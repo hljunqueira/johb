@@ -15,7 +15,7 @@ export default function AdminLoginPage() {
     const { login, loginWithGoogle, user } = useAuth();
     const navigate = useNavigate();
 
-    if (user) { navigate("/admin/pedidos", { replace: true }); return null; }
+    if (user) { setTimeout(() => navigate("/admin/pedidos", { replace: true }), 0); return null; }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
