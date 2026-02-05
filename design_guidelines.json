@@ -1,0 +1,133 @@
+{
+  "identity": {
+    "name": "Salada Soul",
+    "persona": "E1",
+    "mission": "Top 1% Organic Food Delivery Platform",
+    "vibe": "Organic, Minimalist, Transparent, Wellness-focused",
+    "tagline": "Nutre o corpo, alimenta a alma"
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Outfit, sans-serif",
+      "body": "DM Sans, sans-serif",
+      "accent": "Great Vibes, cursive"
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h2": "text-3xl md:text-4xl font-semibold tracking-tight",
+      "h3": "text-2xl md:text-3xl font-medium",
+      "body": "text-base md:text-lg leading-relaxed",
+      "caption": "text-sm text-muted-foreground uppercase tracking-wider"
+    },
+    "instructions": "Import 'Outfit' (400, 500, 700) and 'DM Sans' (400, 500, 700) from Google Fonts. Use Outfit for all headings to give a friendly, rounded, organic feel. Use DM Sans for body text for high legibility."
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#2A7D4B",
+        "foreground": "#FFFFFF",
+        "hover": "#22663D"
+      },
+      "secondary": {
+        "DEFAULT": "#386641",
+        "foreground": "#FFFFFF"
+      },
+      "accent": {
+        "DEFAULT": "#F28F5E",
+        "foreground": "#FFFFFF",
+        "hover": "#E07A4A"
+      },
+      "background": {
+        "DEFAULT": "#F9F7F2",
+        "paper": "#FFFFFF",
+        "subtle": "#F2EFE9"
+      },
+      "text": {
+        "primary": "#2D3A31",
+        "secondary": "#5C6B60",
+        "muted": "#8FA394"
+      },
+      "success": "#4CAF50",
+      "warning": "#FFC107",
+      "error": "#E53935",
+      "border": "#E6E2D8"
+    },
+    "usage": "Use 'background.DEFAULT' (Warm Cream) as the main app background to avoid sterile white. Use 'primary' for main actions and branding. Use 'accent' (Orange) for 'Add to Cart' and 'Checkout' buttons to drive conversion. Use 'text.primary' (Dark Green-Grey) for text, never pure black."
+  },
+  "layout": {
+    "spacing": {
+      "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+      "section": "py-12 md:py-24",
+      "grid_gap": "gap-6 md:gap-8"
+    },
+    "structure": {
+      "public_menu": "3-column layout on Desktop: [Left Sidebar (Nav) - 250px] [Center Content - Flex] [Right Sidebar (Cart) - 350px]. On Mobile: Single column with Bottom Sheet Cart or Drawer.",
+      "dashboard": "Sidebar Navigation + Top Bar + Main Content Area (Padding: p-6 or p-8). Dense grid for metrics."
+    },
+    "border_radius": {
+      "default": "rounded-xl",
+      "card": "rounded-2xl",
+      "button": "rounded-full"
+    },
+    "shadows": {
+      "card": "shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300",
+      "floating": "shadow-[0_10px_40px_rgb(42,125,75,0.15)]"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-8 py-3 font-medium transition-all active:scale-95",
+      "secondary": "bg-white border border-border text-text-primary hover:bg-background-subtle rounded-full px-6 py-2 transition-all",
+      "accent": "bg-accent text-accent-foreground hover:bg-accent/90 rounded-full shadow-lg shadow-accent/20"
+    },
+    "cards": {
+      "product": "bg-white rounded-2xl border border-border/50 overflow-hidden hover:border-primary/20 transition-all duration-300 group",
+      "metric": "bg-white rounded-xl border border-border p-6 flex flex-col justify-between"
+    },
+    "inputs": {
+      "style": "bg-white border-border focus:border-primary focus:ring-primary/20 rounded-lg"
+    }
+  },
+  "visual_assets": {
+    "logo_url": "https://customer-assets.emergentagent.com/job_soul-delivery/artifacts/3puvg49l_IMG_1929.jpeg",
+    "ui_reference": "https://customer-assets.emergentagent.com/job_soul-delivery/artifacts/g1ojs53s_IMG_1932.jpeg",
+    "image_urls": {
+      "salads": [
+        "https://images.unsplash.com/photo-1689832832416-e9be9dc30c6b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwzfHxmcmVzaCUyMGhlYWx0aHklMjBzYWxhZCUyMGJvd2wlMjBvcmdhbmljJTIwaW5ncmVkaWVudHMlMjBhZXN0aGV0aWMlMjB0b3AlMjB2aWV3fGVufDB8fHx8MTc3MDMzMzUxNnww&ixlib=rb-4.1.0&q=85",
+        "https://images.pexels.com/photos/35241090/pexels-photo-35241090.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+      ],
+      "bowls": [
+        "https://images.unsplash.com/photo-1642394079524-1d688c19c17a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzV8MHwxfHNlYXJjaHwyfHxoZWFsdGh5JTIwZ3JhaW4lMjBib3dsJTIwcXVpbm9hJTIwYXZvY2FkbyUyMGFlc3RoZXRpYyUyMGZvb2R8ZW58MHx8fHwxNzcwMzMzNTE4fDA&ixlib=rb-4.1.0&q=85"
+      ],
+      "juices": [
+        "https://images.unsplash.com/photo-1717398804885-a6c22b3e5c2f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwxfHxncmVlbiUyMGp1aWNlJTIwc21vb3RoaWUlMjBnbGFzcyUyMGhlYWx0aHklMjB3ZWxsbmVzcyUyMGRyaW5rJTIwYWVzdGhldGljfGVufDB8fHx8MTc3MDMzMzUxN3ww&ixlib=rb-4.1.0&q=85"
+      ],
+      "desserts": [
+        "https://images.unsplash.com/photo-1767429013015-8ea007ccf002?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzF8MHwxfHNlYXJjaHwxfHxjaGlhJTIwcHVkZGluZyUyMGhlYWx0aHklMjBkZXNzZXJ0JTIwYWVzdGhldGljfGVufDB8fHx8MTc3MDMzMzUxOHww&ixlib=rb-4.1.0&q=85"
+      ],
+      "general": [
+        "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHw0fHxmcmVzaCUyMGhlYWx0aHklMjBzYWxhZCUyMGJvd2wlMjBvcmdhbmljJTIwaW5ncmVkaWVudHMlMjBhZXN0aGV0aWMlMjB0b3AlMjB2aWV3fGVufDB8fHx8MTc3MDMzMzUxNnww&ixlib=rb-4.1.0&q=85"
+      ]
+    }
+  },
+  "motion": {
+    "transitions": "transition-all duration-300 ease-out",
+    "hover_effects": "hover:-translate-y-1 hover:shadow-lg",
+    "page_load": "animate-in fade-in slide-in-from-bottom-4 duration-700"
+  },
+  "accessibility": {
+    "instructions": "Ensure all text meets APCA contrast guidelines. Use 'sr-only' for icon-only buttons. All interactive elements must have 'data-testid'."
+  },
+  "instructions_to_main_agent": {
+    "general": "Build the 'Salada Soul' platform with a focus on 'Organic Wellness'. It should feel like a spa for food. Use the 3-column layout for the public menu.",
+    "admin_dashboard": "Use a denser grid for the Admin area. Implement 'Dark Mode' specifically for the Kitchen View (Admin Orders).",
+    "components": "Use Shadcn components but heavily customize them with rounded-full buttons and the 'Outfit' font family. Avoid the default 'Vercel' look.",
+    "images": "Use the provided image URLs for product placeholders. Randomly assign them if needed but keep categories consistent."
+  },
+  "universal_guidelines": [
+    "Do NOT use gradients for backgrounds, use solid warm colors or subtle noise textures.",
+    "Use 'sonner' for toasts.",
+    "Never center align the app container.",
+    "Use 2-3x more spacing than typical designs."
+  ]
+}
