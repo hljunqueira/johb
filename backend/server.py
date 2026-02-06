@@ -540,6 +540,58 @@ async def delete_category(category_id: str, user=Depends(get_current_admin)):
         raise HTTPException(status_code=404, detail="Category not found")
     return {"message": "Category deleted"}
 
+# ==================== ADMIN COMPLEMENT ROUTES ====================
+@api_router.get("/admin/complements")
+async def get_admin_complements(user=Depends(get_current_admin)):
+    return await db.complements.find({}, {"_id": 0}).sort("name", 1).to_list(200)
+
+@api_router.post("/admin/complements")
+async def create_complement(comp: ComplementCreate, user=Depends(get_current_admin)):
+    doc = {"id": str(uuid.uuid4()), **comp.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.complements.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/admin/complements/{comp_id}")
+async def update_complement(comp_id: str, comp: ComplementUpdate, user=Depends(get_current_admin)):
+    update_data = {k: v for k, v in comp.model_dump().items() if v is not None}
+    result = await db.complements.update_one({"id": comp_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Complement not found")
+    return await db.complements.find_one({"id": comp_id}, {"_id": 0})
+
+@api_router.delete("/admin/complements/{comp_id}")
+async def delete_complement(comp_id: str, user=Depends(get_current_admin)):
+    await db.complements.delete_one({"id": comp_id})
+    return {"message": "Complement deleted"}
+
+# ==================== ADMIN MENU ROUTES ====================
+@api_router.get("/admin/menus")
+async def get_admin_menus(user=Depends(get_current_admin)):
+    return await db.menus.find({}, {"_id": 0}).sort("order", 1).to_list(50)
+
+@api_router.post("/admin/menus")
+async def create_menu(menu: MenuCreate, user=Depends(get_current_admin)):
+    last = await db.menus.find_one({}, sort=[("order", -1)])
+    next_order = (last.get("order", 0) + 1) if last else 0
+    doc = {"id": str(uuid.uuid4()), **menu.model_dump(), "order": next_order, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.menus.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/admin/menus/{menu_id}")
+async def update_menu(menu_id: str, menu: MenuUpdate, user=Depends(get_current_admin)):
+    update_data = {k: v for k, v in menu.model_dump().items() if v is not None}
+    result = await db.menus.update_one({"id": menu_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Menu not found")
+    return await db.menus.find_one({"id": menu_id}, {"_id": 0})
+
+@api_router.delete("/admin/menus/{menu_id}")
+async def delete_menu(menu_id: str, user=Depends(get_current_admin)):
+    await db.menus.delete_one({"id": menu_id})
+    return {"message": "Menu deleted"}
+
 # ==================== ADMIN CUSTOMER ROUTES ====================
 @api_router.get("/admin/customers")
 async def get_admin_customers(search: str = None, tag: str = None, user=Depends(get_current_admin)):
