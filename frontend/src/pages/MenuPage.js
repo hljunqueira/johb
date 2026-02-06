@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, MessageCircle, X } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, MessageCircle, Salad, UtensilsCrossed, Coffee } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,9 +24,28 @@ const tagLabels = {
     vegano: { label: "Vegano", color: "bg-emerald-100 text-emerald-700" },
     leve: { label: "Leve", color: "bg-sky-100 text-sky-700" },
     mais_pedido: { label: "Popular", color: "bg-orange-100 text-orange-700" },
-    recomendado: { label: "Recomendado", color: "bg-amber-100 text-amber-700" }
+    recomendado: { label: "Recomendado", color: "bg-amber-100 text-amber-700" },
+    personalizavel: { label: "Personalizavel", color: "bg-purple-100 text-purple-700" }
 };
-const getTagStyle = (tag) => tagLabels[tag] || { label: tag, color: "bg-purple-100 text-purple-700" };
+const getTagStyle = (tag) => tagLabels[tag] || { label: tag, color: "bg-gray-100 text-gray-700" };
+
+// Complement category labels and order
+const complementCategories = {
+    base_folhas: { label: "Base de Folhas", order: 0, icon: "🥬" },
+    proteina: { label: "Proteina", order: 1, icon: "🍗" },
+    legumes: { label: "Legumes & Verduras", order: 2, icon: "🥕" },
+    frutas: { label: "Frutas", order: 3, icon: "🍓" },
+    extras: { label: "Extras & Crocancia", order: 4, icon: "🥜" },
+    molhos: { label: "Molhos & Cremes", order: 5, icon: "🥣" },
+    temperos: { label: "Temperos", order: 6, icon: "🧂" }
+};
+
+const categoryIcons = {
+    "Monte sua Salada": <Salad className="h-4 w-4" />,
+    "Saladas Prontas": <Leaf className="h-4 w-4" />,
+    "Lanches Frios": <UtensilsCrossed className="h-4 w-4" />,
+    "Bebidas": <Coffee className="h-4 w-4" />
+};
 
 /* ============ PRODUCT DETAIL MODAL ============ */
 function ProductDetailModal({ product, open, onClose, onAdd }) {
@@ -56,6 +74,21 @@ function ProductDetailModal({ product, open, onClose, onAdd }) {
         onClose();
     };
 
+    // Group additionals by category
+    const groupedAdditionals = {};
+    if (product.additionals?.length > 0) {
+        product.additionals.forEach(add => {
+            const cat = add.category || "outros";
+            if (!groupedAdditionals[cat]) groupedAdditionals[cat] = [];
+            groupedAdditionals[cat].push(add);
+        });
+    }
+    const sortedCategories = Object.keys(groupedAdditionals).sort((a, b) => 
+        (complementCategories[a]?.order ?? 99) - (complementCategories[b]?.order ?? 99)
+    );
+
+    const isCustomizable = product.tags?.includes("personalizavel") || product.additionals?.length > 0;
+
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="p-0 rounded-2xl overflow-hidden max-w-lg max-h-[90vh] overflow-y-auto" data-testid="product-detail-modal">
@@ -80,29 +113,45 @@ function ProductDetailModal({ product, open, onClose, onAdd }) {
                         <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
                     </div>
 
-                    {/* Additionals */}
-                    {product.additionals?.length > 0 && (
-                        <div>
-                            <Separator className="mb-3" />
-                            <h3 className="font-semibold text-sm font-heading mb-3">Monte do seu jeito</h3>
-                            <div className="space-y-2">
-                                {product.additionals.map(add => {
-                                    const isSelected = selectedAdditionals.find(a => a.name === add.name);
-                                    return (
-                                        <button key={add.name} type="button" onClick={() => toggleAdditional(add)}
-                                            data-testid={`additional-${add.name}`}
-                                            className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
-                                            <div className="flex items-center gap-3">
-                                                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
-                                                    {isSelected && <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                                                </div>
-                                                <span className="text-sm font-medium">{add.name}</span>
-                                            </div>
-                                            <span className="text-sm font-semibold text-primary">+ R$ {add.price.toFixed(2)}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                    {/* Grouped Additionals */}
+                    {isCustomizable && sortedCategories.length > 0 && (
+                        <div className="space-y-4">
+                            <Separator />
+                            <h3 className="font-semibold text-base font-heading">Monte do seu jeito</h3>
+                            
+                            {sortedCategories.map(catKey => {
+                                const catInfo = complementCategories[catKey] || { label: catKey, icon: "+" };
+                                const items = groupedAdditionals[catKey];
+                                
+                                return (
+                                    <div key={catKey} className="space-y-2">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                            <span>{catInfo.icon}</span>
+                                            <span>{catInfo.label}</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {items.map(add => {
+                                                const isSelected = selectedAdditionals.find(a => a.name === add.name);
+                                                return (
+                                                    <button key={add.name} type="button" onClick={() => toggleAdditional(add)}
+                                                        data-testid={`additional-${add.name.replace(/\s+/g, '-').toLowerCase()}`}
+                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
+                                                                {isSelected && <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                            </div>
+                                                            <span className="text-sm font-medium">{add.name}</span>
+                                                        </div>
+                                                        <span className="text-sm font-semibold text-primary">
+                                                            {add.price > 0 ? `+ R$ ${add.price.toFixed(2)}` : "Gratis"}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
 
@@ -140,6 +189,8 @@ function ProductDetailModal({ product, open, onClose, onAdd }) {
 /* ============ PRODUCT CARD ============ */
 function ProductCard({ product, onClick }) {
     const hasAdditionals = product.additionals?.length > 0;
+    const isCustomizable = product.tags?.includes("personalizavel");
+    
     return (
         <div className="product-card bg-white rounded-2xl border border-border/50 overflow-hidden group cursor-pointer" onClick={() => onClick(product)} data-testid={`product-${product.id}`}>
             <div className="relative aspect-[4/3] overflow-hidden bg-muted">
@@ -150,7 +201,7 @@ function ProductCard({ product, onClick }) {
                         return <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.color}`}>{style.label}</span>;
                     })}
                 </div>
-                {hasAdditionals && (
+                {(hasAdditionals || isCustomizable) && (
                     <div className="absolute bottom-3 right-3">
                         <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-foreground shadow-sm">Personalizavel</span>
                     </div>
@@ -164,7 +215,7 @@ function ProductCard({ product, onClick }) {
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
                 <Button className="w-full bg-accent hover:bg-accent/90 text-white rounded-full font-medium" data-testid={`add-${product.id}`}
                     onClick={(e) => { e.stopPropagation(); onClick(product); }}>
-                    <Plus className="h-4 w-4 mr-1" /> {hasAdditionals ? "Escolher opcionais" : "Adicionar"}
+                    <Plus className="h-4 w-4 mr-1" /> {(hasAdditionals || isCustomizable) ? "Escolher opcionais" : "Adicionar"}
                 </Button>
             </div>
         </div>
@@ -220,27 +271,48 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
 /* ============ MENU PAGE ============ */
 export default function MenuPage() {
     const [categories, setCategories] = useState([]);
-    const [products, setProducts] = useState([]);
+    const [productsByCategory, setProductsByCategory] = useState({});
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [search, setSearch] = useState("");
     const [cartOpen, setCartOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [loading, setLoading] = useState(true);
     const { items, addItem, removeItem, updateQuantity, total, itemCount } = useCart();
     const navigate = useNavigate();
 
+    // Load all data on mount
     useEffect(() => {
-        axios.get(`${API}/categories`).then(res => {
-            setCategories(res.data);
-            if (res.data.length > 0 && !selectedCategory) setSelectedCategory(res.data[0].id);
-        });
-    }, []); // eslint-disable-line
-
-    useEffect(() => {
-        const params = new URLSearchParams();
-        if (selectedCategory) params.append("category_id", selectedCategory);
-        if (search) params.append("search", search);
-        axios.get(`${API}/products?${params}`).then(res => setProducts(res.data));
-    }, [selectedCategory, search]);
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                // Get categories
+                const catsRes = await axios.get(`${API}/categories`);
+                const cats = catsRes.data;
+                setCategories(cats);
+                
+                if (cats.length > 0) {
+                    setSelectedCategory(cats[0].id);
+                    
+                    // Get all products
+                    const prodsRes = await axios.get(`${API}/products`);
+                    const allProducts = prodsRes.data;
+                    
+                    // Group products by category
+                    const grouped = {};
+                    cats.forEach(cat => {
+                        grouped[cat.id] = allProducts.filter(p => p.category_id === cat.id);
+                    });
+                    setProductsByCategory(grouped);
+                }
+            } catch (err) {
+                console.error("Error fetching menu:", err);
+                toast.error("Erro ao carregar cardapio");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const handleAddItem = (product, quantity, additionals, observation) => {
         addItem(product, quantity, additionals, observation);
@@ -248,6 +320,22 @@ export default function MenuPage() {
     };
 
     const selectedCat = categories.find(c => c.id === selectedCategory);
+    
+    // Filter products by search
+    const currentProducts = (productsByCategory[selectedCategory] || []).filter(p => 
+        !search || p.name.toLowerCase().includes(search.toLowerCase())
+    );
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="text-center">
+                    <Leaf className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+                    <p className="text-muted-foreground">Carregando cardapio...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-background" data-testid="menu-page">
@@ -318,7 +406,8 @@ export default function MenuPage() {
                                 {categories.map(cat => (
                                     <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} data-testid={`cat-${cat.id}`}
                                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-sm font-medium transition-all ${selectedCategory === cat.id ? "bg-primary text-white shadow-md" : "text-foreground hover:bg-muted"}`}>
-                                        <Leaf className="h-4 w-4" />{cat.name}
+                                        {categoryIcons[cat.name] || <Leaf className="h-4 w-4" />}
+                                        {cat.name}
                                     </button>
                                 ))}
                             </nav>
@@ -340,9 +429,9 @@ export default function MenuPage() {
                             </div>
                         )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                            {products.map(product => <ProductCard key={product.id} product={product} onClick={setSelectedProduct} />)}
+                            {currentProducts.map(product => <ProductCard key={product.id} product={product} onClick={setSelectedProduct} />)}
                         </div>
-                        {products.length === 0 && (
+                        {currentProducts.length === 0 && (
                             <div className="text-center py-16">
                                 <Leaf className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                 <p className="text-lg font-medium">Nenhum produto encontrado</p>
