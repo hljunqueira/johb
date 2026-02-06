@@ -748,18 +748,40 @@ async def seed_data():
     await db.categories.insert_many(cats)
 
     now = datetime.now(timezone.utc).isoformat()
+
+    # Create complements library
+    comps = [
+        {"id": str(uuid.uuid4()), "name": "Proteina extra", "price": 8.0, "description": "Frango, tofu ou ovo", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Frango grelhado", "price": 10.0, "description": "Peito de frango grelhado", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Tofu grelhado", "price": 7.0, "description": "Tofu orgânico grelhado", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Granola extra", "price": 4.0, "description": "Granola artesanal crocante", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Granola", "price": 3.0, "description": "Granola artesanal", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Abacate", "price": 5.0, "description": "Fatias de abacate fresco", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Ovo cozido", "price": 4.0, "description": "Ovo cozido cortado", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Queijo feta", "price": 6.0, "description": "Queijo feta em cubos", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Molho tahini", "price": 3.0, "description": "Molho tahini caseiro", "active": True, "created_at": now},
+        {"id": str(uuid.uuid4()), "name": "Castanhas", "price": 5.0, "description": "Mix de castanhas", "active": True, "created_at": now},
+    ]
+    await db.complements.insert_many(comps)
+
     products = [
-        {"id": str(uuid.uuid4()), "category_id": cats[0]["id"], "name": "Deusa Verde", "description": "Couve, abacate, pepino, sementes de abobora, molho tahini", "price": 42.90, "image_url": "https://images.unsplash.com/photo-1689832832416-e9be9dc30c6b?w=400", "stock": -1, "tags": ["vegano", "mais_pedido"], "additionals": [{"name": "Proteina extra", "price": 8.0}], "order": 0, "active": True, "created_at": now, "updated_at": now},
-        {"id": str(uuid.uuid4()), "category_id": cats[0]["id"], "name": "Caesar Classica", "description": "Alface romana, croutons, parmesao ralado, molho caesar caseiro", "price": 36.00, "image_url": "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=400", "stock": -1, "tags": ["recomendado"], "additionals": [{"name": "Frango grelhado", "price": 10.0}], "order": 1, "active": True, "created_at": now, "updated_at": now},
-        {"id": str(uuid.uuid4()), "category_id": cats[0]["id"], "name": "Mediterranean Mix", "description": "Tomate, pepino, azeitona kalamata, queijo feta, cebola roxa", "price": 38.50, "image_url": "https://images.pexels.com/photos/35241090/pexels-photo-35241090.jpeg?auto=compress&w=400", "stock": -1, "tags": ["vegano", "leve"], "additionals": [], "order": 2, "active": True, "created_at": now, "updated_at": now},
-        {"id": str(uuid.uuid4()), "category_id": cats[1]["id"], "name": "Buddha Bowl", "description": "Quinoa, grao de bico assado, abacate, batata doce, tahini", "price": 48.50, "image_url": "https://images.unsplash.com/photo-1642394079524-1d688c19c17a?w=400", "stock": -1, "tags": ["vegano", "mais_pedido"], "additionals": [{"name": "Tofu grelhado", "price": 7.0}], "order": 0, "active": True, "created_at": now, "updated_at": now},
-        {"id": str(uuid.uuid4()), "category_id": cats[1]["id"], "name": "Acai Power", "description": "Acai, granola artesanal, banana, mel organico, frutas vermelhas", "price": 32.00, "image_url": "https://images.unsplash.com/photo-1590301157890-4810ed352733?w=400", "stock": -1, "tags": ["recomendado"], "additionals": [{"name": "Granola extra", "price": 4.0}], "order": 1, "active": True, "created_at": now, "updated_at": now},
-        {"id": str(uuid.uuid4()), "category_id": cats[2]["id"], "name": "Detox Sunrise", "description": "Cenoura, maca verde, gengibre, limao", "price": 18.00, "image_url": "https://images.unsplash.com/photo-1717398804885-a6c22b3e5c2f?w=400", "stock": -1, "tags": ["leve", "mais_pedido"], "additionals": [], "order": 0, "active": True, "created_at": now, "updated_at": now},
-        {"id": str(uuid.uuid4()), "category_id": cats[2]["id"], "name": "Green Power", "description": "Couve, abacaxi, hortela, agua de coco", "price": 16.00, "image_url": "https://images.unsplash.com/photo-1610970881699-44a5587cabec?w=400", "stock": -1, "tags": ["vegano", "leve"], "additionals": [], "order": 1, "active": True, "created_at": now, "updated_at": now},
-        {"id": str(uuid.uuid4()), "category_id": cats[3]["id"], "name": "Chia Pudding", "description": "Chia, leite de coco, frutas frescas, mel", "price": 22.00, "image_url": "https://images.unsplash.com/photo-1767429013015-8ea007ccf002?w=400", "stock": -1, "tags": ["vegano", "leve"], "additionals": [], "order": 0, "active": True, "created_at": now, "updated_at": now},
-        {"id": str(uuid.uuid4()), "category_id": cats[3]["id"], "name": "Banana Nice Cream", "description": "Banana congelada, cacau, pasta de amendoim, coco ralado", "price": 24.00, "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400", "stock": -1, "tags": ["vegano"], "additionals": [{"name": "Granola", "price": 3.0}], "order": 1, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[0]["id"], "name": "Deusa Verde", "description": "Couve, abacate, pepino, sementes de abobora, molho tahini", "price": 42.90, "image_url": "https://images.unsplash.com/photo-1689832832416-e9be9dc30c6b?w=400", "stock": -1, "tags": ["vegano", "mais_pedido"], "additionals": [], "complement_ids": [comps[0]["id"], comps[5]["id"], comps[9]["id"]], "order": 0, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[0]["id"], "name": "Caesar Classica", "description": "Alface romana, croutons, parmesao ralado, molho caesar caseiro", "price": 36.00, "image_url": "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=400", "stock": -1, "tags": ["recomendado"], "additionals": [], "complement_ids": [comps[1]["id"], comps[6]["id"], comps[7]["id"]], "order": 1, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[0]["id"], "name": "Mediterranean Mix", "description": "Tomate, pepino, azeitona kalamata, queijo feta, cebola roxa", "price": 38.50, "image_url": "https://images.pexels.com/photos/35241090/pexels-photo-35241090.jpeg?auto=compress&w=400", "stock": -1, "tags": ["vegano", "leve"], "additionals": [], "complement_ids": [comps[5]["id"], comps[8]["id"]], "order": 2, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[1]["id"], "name": "Buddha Bowl", "description": "Quinoa, grao de bico assado, abacate, batata doce, tahini", "price": 48.50, "image_url": "https://images.unsplash.com/photo-1642394079524-1d688c19c17a?w=400", "stock": -1, "tags": ["vegano", "mais_pedido"], "additionals": [], "complement_ids": [comps[2]["id"], comps[5]["id"], comps[9]["id"]], "order": 0, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[1]["id"], "name": "Acai Power", "description": "Acai, granola artesanal, banana, mel organico, frutas vermelhas", "price": 32.00, "image_url": "https://images.unsplash.com/photo-1590301157890-4810ed352733?w=400", "stock": -1, "tags": ["recomendado"], "additionals": [], "complement_ids": [comps[3]["id"], comps[4]["id"]], "order": 1, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[2]["id"], "name": "Detox Sunrise", "description": "Cenoura, maca verde, gengibre, limao", "price": 18.00, "image_url": "https://images.unsplash.com/photo-1717398804885-a6c22b3e5c2f?w=400", "stock": -1, "tags": ["leve", "mais_pedido"], "additionals": [], "complement_ids": [], "order": 0, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[2]["id"], "name": "Green Power", "description": "Couve, abacaxi, hortela, agua de coco", "price": 16.00, "image_url": "https://images.unsplash.com/photo-1610970881699-44a5587cabec?w=400", "stock": -1, "tags": ["vegano", "leve"], "additionals": [], "complement_ids": [], "order": 1, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[3]["id"], "name": "Chia Pudding", "description": "Chia, leite de coco, frutas frescas, mel", "price": 22.00, "image_url": "https://images.unsplash.com/photo-1767429013015-8ea007ccf002?w=400", "stock": -1, "tags": ["vegano", "leve"], "additionals": [], "complement_ids": [comps[4]["id"]], "order": 0, "active": True, "created_at": now, "updated_at": now},
+        {"id": str(uuid.uuid4()), "category_id": cats[3]["id"], "name": "Banana Nice Cream", "description": "Banana congelada, cacau, pasta de amendoim, coco ralado", "price": 24.00, "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400", "stock": -1, "tags": ["vegano"], "additionals": [], "complement_ids": [comps[4]["id"], comps[9]["id"]], "order": 1, "active": True, "created_at": now, "updated_at": now},
     ]
     await db.products.insert_many(products)
+
+    # Create default menu
+    await db.menus.insert_one({
+        "id": str(uuid.uuid4()), "name": "Cardapio Principal", "description": "Menu completo do Salada Soul",
+        "category_ids": [c["id"] for c in cats], "active": True, "order": 0, "created_at": now
+    })
 
     await db.delivery_settings.insert_one({
         "areas": [
