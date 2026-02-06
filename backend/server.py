@@ -226,6 +226,14 @@ async def get_pix_settings():
     settings = await db.pix_settings.find_one({}, {"_id": 0})
     return settings or {"pix_key": "", "pix_name": "Salada Soul", "qr_code_url": ""}
 
+@api_router.get("/complements")
+async def get_complements():
+    return await db.complements.find({"active": True}, {"_id": 0}).sort("name", 1).to_list(200)
+
+@api_router.get("/menus")
+async def get_menus():
+    return await db.menus.find({"active": True}, {"_id": 0}).sort("order", 1).to_list(50)
+
 # ==================== ORDER ROUTES ====================
 @api_router.post("/orders")
 async def create_order(order: OrderCreate):
