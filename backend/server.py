@@ -50,6 +50,7 @@ class ProductCreate(BaseModel):
     stock: int = -1
     tags: List[str] = []
     additionals: List[dict] = []
+    complement_ids: List[str] = []
     active: bool = True
 
 class ProductUpdate(BaseModel):
@@ -61,6 +62,7 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = None
     tags: Optional[List[str]] = None
     additionals: Optional[List[dict]] = None
+    complement_ids: Optional[List[str]] = None
     active: Optional[bool] = None
     order: Optional[int] = None
 
