@@ -53,7 +53,14 @@ export default function CheckoutPage() {
             const res = await axios.post(`${API}/orders`, {
                 customer_name: name, customer_phone: phone, delivery_type: deliveryType,
                 address, neighborhood,
-                items: items.map(i => ({ product_id: i.product_id, product_name: i.product_name, quantity: i.quantity, price: i.price, observation: i.observation || "" }))
+                items: items.map(i => {
+                    let obs = i.observation || "";
+                    if (i.additionals?.length > 0) {
+                        const addText = "Adicionais: " + i.additionals.map(a => a.name).join(", ");
+                        obs = obs ? `${addText} | ${obs}` : addText;
+                    }
+                    return { product_id: i.product_id, product_name: i.product_name, quantity: i.quantity, price: i.price, observation: obs };
+                })
             });
             localStorage.setItem("salada-soul-phone", phone);
             localStorage.setItem("salada-soul-name", name);
