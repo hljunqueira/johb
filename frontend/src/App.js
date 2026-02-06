@@ -68,7 +68,7 @@ function AppRouter() {
             <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/admin/pedidos" replace />} />
                 <Route path="pedidos" element={<AdminOrdersPage />} />
-                <Route path="produtos" element={<AdminProductsPage />} />
+                <Route path="produtos" element={<AdminCardapioPage />} />
                 <Route path="clientes" element={<AdminCustomersPage />} />
                 <Route path="relatorios" element={<AdminReportsPage />} />
                 <Route path="entrega" element={<AdminDeliveryPage />} />
