@@ -173,6 +173,19 @@ def create_jwt_token(user_id: str):
         JWT_SECRET, algorithm=JWT_ALGORITHM
     )
 
+async def resolve_product_complements(products):
+    all_ids = set()
+    for p in products:
+        all_ids.update(p.get("complement_ids", []))
+    if not all_ids:
+        return products
+    comps = await db.complements.find({"id": {"$in": list(all_ids)}, "active": True}, {"_id": 0}).to_list(200)
+    comp_map = {c["id"]: c for c in comps}
+    for p in products:
+        if p.get("complement_ids"):
+            p["additionals"] = [{"name": comp_map[cid]["name"], "price": comp_map[cid]["price"], "id": cid} for cid in p["complement_ids"] if cid in comp_map]
+    return products
+
 # ==================== PUBLIC ROUTES ====================
 @api_router.get("/")
 async def root():
