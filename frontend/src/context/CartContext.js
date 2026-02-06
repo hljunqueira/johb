@@ -10,23 +10,38 @@ export function CartProvider({ children }) {
 
     useEffect(() => { localStorage.setItem("salada-soul-cart", JSON.stringify(items)); }, [items]);
 
-    const addItem = (product, quantity = 1) => {
+    const addItem = (product, quantity = 1, selectedAdditionals = [], observation = "") => {
+        const addNames = selectedAdditionals.map(a => a.name).sort().join(",");
+        const cartId = `${product.id}_${addNames}`;
+        const addPrice = selectedAdditionals.reduce((s, a) => s + a.price, 0);
+        const unitPrice = product.price + addPrice;
+
         setItems(prev => {
-            const existing = prev.find(i => i.product_id === product.id);
-            if (existing) return prev.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
-            return [...prev, { product_id: product.id, product_name: product.name, price: product.price, image_url: product.image_url, quantity, observation: "" }];
+            const existing = prev.find(i => i.cart_id === cartId);
+            if (existing) return prev.map(i => i.cart_id === cartId ? { ...i, quantity: i.quantity + quantity } : i);
+            return [...prev, {
+                cart_id: cartId,
+                product_id: product.id,
+                product_name: product.name,
+                base_price: product.price,
+                price: unitPrice,
+                image_url: product.image_url,
+                quantity,
+                additionals: selectedAdditionals,
+                observation
+            }];
         });
     };
 
-    const removeItem = (productId) => setItems(prev => prev.filter(i => i.product_id !== productId));
+    const removeItem = (cartId) => setItems(prev => prev.filter(i => i.cart_id !== cartId));
 
-    const updateQuantity = (productId, quantity) => {
-        if (quantity <= 0) { removeItem(productId); return; }
-        setItems(prev => prev.map(i => i.product_id === productId ? { ...i, quantity } : i));
+    const updateQuantity = (cartId, quantity) => {
+        if (quantity <= 0) { removeItem(cartId); return; }
+        setItems(prev => prev.map(i => i.cart_id === cartId ? { ...i, quantity } : i));
     };
 
-    const updateObservation = (productId, observation) => {
-        setItems(prev => prev.map(i => i.product_id === productId ? { ...i, observation } : i));
+    const updateObservation = (cartId, observation) => {
+        setItems(prev => prev.map(i => i.cart_id === cartId ? { ...i, observation } : i));
     };
 
     const clearCart = () => setItems([]);
