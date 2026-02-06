@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, MessageCircle } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, MessageCircle, X } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,26 +27,134 @@ const tagLabels = {
     mais_pedido: { label: "Popular", color: "bg-orange-100 text-orange-700" },
     recomendado: { label: "Recomendado", color: "bg-amber-100 text-amber-700" }
 };
-
 const getTagStyle = (tag) => tagLabels[tag] || { label: tag, color: "bg-purple-100 text-purple-700" };
 
-const catIcons = { salad: "leaf", bowl: "soup", juice: "glass-water", dessert: "cake-slice" };
+/* ============ PRODUCT DETAIL MODAL ============ */
+function ProductDetailModal({ product, open, onClose, onAdd }) {
+    const [selectedAdditionals, setSelectedAdditionals] = useState([]);
+    const [quantity, setQuantity] = useState(1);
+    const [observation, setObservation] = useState("");
 
-function ProductCard({ product, onAdd }) {
+    useEffect(() => {
+        if (open) { setSelectedAdditionals([]); setQuantity(1); setObservation(""); }
+    }, [open]);
+
+    if (!product) return null;
+
+    const toggleAdditional = (add) => {
+        setSelectedAdditionals(prev =>
+            prev.find(a => a.name === add.name) ? prev.filter(a => a.name !== add.name) : [...prev, add]
+        );
+    };
+
+    const addPrice = selectedAdditionals.reduce((s, a) => s + a.price, 0);
+    const unitTotal = product.price + addPrice;
+    const totalPrice = unitTotal * quantity;
+
+    const handleAdd = () => {
+        onAdd(product, quantity, selectedAdditionals, observation);
+        onClose();
+    };
+
     return (
-        <div className="product-card bg-white rounded-2xl border border-border/50 overflow-hidden group" data-testid={`product-${product.id}`}>
+        <Dialog open={open} onOpenChange={onClose}>
+            <DialogContent className="p-0 rounded-2xl overflow-hidden max-w-lg max-h-[90vh] overflow-y-auto" data-testid="product-detail-modal">
+                {/* Image */}
+                <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                    <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover" />
+                    <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                        {product.tags?.map(tag => {
+                            const style = getTagStyle(tag);
+                            return <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.color}`}>{style.label}</span>;
+                        })}
+                    </div>
+                </div>
+
+                <div className="p-5 space-y-4">
+                    {/* Name & Price */}
+                    <div>
+                        <div className="flex justify-between items-start">
+                            <h2 className="text-xl font-bold font-heading text-foreground">{product.name}</h2>
+                            <span className="text-xl font-bold text-primary whitespace-nowrap ml-3">R$ {product.price.toFixed(2)}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
+                    </div>
+
+                    {/* Additionals */}
+                    {product.additionals?.length > 0 && (
+                        <div>
+                            <Separator className="mb-3" />
+                            <h3 className="font-semibold text-sm font-heading mb-3">Monte do seu jeito</h3>
+                            <div className="space-y-2">
+                                {product.additionals.map(add => {
+                                    const isSelected = selectedAdditionals.find(a => a.name === add.name);
+                                    return (
+                                        <button key={add.name} type="button" onClick={() => toggleAdditional(add)}
+                                            data-testid={`additional-${add.name}`}
+                                            className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
+                                                    {isSelected && <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                </div>
+                                                <span className="text-sm font-medium">{add.name}</span>
+                                            </div>
+                                            <span className="text-sm font-semibold text-primary">+ R$ {add.price.toFixed(2)}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Observation */}
+                    <div>
+                        <Separator className="mb-3" />
+                        <h3 className="font-semibold text-sm font-heading mb-2">Alguma observacao?</h3>
+                        <textarea value={observation} onChange={e => setObservation(e.target.value)}
+                            placeholder="Ex: Sem cebola, molho a parte..."
+                            className="w-full rounded-xl border border-input bg-white p-3 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            data-testid="product-observation" />
+                    </div>
+
+                    {/* Quantity + Add */}
+                    <div className="flex items-center gap-4 pt-1">
+                        <div className="flex items-center gap-2 bg-muted rounded-full px-1 py-1">
+                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-9 w-9 rounded-full bg-white border border-border flex items-center justify-center hover:bg-gray-50 transition-colors" data-testid="modal-qty-minus">
+                                <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="w-8 text-center font-semibold" data-testid="modal-qty">{quantity}</span>
+                            <button onClick={() => setQuantity(q => q + 1)} className="h-9 w-9 rounded-full bg-white border border-border flex items-center justify-center hover:bg-gray-50 transition-colors" data-testid="modal-qty-plus">
+                                <Plus className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <Button onClick={handleAdd} className="flex-1 bg-accent hover:bg-accent/90 text-white rounded-full py-5 font-semibold text-base" data-testid="modal-add-btn">
+                            Adicionar - R$ {totalPrice.toFixed(2)}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+/* ============ PRODUCT CARD ============ */
+function ProductCard({ product, onClick }) {
+    const hasAdditionals = product.additionals?.length > 0;
+    return (
+        <div className="product-card bg-white rounded-2xl border border-border/50 overflow-hidden group cursor-pointer" onClick={() => onClick(product)} data-testid={`product-${product.id}`}>
             <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                 <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                 <div className="absolute top-3 left-3 flex flex-wrap gap-1">
                     {product.tags?.map(tag => {
                         const style = getTagStyle(tag);
-                        return (
-                            <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.color}`}>
-                                {style.label}
-                            </span>
-                        );
+                        return <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.color}`}>{style.label}</span>;
                     })}
                 </div>
+                {hasAdditionals && (
+                    <div className="absolute bottom-3 right-3">
+                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-foreground shadow-sm">Personalizavel</span>
+                    </div>
+                )}
             </div>
             <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
@@ -52,14 +162,16 @@ function ProductCard({ product, onAdd }) {
                     <span className="font-bold text-foreground whitespace-nowrap ml-2">R$ {product.price.toFixed(2)}</span>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
-                <Button onClick={() => onAdd(product)} className="w-full bg-accent hover:bg-accent/90 text-white rounded-full font-medium" data-testid={`add-${product.id}`}>
-                    <Plus className="h-4 w-4 mr-1" /> Adicionar ao Carrinho
+                <Button className="w-full bg-accent hover:bg-accent/90 text-white rounded-full font-medium" data-testid={`add-${product.id}`}
+                    onClick={(e) => { e.stopPropagation(); onClick(product); }}>
+                    <Plus className="h-4 w-4 mr-1" /> {hasAdditionals ? "Escolher opcionais" : "Adicionar"}
                 </Button>
             </div>
         </div>
     );
 }
 
+/* ============ CART CONTENT ============ */
 function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout }) {
     if (itemCount === 0) return (
         <div className="text-center py-8">
@@ -71,18 +183,22 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
         <div className="flex flex-col">
             <div className="space-y-3 max-h-[40vh] overflow-auto pr-1">
                 {items.map(item => (
-                    <div key={item.product_id} className="flex items-center gap-3" data-testid={`cart-item-${item.product_id}`}>
-                        <img src={getImageUrl(item.image_url)} alt={item.product_name} className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
+                    <div key={item.cart_id} className="flex items-start gap-3" data-testid={`cart-item-${item.cart_id}`}>
+                        <img src={getImageUrl(item.image_url)} alt={item.product_name} className="h-14 w-14 rounded-xl object-cover flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{item.product_name}</p>
+                            {item.additionals?.length > 0 && (
+                                <p className="text-xs text-accent">+ {item.additionals.map(a => a.name).join(", ")}</p>
+                            )}
+                            {item.observation && <p className="text-xs text-muted-foreground italic">"{item.observation}"</p>}
                             <p className="text-sm text-muted-foreground">R$ {item.price.toFixed(2)}</p>
                         </div>
-                        <div className="flex items-center gap-1">
-                            <button onClick={() => updateQuantity(item.product_id, item.quantity - 1)} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted" data-testid={`decrease-${item.product_id}`}>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                            <button onClick={() => updateQuantity(item.cart_id, item.quantity - 1)} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted" data-testid={`decrease-${item.cart_id}`}>
                                 <Minus className="h-3 w-3" />
                             </button>
                             <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.product_id, item.quantity + 1)} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted" data-testid={`increase-${item.product_id}`}>
+                            <button onClick={() => updateQuantity(item.cart_id, item.quantity + 1)} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted" data-testid={`increase-${item.cart_id}`}>
                                 <Plus className="h-3 w-3" />
                             </button>
                         </div>
@@ -101,12 +217,14 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
     );
 }
 
+/* ============ MENU PAGE ============ */
 export default function MenuPage() {
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [search, setSearch] = useState("");
     const [cartOpen, setCartOpen] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
     const { items, addItem, removeItem, updateQuantity, total, itemCount } = useCart();
     const navigate = useNavigate();
 
@@ -124,7 +242,11 @@ export default function MenuPage() {
         axios.get(`${API}/products?${params}`).then(res => setProducts(res.data));
     }, [selectedCategory, search]);
 
-    const handleAddItem = (product) => { addItem(product); toast.success("Item adicionado ao carrinho!"); };
+    const handleAddItem = (product, quantity, additionals, observation) => {
+        addItem(product, quantity, additionals, observation);
+        toast.success("Item adicionado ao carrinho!");
+    };
+
     const selectedCat = categories.find(c => c.id === selectedCategory);
 
     return (
@@ -152,7 +274,7 @@ export default function MenuPage() {
                         <Button variant="outline" size="sm" onClick={() => navigate("/admin/login")} data-testid="admin-login-btn" className="rounded-full">Entrar</Button>
                         <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                             <SheetTrigger asChild>
-                                <Button className="md:hidden relative bg-primary text-primary-foreground rounded-full" size="icon" data-testid="mobile-cart-btn">
+                                <Button className="lg:hidden relative bg-primary text-primary-foreground rounded-full" size="icon" data-testid="mobile-cart-btn">
                                     <ShoppingCart className="h-5 w-5" />
                                     {itemCount > 0 && <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">{itemCount}</span>}
                                 </Button>
@@ -218,7 +340,7 @@ export default function MenuPage() {
                             </div>
                         )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                            {products.map(product => <ProductCard key={product.id} product={product} onAdd={handleAddItem} />)}
+                            {products.map(product => <ProductCard key={product.id} product={product} onClick={setSelectedProduct} />)}
                         </div>
                         {products.length === 0 && (
                             <div className="text-center py-16">
@@ -250,6 +372,9 @@ export default function MenuPage() {
                     </Button>
                 </div>
             )}
+
+            {/* Product Detail Modal */}
+            <ProductDetailModal product={selectedProduct} open={!!selectedProduct} onClose={() => setSelectedProduct(null)} onAdd={handleAddItem} />
         </div>
     );
 }
