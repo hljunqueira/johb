@@ -7,7 +7,7 @@ import { ClipboardList, Package, Users, BarChart3, Truck, LogOut, Menu, Moon, Su
 
 const navItems = [
     { to: "/admin/pedidos", icon: ClipboardList, label: "Pedidos" },
-    { to: "/admin/produtos", icon: Package, label: "Produtos" },
+    { to: "/admin/produtos", icon: Package, label: "Cardapio" },
     { to: "/admin/clientes", icon: Users, label: "Clientes" },
     { to: "/admin/relatorios", icon: BarChart3, label: "Relatorios" },
     { to: "/admin/entrega", icon: Truck, label: "Entrega" },
