@@ -84,6 +84,13 @@ export default function AdminProductsPage() {
     const openNew = () => { setEditingProduct(null); setForm(emptyProduct); setShowForm(true); };
 
     const toggleTag = (tag) => setForm(f => ({ ...f, tags: f.tags.includes(tag) ? f.tags.filter(t => t !== tag) : [...f.tags, tag] }));
+    const [newTag, setNewTag] = useState("");
+    const addCustomTag = () => {
+        const tag = newTag.trim().toLowerCase().replace(/\s+/g, "_");
+        if (tag && !form.tags.includes(tag)) { setForm(f => ({ ...f, tags: [...f.tags, tag] })); }
+        setNewTag("");
+    };
+    const removeTag = (tag) => setForm(f => ({ ...f, tags: f.tags.filter(t => t !== tag) }));
 
     const getCategoryName = (id) => categories.find(c => c.id === id)?.name || "";
 
