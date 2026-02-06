@@ -183,7 +183,11 @@ async def resolve_product_complements(products):
     comp_map = {c["id"]: c for c in comps}
     for p in products:
         if p.get("complement_ids"):
-            p["additionals"] = [{"name": comp_map[cid]["name"], "price": comp_map[cid]["price"], "id": cid} for cid in p["complement_ids"] if cid in comp_map]
+            # Include category for grouping in frontend
+            p["additionals"] = [
+                {"name": comp_map[cid]["name"], "price": comp_map[cid]["price"], "id": cid, "category": comp_map[cid].get("category", "")} 
+                for cid in p["complement_ids"] if cid in comp_map
+            ]
     return products
 
 # ==================== PUBLIC ROUTES ====================
