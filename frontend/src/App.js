@@ -10,7 +10,7 @@ import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import OrderHistoryPage from "@/pages/OrderHistoryPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminOrdersPage from "@/pages/AdminOrdersPage";
-import AdminProductsPage from "@/pages/AdminProductsPage";
+import AdminCardapioPage from "@/pages/AdminCardapioPage";
 import AdminCustomersPage from "@/pages/AdminCustomersPage";
 import AdminReportsPage from "@/pages/AdminReportsPage";
 import AdminDeliveryPage from "@/pages/AdminDeliveryPage";
