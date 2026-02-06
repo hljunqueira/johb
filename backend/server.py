@@ -110,6 +110,30 @@ class PixSettingsUpdate(BaseModel):
     pix_name: str = ""
     qr_code_url: str = ""
 
+class ComplementCreate(BaseModel):
+    name: str
+    price: float
+    description: str = ""
+    active: bool = True
+
+class ComplementUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    description: Optional[str] = None
+    active: Optional[bool] = None
+
+class MenuCreate(BaseModel):
+    name: str
+    description: str = ""
+    category_ids: List[str] = []
+    active: bool = True
+
+class MenuUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category_ids: Optional[List[str]] = None
+    active: Optional[bool] = None
+
 # ==================== AUTH ====================
 async def get_current_admin(request: Request):
     token = None
