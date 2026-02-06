@@ -166,13 +166,28 @@ export default function AdminProductsPage() {
                         </div>
                         <div>
                             <Label>Tags</Label>
-                            <div className="flex flex-wrap gap-2 mt-1">
+                            <div className="flex flex-wrap gap-2 mt-1 mb-2">
                                 {["vegano", "leve", "mais_pedido", "recomendado"].map(tag => (
                                     <button key={tag} type="button" onClick={() => toggleTag(tag)}
                                         className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${form.tags.includes(tag) ? "bg-primary text-white" : "bg-muted text-foreground"}`}>
                                         {tag}
                                     </button>
                                 ))}
+                            </div>
+                            {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                    {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).map(tag => (
+                                        <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent/15 text-accent">
+                                            <Tag className="h-3 w-3" />{tag}
+                                            <button type="button" onClick={() => removeTag(tag)} className="hover:text-destructive"><X className="h-3 w-3" /></button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="flex gap-2">
+                                <Input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Nova tag customizada..." className="rounded-lg flex-1 text-sm" data-testid="new-tag-input"
+                                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }} />
+                                <Button type="button" size="sm" variant="outline" onClick={addCustomTag} className="rounded-lg" data-testid="add-tag-btn"><Plus className="h-3 w-3 mr-1" />Tag</Button>
                             </div>
                         </div>
                         <Button type="submit" className="w-full bg-primary text-white rounded-full" data-testid="save-product-btn">
