@@ -36,11 +36,14 @@ function ProductCard({ product, onAdd }) {
             <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                 <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                 <div className="absolute top-3 left-3 flex flex-wrap gap-1">
-                    {product.tags?.map(tag => (
-                        <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${tagLabels[tag]?.color || "bg-gray-100 text-gray-600"}`}>
-                            {tagLabels[tag]?.label || tag}
-                        </span>
-                    ))}
+                    {product.tags?.map(tag => {
+                        const style = getTagStyle(tag);
+                        return (
+                            <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.color}`}>
+                                {style.label}
+                            </span>
+                        );
+                    })}
                 </div>
             </div>
             <div className="p-4">
