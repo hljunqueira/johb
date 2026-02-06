@@ -94,9 +94,13 @@ export default function CheckoutPage() {
                         <h2 className="font-semibold font-heading mb-3">Resumo do Pedido</h2>
                         <div className="space-y-2.5">
                             {items.map(item => (
-                                <div key={item.product_id} className="flex items-center gap-3">
+                                <div key={item.cart_id} className="flex items-center gap-3">
                                     <img src={getImageUrl(item.image_url)} alt="" className="h-11 w-11 rounded-lg object-cover" />
-                                    <div className="flex-1"><p className="text-sm font-medium">{item.quantity}x {item.product_name}</p></div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium">{item.quantity}x {item.product_name}</p>
+                                        {item.additionals?.length > 0 && <p className="text-xs text-accent">+ {item.additionals.map(a => a.name).join(", ")}</p>}
+                                        {item.observation && <p className="text-xs text-muted-foreground italic">"{item.observation}"</p>}
+                                    </div>
                                     <span className="text-sm font-medium">R$ {(item.price * item.quantity).toFixed(2)}</span>
                                 </div>
                             ))}
