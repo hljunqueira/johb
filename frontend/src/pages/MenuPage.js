@@ -26,6 +26,8 @@ const tagLabels = {
     recomendado: { label: "Recomendado", color: "bg-amber-100 text-amber-700" }
 };
 
+const getTagStyle = (tag) => tagLabels[tag] || { label: tag, color: "bg-purple-100 text-purple-700" };
+
 const catIcons = { salad: "leaf", bowl: "soup", juice: "glass-water", dessert: "cake-slice" };
 
 function ProductCard({ product, onAdd }) {
