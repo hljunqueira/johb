@@ -56,8 +56,6 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         }
     }, [open]);
 
-    if (!product) return null;
-
     const toggleAdditional = useCallback((add) => {
         setSelectedAdditionals(prev =>
             prev.find(a => a.name === add.name) ? prev.filter(a => a.name !== add.name) : [...prev, add]
@@ -72,6 +70,9 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         onAdd(product, quantity, selectedAdditionals, observation);
         onClose();
     }, [product, quantity, selectedAdditionals, observation, onAdd, onClose]);
+
+    // Return null if no product (after all hooks)
+    if (!product) return null;
 
     // Group additionals by category
     const groupedAdditionals = {};
