@@ -13,7 +13,7 @@ COPY . .
 
 # Build como CLIENTE
 ENV REACT_APP_MODE=cliente
-ENV REACT_APP_BACKEND_URL=http://76.13.171.93:8003
+ENV REACT_APP_BACKEND_URL=http://76.13.171.93:8001
 RUN npm run build
 
 # Production Stage
