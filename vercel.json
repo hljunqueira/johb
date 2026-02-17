@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm install --legacy-peer-deps && npm install ajv@^8.0.0 --legacy-peer-deps && npm run build",
+  "outputDirectory": "frontend/build",
+  "framework": "create-react-app",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
+    }
+  ],
+  "env": {
+    "REACT_APP_BACKEND_URL": "http://76.13.171.93:8003"
+  }
+}

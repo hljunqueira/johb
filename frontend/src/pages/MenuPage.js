@@ -1,15 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "@/context/CartContext";
+import { useFavorites } from "@/context/FavoritesContext";
+import { useCustomer } from "@/context/CustomerContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, MessageCircle, Salad, UtensilsCrossed, Coffee } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -40,44 +42,42 @@ const complementCategories = {
     temperos: { label: "Temperos", order: 6, icon: "🧂" }
 };
 
-const categoryIcons = {
-    "Monte sua Salada": <Salad className="h-4 w-4" />,
-    "Saladas Prontas": <Leaf className="h-4 w-4" />,
-    "Lanches Frios": <UtensilsCrossed className="h-4 w-4" />,
-    "Bebidas": <Coffee className="h-4 w-4" />
-};
-
 /* ============ PRODUCT DETAIL MODAL ============ */
-function ProductDetailModal({ product, open, onClose, onAdd }) {
+const ProductDetailModal = memo(function ProductDetailModal({ product, open, onClose, onAdd }) {
     const [selectedAdditionals, setSelectedAdditionals] = useState([]);
     const [quantity, setQuantity] = useState(1);
     const [observation, setObservation] = useState("");
 
     useEffect(() => {
-        if (open) { setSelectedAdditionals([]); setQuantity(1); setObservation(""); }
+        if (open) { 
+            setSelectedAdditionals([]); 
+            setQuantity(1); 
+            setObservation(""); 
+        }
     }, [open]);
 
     if (!product) return null;
 
-    const toggleAdditional = (add) => {
+    const toggleAdditional = useCallback((add) => {
         setSelectedAdditionals(prev =>
             prev.find(a => a.name === add.name) ? prev.filter(a => a.name !== add.name) : [...prev, add]
         );
-    };
+    }, []);
 
     const addPrice = selectedAdditionals.reduce((s, a) => s + a.price, 0);
     const unitTotal = product.price + addPrice;
     const totalPrice = unitTotal * quantity;
 
-    const handleAdd = () => {
+    const handleAdd = useCallback(() => {
         onAdd(product, quantity, selectedAdditionals, observation);
         onClose();
-    };
+    }, [product, quantity, selectedAdditionals, observation, onAdd, onClose]);
 
     // Group additionals by category
     const groupedAdditionals = {};
-    if (product.additionals?.length > 0) {
-        product.additionals.forEach(add => {
+    const additionals = Array.isArray(product.additionals) ? product.additionals : [];
+    if (additionals.length > 0) {
+        additionals.forEach(add => {
             const cat = add.category || "outros";
             if (!groupedAdditionals[cat]) groupedAdditionals[cat] = [];
             groupedAdditionals[cat].push(add);
@@ -87,29 +87,32 @@ function ProductDetailModal({ product, open, onClose, onAdd }) {
         (complementCategories[a]?.order ?? 99) - (complementCategories[b]?.order ?? 99)
     );
 
-    const isCustomizable = product.tags?.includes("personalizavel") || product.additionals?.length > 0;
+    const isCustomizable = product.tags?.includes("personalizavel") || additionals.length > 0;
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="p-0 rounded-2xl overflow-hidden max-w-lg max-h-[90vh] overflow-y-auto" data-testid="product-detail-modal">
-                {/* Image */}
-                <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                    <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover" />
-                    <div className="absolute top-3 left-3 flex flex-wrap gap-1">
-                        {product.tags?.map(tag => {
-                            const style = getTagStyle(tag);
-                            return <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.color}`}>{style.label}</span>;
-                        })}
-                    </div>
+            <DialogContent className="p-0 rounded-2xl overflow-hidden max-w-lg max-h-[90vh] overflow-y-auto !block !gap-0" data-testid="product-detail-modal">
+                <DialogTitle className="sr-only">{product?.name || "Detalhes do produto"}</DialogTitle>
+                {/* Image - Proporção compacta */}
+                <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted max-h-[180px] flex-shrink-0">
+                    <img 
+                        src={getImageUrl(product.image_url)} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.target.src = "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=600";
+                        }}
+                    />
                 </div>
 
-                <div className="p-5 space-y-4">
-                    {/* Name & Price */}
+                <div className="p-4 space-y-3">
+                    {/* Name, Price & Description */}
                     <div>
-                        <div className="flex justify-between items-start">
-                            <h2 className="text-xl font-bold font-heading text-foreground">{product.name}</h2>
-                            <span className="text-xl font-bold text-primary whitespace-nowrap ml-3">R$ {product.price.toFixed(2)}</span>
+                        <div className="flex justify-between items-start gap-2">
+                            <h2 className="text-lg font-bold font-heading text-foreground flex-1">{product.name}</h2>
+                            <span className="text-lg font-bold text-primary whitespace-nowrap">R$ {product.price.toFixed(2)}</span>
                         </div>
+                        {/* Descrição abaixo do nome */}
                         <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
                     </div>
 
@@ -123,24 +126,57 @@ function ProductDetailModal({ product, open, onClose, onAdd }) {
                                 const catInfo = complementCategories[catKey] || { label: catKey, icon: "+" };
                                 const items = groupedAdditionals[catKey];
                                 
+                                const hasRequired = items.some(add => add.required);
+                                const catMinSelect = items[0]?.min_select || 0;
+                                const catMaxSelect = items[0]?.max_select || 1;
+                                
                                 return (
                                     <div key={catKey} className="space-y-2">
                                         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                                             <span>{catInfo.icon}</span>
                                             <span>{catInfo.label}</span>
+                                            {hasRequired && (
+                                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Obrigatório</span>
+                                            )}
+                                            {!hasRequired && catMaxSelect > 1 && (
+                                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Até {catMaxSelect}</span>
+                                            )}
                                         </div>
                                         <div className="grid grid-cols-1 gap-2">
                                             {items.map(add => {
                                                 const isSelected = selectedAdditionals.find(a => a.name === add.name);
+                                                const isRequired = add.required;
+                                                const selectionInfo = add.min_select > 0 
+                                                    ? `Mínimo ${add.min_select}` 
+                                                    : add.max_select > 1 
+                                                        ? `Até ${add.max_select}` 
+                                                        : null;
                                                 return (
                                                     <button key={add.name} type="button" onClick={() => toggleAdditional(add)}
                                                         data-testid={`additional-${add.name.replace(/\s+/g, '-').toLowerCase()}`}
-                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5" : isRequired ? "border-amber-300 bg-amber-50/30" : "border-border hover:border-primary/30"}`}>
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
-                                                                {isSelected && <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                            {/* Foto do complemento */}
+                                                            {add.image_url ? (
+                                                                <img 
+                                                                    src={getImageUrl(add.image_url)} 
+                                                                    alt={add.name}
+                                                                    className="h-10 w-10 rounded-lg object-cover border border-border"
+                                                                />
+                                                            ) : (
+                                                                <div className={`h-10 w-10 rounded-lg border-2 flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30 bg-muted"}`}>
+                                                                    {isSelected && <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                </div>
+                                                            )}
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-medium">{add.name}</span>
+                                                                {isRequired && (
+                                                                    <span className="text-xs text-amber-600 font-medium">Obrigatório</span>
+                                                                )}
+                                                                {selectionInfo && !isRequired && (
+                                                                    <span className="text-xs text-muted-foreground">{selectionInfo}</span>
+                                                                )}
                                                             </div>
-                                                            <span className="text-sm font-medium">{add.name}</span>
                                                         </div>
                                                         <span className="text-sm font-semibold text-primary">
                                                             {add.price > 0 ? `+ R$ ${add.price.toFixed(2)}` : "Gratis"}
@@ -184,43 +220,7 @@ function ProductDetailModal({ product, open, onClose, onAdd }) {
             </DialogContent>
         </Dialog>
     );
-}
-
-/* ============ PRODUCT CARD ============ */
-function ProductCard({ product, onClick }) {
-    const hasAdditionals = product.additionals?.length > 0;
-    const isCustomizable = product.tags?.includes("personalizavel");
-    
-    return (
-        <div className="product-card bg-white rounded-2xl border border-border/50 overflow-hidden group cursor-pointer" onClick={() => onClick(product)} data-testid={`product-${product.id}`}>
-            <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                <div className="absolute top-3 left-3 flex flex-wrap gap-1">
-                    {product.tags?.map(tag => {
-                        const style = getTagStyle(tag);
-                        return <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.color}`}>{style.label}</span>;
-                    })}
-                </div>
-                {(hasAdditionals || isCustomizable) && (
-                    <div className="absolute bottom-3 right-3">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-foreground shadow-sm">Personalizavel</span>
-                    </div>
-                )}
-            </div>
-            <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-foreground font-heading">{product.name}</h3>
-                    <span className="font-bold text-foreground whitespace-nowrap ml-2">R$ {product.price.toFixed(2)}</span>
-                </div>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
-                <Button className="w-full bg-accent hover:bg-accent/90 text-white rounded-full font-medium" data-testid={`add-${product.id}`}
-                    onClick={(e) => { e.stopPropagation(); onClick(product); }}>
-                    <Plus className="h-4 w-4 mr-1" /> {(hasAdditionals || isCustomizable) ? "Escolher opcionais" : "Adicionar"}
-                </Button>
-            </div>
-        </div>
-    );
-}
+});
 
 /* ============ CART CONTENT ============ */
 function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout }) {
@@ -268,63 +268,333 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
     );
 }
 
+/* ============ PRODUCT CARD ============ */
+function ProductCard({ product, onClick, backendUrl }) {
+    const { toggleFavorite, isFavorite } = useFavorites();
+    const favorite = isFavorite(product.id);
+
+    const getImageUrl = (url) => {
+        if (!url) return "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=400";
+        if (url.startsWith("http")) return url;
+        return `${backendUrl}${url}`;
+    };
+
+    const hasOpcionais = (Array.isArray(product.additionals) && product.additionals.length > 0) || 
+                             (Array.isArray(product.complement_ids) && product.complement_ids.length > 0);
+
+    const handleFavoriteClick = (e) => {
+        e.stopPropagation();
+        toggleFavorite(product);
+    };
+
+    return (
+        <div 
+            onClick={() => onClick(product)}
+            className="bg-white rounded-2xl border border-border overflow-hidden cursor-pointer hover:shadow-lg transition-shadow group"
+            data-testid={`product-${product.id}`}
+        >
+            <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                <img 
+                    src={getImageUrl(product.image_url)} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                />
+                {product.tags?.includes("mais_pedido") && (
+                    <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        Popular
+                    </div>
+                )}
+                {hasOpcionais && (
+                    <div className="absolute bottom-2 right-2 bg-primary/90 text-white text-xs px-2 py-1 rounded-full">
+                        Personalizável
+                    </div>
+                )}
+                {/* Botão de Favorito */}
+                <button
+                    onClick={handleFavoriteClick}
+                    className={`absolute top-2 right-2 p-2 rounded-full transition-all ${
+                        favorite 
+                            ? "bg-red-500 text-white" 
+                            : "bg-white/80 text-muted-foreground hover:bg-white hover:text-red-500"
+                    }`}
+                >
+                    <Heart className={`h-4 w-4 ${favorite ? "fill-current" : ""}`} />
+                </button>
+            </div>
+            <div className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold font-heading text-foreground line-clamp-1">{product.name}</h3>
+                    <span className="font-bold text-primary whitespace-nowrap ml-2">R$ {product.price?.toFixed(2)}</span>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{product.description}</p>
+                <div className="flex flex-wrap gap-1">
+                    {product.tags?.slice(0, 3).map(tag => {
+                        const style = getTagStyle(tag);
+                        return (
+                            <span key={tag} className={`px-2 py-0.5 rounded-full text-xs ${style.color}`}>
+                                {style.label}
+                            </span>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ============ MENU PAGE ============ */
+/* ============ LOGIN MODAL ============ */
+function LoginModal({ open, onClose, onLogin }) {
+    const [phone, setPhone] = useState("");
+    const [name, setName] = useState("");
+    const [step, setStep] = useState("phone"); // phone | name
+    const [loading, setLoading] = useState(false);
+
+    const formatPhone = (value) => {
+        const numbers = value.replace(/\D/g, "");
+        if (numbers.length <= 2) return numbers;
+        if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+        return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+    };
+
+    const handlePhoneSubmit = (e) => {
+        e.preventDefault();
+        const cleanPhone = phone.replace(/\D/g, "");
+        if (cleanPhone.length < 10) {
+            toast.error("Digite um telefone válido");
+            return;
+        }
+        setStep("name");
+    };
+
+    const handleNameSubmit = async (e) => {
+        e.preventDefault();
+        if (!name.trim()) {
+            toast.error("Digite seu nome");
+            return;
+        }
+        setLoading(true);
+        const result = await onLogin(phone.replace(/\D/g, ""), name.trim());
+        setLoading(false);
+        if (result.success) {
+            toast.success(result.isNew ? "Bem-vindo!" : "Bem-vindo de volta!");
+            onClose();
+        } else {
+            toast.error("Erro ao fazer login");
+        }
+    };
+
+    const handleClose = () => {
+        setPhone("");
+        setName("");
+        setStep("phone");
+        onClose();
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={handleClose}>
+            <DialogContent className="sm:max-w-md bg-white">
+                <div className="text-center py-4">
+                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                        <User className="h-8 w-8 text-primary" />
+                    </div>
+                    <h2 className="text-xl font-bold font-heading mb-2">
+                        {step === "phone" ? "Identifique-se" : "Como podemos te chamar?"}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                        {step === "phone" 
+                            ? "Digite seu telefone para acessar seus favoritos e histórico" 
+                            : "Digite seu nome para personalizar sua experiência"}
+                    </p>
+                </div>
+
+                {step === "phone" ? (
+                    <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                        <div>
+                            <Input
+                                type="tel"
+                                placeholder="(11) 99999-9999"
+                                value={phone}
+                                onChange={e => setPhone(formatPhone(e.target.value))}
+                                maxLength={15}
+                                className="text-center text-lg"
+                                autoFocus
+                            />
+                        </div>
+                        <Button type="submit" className="w-full bg-primary text-white rounded-full">
+                            Continuar
+                        </Button>
+                        <Button type="button" variant="ghost" className="w-full" onClick={handleClose}>
+                            Pular por enquanto
+                        </Button>
+                    </form>
+                ) : (
+                    <form onSubmit={handleNameSubmit} className="space-y-4">
+                        <div>
+                            <Input
+                                type="text"
+                                placeholder="Seu nome"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                className="text-center"
+                                autoFocus
+                            />
+                        </div>
+                        <Button type="submit" className="w-full bg-primary text-white rounded-full" disabled={loading}>
+                            {loading ? "Entrando..." : "Entrar"}
+                        </Button>
+                        <Button type="button" variant="ghost" className="w-full" onClick={() => setStep("phone")}>
+                            Voltar
+                        </Button>
+                    </form>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+/* ============ REORDER SECTION ============ */
+function ReorderSection({ suggestions, onReorder }) {
+    if (!suggestions || suggestions.length === 0) return null;
+
+    return (
+        <div className="mb-8 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl p-5 border border-primary/10">
+            <div className="flex items-center gap-2 mb-4">
+                <RotateCcw className="h-5 w-5 text-primary" />
+                <h2 className="font-bold font-heading text-lg">Pedir Novamente</h2>
+                <span className="text-xs text-muted-foreground ml-auto">Baseado nos seus pedidos</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {suggestions.map(product => (
+                    <button
+                        key={product.product_id}
+                        onClick={() => onReorder(product)}
+                        className="flex-shrink-0 w-36 bg-white rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow text-left"
+                    >
+                        <div className="h-24 bg-muted">
+                            <img 
+                                src={getImageUrl(product.image_url)} 
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                        <div className="p-3">
+                            <p className="font-medium text-sm line-clamp-1">{product.name}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Pedido {product.times_ordered}x
+                            </p>
+                            <p className="font-bold text-primary text-sm mt-1">
+                                R$ {product.price?.toFixed(2)}
+                            </p>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function MenuPage() {
+    const [menus, setMenus] = useState([]);
+    const [selectedMenu, setSelectedMenu] = useState(null);
     const [categories, setCategories] = useState([]);
-    const [productsByCategory, setProductsByCategory] = useState({});
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [products, setProducts] = useState([]);
     const [search, setSearch] = useState("");
     const [cartOpen, setCartOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [loginModalOpen, setLoginModalOpen] = useState(false);
+    
     const { items, addItem, removeItem, updateQuantity, total, itemCount } = useCart();
+    const { favorites } = useFavorites();
+    const { customer, isLoggedIn, login, reorderSuggestions } = useCustomer();
     const navigate = useNavigate();
 
-    // Load all data on mount
+    // Load menus on mount
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchMenus = async () => {
             try {
                 setLoading(true);
-                // Get categories
-                const catsRes = await axios.get(`${API}/categories`);
-                const cats = catsRes.data;
-                setCategories(cats);
+                const res = await axios.get(`${API}/menus`);
+                const menusData = Array.isArray(res.data) ? res.data : [];
+                setMenus(menusData);
                 
-                if (cats.length > 0) {
-                    setSelectedCategory(cats[0].id);
-                    
-                    // Get all products
-                    const prodsRes = await axios.get(`${API}/products`);
-                    const allProducts = prodsRes.data;
-                    
-                    // Group products by category
-                    const grouped = {};
-                    cats.forEach(cat => {
-                        grouped[cat.id] = allProducts.filter(p => p.category_id === cat.id);
-                    });
-                    setProductsByCategory(grouped);
+                const activeMenu = menusData.find(m => m.active) || menusData[0];
+                if (activeMenu) {
+                    setSelectedMenu(activeMenu.id);
                 }
             } catch (err) {
-                console.error("Error fetching menu:", err);
-                toast.error("Erro ao carregar cardapio");
+                console.error("Error fetching menus:", err);
+                toast.error("Erro ao carregar menus");
             } finally {
                 setLoading(false);
             }
         };
-        fetchData();
+        fetchMenus();
     }, []);
+
+    // Load categories when menu is selected
+    useEffect(() => {
+        if (!selectedMenu) return;
+        
+        const fetchCategories = async () => {
+            try {
+                const res = await axios.get(`${API}/menus/${selectedMenu}/categories`);
+                const cats = Array.isArray(res.data) ? res.data : [];
+                setCategories(cats);
+                
+                if (cats.length > 0) {
+                    setSelectedCategory(cats[0].id);
+                } else {
+                    setSelectedCategory(null);
+                    setProducts([]);
+                }
+            } catch (err) {
+                console.error("Error fetching categories:", err);
+                toast.error("Erro ao carregar categorias");
+            }
+        };
+        fetchCategories();
+    }, [selectedMenu]);
+
+    // Load products when category is selected
+    useEffect(() => {
+        if (!selectedCategory) {
+            setProducts([]);
+            return;
+        }
+        
+        const fetchProducts = async () => {
+            try {
+                const res = await axios.get(`${API}/categories/${selectedCategory}/products`);
+                let prods = Array.isArray(res.data) ? res.data : [];
+                setProducts(prods);
+            } catch (err) {
+                console.error("Error fetching products:", err);
+                toast.error("Erro ao carregar produtos");
+            }
+        };
+        fetchProducts();
+    }, [selectedCategory]);
+
+    // Filter products by search
+    const filteredProducts = useMemo(() => {
+        if (!search) return products;
+        return products.filter(p => 
+            p.name.toLowerCase().includes(search.toLowerCase()) ||
+            p.description?.toLowerCase().includes(search.toLowerCase())
+        );
+    }, [products, search]);
 
     const handleAddItem = (product, quantity, additionals, observation) => {
         addItem(product, quantity, additionals, observation);
         toast.success("Item adicionado ao carrinho!");
     };
 
-    const selectedCat = categories.find(c => c.id === selectedCategory);
-    
-    // Filter products by search
-    const currentProducts = (productsByCategory[selectedCategory] || []).filter(p => 
-        !search || p.name.toLowerCase().includes(search.toLowerCase())
-    );
+    // Get current menu and category names
+    const currentMenu = menus.find(m => m.id === selectedMenu);
+    const currentCategory = categories.find(c => c.id === selectedCategory);
 
     if (loading) {
         return (
@@ -337,13 +607,26 @@ export default function MenuPage() {
         );
     }
 
+    // Mostrar mensagem quando não há menus cadastrados
+    if (menus.length === 0) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="text-center max-w-md mx-auto px-4">
+                    <Layers className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h2 className="text-xl font-bold font-heading mb-2">Cardapio em preparação</h2>
+                    <p className="text-muted-foreground mb-4">Nosso cardapio está sendo montado. Volte em breve!</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-background" data-testid="menu-page">
             {/* Header */}
             <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <img src="https://customer-assets.emergentagent.com/job_soul-delivery/artifacts/3puvg49l_IMG_1929.jpeg" alt="Salada Soul" className="h-10 w-10 rounded-full object-cover" />
+                        <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">SS</div>
                         <div className="hidden sm:block">
                             <h1 className="font-bold text-lg text-foreground font-heading leading-tight">Salada Soul</h1>
                             <p className="text-xs text-muted-foreground">Nutre o corpo, alimenta a alma</p>
@@ -352,17 +635,39 @@ export default function MenuPage() {
                     <div className="hidden md:flex flex-1 max-w-md mx-4">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input data-testid="search-input" placeholder="Buscar saladas, bowls..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 rounded-full border-border bg-white" />
+                            <Input 
+                                data-testid="search-input" 
+                                placeholder="Buscar produtos..." 
+                                value={search} 
+                                onChange={e => setSearch(e.target.value)} 
+                                className="pl-10 rounded-full border-border bg-white" 
+                            />
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* Botão de Login ou Nome do Cliente */}
+                        {isLoggedIn ? (
+                            <Button variant="ghost" size="sm" className="text-foreground hidden sm:flex" onClick={() => navigate("/historico")}>
+                                <User className="h-4 w-4 mr-1" />
+                                {customer?.name?.split(" ")[0]}
+                            </Button>
+                        ) : (
+                            <Button variant="ghost" size="sm" onClick={() => setLoginModalOpen(true)} className="text-foreground hidden sm:flex">
+                                <User className="h-4 w-4 mr-1" />
+                                Entrar
+                            </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => navigate("/favoritos")} data-testid="favorites-btn" className="text-foreground hidden sm:flex">
+                            <Heart className="h-4 w-4 mr-1" /> 
+                            Favoritos
+                            {favorites.length > 0 && <Badge className="ml-1 bg-red-500 text-white">{favorites.length}</Badge>}
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => navigate("/historico")} data-testid="history-btn" className="text-foreground hidden sm:flex">
                             <Clock className="h-4 w-4 mr-1" /> Historico
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => navigate("/admin/login")} data-testid="admin-login-btn" className="rounded-full">Entrar</Button>
                         <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                             <SheetTrigger asChild>
-                                <Button className="lg:hidden relative bg-primary text-primary-foreground rounded-full" size="icon" data-testid="mobile-cart-btn">
+                                <Button className="relative bg-primary text-primary-foreground rounded-full" size="icon" data-testid="mobile-cart-btn">
                                     <ShoppingCart className="h-5 w-5" />
                                     {itemCount > 0 && <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">{itemCount}</span>}
                                 </Button>
@@ -379,91 +684,159 @@ export default function MenuPage() {
                 <div className="md:hidden px-4 pb-3">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 rounded-full" data-testid="mobile-search" />
+                        <Input 
+                            placeholder="Buscar produtos..." 
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)} 
+                            className="pl-10 rounded-full" 
+                            data-testid="mobile-search" 
+                        />
                     </div>
                 </div>
             </header>
 
-            {/* Mobile categories */}
-            <div className="md:hidden overflow-x-auto scrollbar-hide px-4 py-3 flex gap-2 bg-white border-b border-border">
-                {categories.map(cat => (
-                    <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} data-testid={`mobile-cat-${cat.id}`}
-                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === cat.id ? "bg-primary text-white" : "bg-muted text-foreground hover:bg-muted/80"}`}>
-                        {cat.name}
-                    </button>
-                ))}
-            </div>
-
-            {/* Main */}
+            {/* Main Content - Hierarquia: Menu → Categoria → Produto */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <div className="flex gap-8">
-                    {/* Desktop Sidebar */}
-                    <aside className="hidden md:block w-60 flex-shrink-0">
-                        <div className="sticky top-24 bg-white rounded-2xl border border-border p-5 shadow-sm">
-                            <h2 className="font-semibold text-base font-heading mb-1">Cardapio</h2>
-                            <p className="text-xs text-muted-foreground mb-4">Navegar Categorias</p>
-                            <nav className="space-y-1">
-                                {categories.map(cat => (
-                                    <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} data-testid={`cat-${cat.id}`}
-                                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-sm font-medium transition-all ${selectedCategory === cat.id ? "bg-primary text-white shadow-md" : "text-foreground hover:bg-muted"}`}>
-                                        {categoryIcons[cat.name] || <Leaf className="h-4 w-4" />}
-                                        {cat.name}
+                
+                {/* ===== MENU SELECTOR (visível apenas se houver mais de 1 menu) ===== */}
+                {menus.length > 1 && (
+                    <div className="mb-6">
+                        <h2 className="text-sm font-medium text-muted-foreground mb-3">Selecione o Menu</h2>
+                        <div className="flex flex-wrap gap-2">
+                            {menus.map(menu => (
+                                <button
+                                    key={menu.id}
+                                    onClick={() => setSelectedMenu(menu.id)}
+                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                                        selectedMenu === menu.id
+                                            ? "bg-primary text-white shadow-md"
+                                            : "bg-white border border-border text-foreground hover:border-primary/50"
+                                    }`}
+                                >
+                                    {menu.icon && <span>{menu.icon}</span>}
+                                    {menu.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ===== BREADCRUMB / HEADER DO MENU ===== */}
+                {currentMenu && (
+                    <div className="mb-6">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                            <span>Cardápio</span>
+                            <ChevronRight className="h-4 w-4" />
+                            <span className="font-medium text-foreground">{currentMenu.name}</span>
+                        </div>
+                        {currentMenu.description && (
+                            <p className="text-muted-foreground">{currentMenu.description}</p>
+                        )}
+                    </div>
+                )}
+
+                {/* ===== CATEGORY TABS ===== */}
+                {categories.length > 0 ? (
+                    <div className="mb-8">
+                        <div className="border-b border-border mb-6">
+                            <div className="flex gap-1 overflow-x-auto pb-0 scrollbar-hide">
+                                {categories.map(category => (
+                                    <button
+                                        key={category.id}
+                                        onClick={() => setSelectedCategory(category.id)}
+                                        className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                                            selectedCategory === category.id
+                                                ? "border-primary text-primary"
+                                                : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                                        }`}
+                                    >
+                                        {category.name}
                                     </button>
                                 ))}
-                            </nav>
-                            <Separator className="my-5" />
-                            <div className="bg-muted rounded-xl p-4 text-center">
-                                <MessageCircle className="h-6 w-6 text-primary mx-auto mb-2" />
-                                <p className="text-sm font-medium">Precisa de Ajuda?</p>
-                                <p className="text-xs text-muted-foreground">Fale conosco</p>
                             </div>
                         </div>
-                    </aside>
 
-                    {/* Products */}
-                    <main className="flex-1 min-w-0">
-                        {selectedCat && (
+                        {/* ===== REORDER SUGGESTIONS (se logado) ===== */}
+                        {isLoggedIn && reorderSuggestions.length > 0 && (
+                            <ReorderSection 
+                                suggestions={reorderSuggestions} 
+                                onReorder={(product) => {
+                                    addItem(product, 1, [], "");
+                                    toast.success(`${product.name} adicionado ao carrinho!`);
+                                }}
+                            />
+                        )}
+
+                        {/* ===== CATEGORY HEADER ===== */}
+                        {currentCategory && (
                             <div className="mb-6">
-                                <h2 className="text-2xl md:text-3xl font-bold font-heading text-foreground">{selectedCat.name}</h2>
-                                <p className="text-muted-foreground mt-1 text-sm md:text-base">{selectedCat.description}</p>
+                                <h2 className="text-2xl font-bold font-heading text-foreground">
+                                    {currentCategory.name}
+                                </h2>
+                                {currentCategory.description && (
+                                    <p className="text-muted-foreground mt-1">{currentCategory.description}</p>
+                                )}
                             </div>
                         )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                            {currentProducts.map(product => <ProductCard key={product.id} product={product} onClick={setSelectedProduct} />)}
-                        </div>
-                        {currentProducts.length === 0 && (
-                            <div className="text-center py-16">
+
+                        {/* ===== PRODUCTS GRID ===== */}
+                        {filteredProducts.length > 0 ? (
+                            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {filteredProducts.map(product => (
+                                    <ProductCard 
+                                        key={product.id}
+                                        product={product}
+                                        onClick={setSelectedProduct}
+                                        backendUrl={BACKEND_URL}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-muted/30 rounded-2xl">
                                 <Leaf className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                 <p className="text-lg font-medium">Nenhum produto encontrado</p>
-                                <p className="text-muted-foreground text-sm">Tente buscar por outro termo</p>
+                                <p className="text-muted-foreground text-sm">
+                                    {search ? "Tente buscar por outro termo" : "Nenhum produto nesta categoria"}
+                                </p>
                             </div>
                         )}
-                    </main>
-
-                    {/* Desktop Cart */}
-                    <aside className="hidden lg:block w-80 flex-shrink-0">
-                        <div className="sticky top-24 bg-white rounded-2xl border border-border p-5 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="font-semibold text-base font-heading">Seu Pedido</h2>
-                                {itemCount > 0 && <Badge className="bg-accent text-white rounded-full text-xs">{itemCount} {itemCount === 1 ? "item" : "itens"}</Badge>}
-                            </div>
-                            <CartContent items={items} removeItem={removeItem} updateQuantity={updateQuantity} total={total} itemCount={itemCount} onCheckout={() => navigate("/checkout")} />
-                        </div>
-                    </aside>
-                </div>
+                    </div>
+                ) : (
+                    <div className="text-center py-12 bg-muted/30 rounded-2xl">
+                        <Grid3X3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-lg font-medium">Nenhuma categoria disponível</p>
+                        <p className="text-muted-foreground">Este menu ainda não possui categorias cadastradas</p>
+                    </div>
+                )}
             </div>
 
-            {/* Mobile floating cart */}
+            {/* Mobile floating checkout */}
             {itemCount > 0 && (
                 <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50">
-                    <Button onClick={() => navigate("/checkout")} className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-5 text-base font-semibold shadow-lg shadow-accent/30" data-testid="mobile-checkout-btn">
-                        Finalizar Pedido - R$ {total.toFixed(2)}
+                    <Button 
+                        onClick={() => navigate("/checkout")} 
+                        className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-5 text-base font-semibold shadow-lg shadow-accent/30" 
+                        data-testid="mobile-checkout-btn"
+                    >
+                        Ver Carrinho ({itemCount}) - R$ {total.toFixed(2)}
                     </Button>
                 </div>
             )}
 
-            {/* Product Detail Modal */}
-            <ProductDetailModal product={selectedProduct} open={!!selectedProduct} onClose={() => setSelectedProduct(null)} onAdd={handleAddItem} />
+            {/* Product Detail Modal - mostra os OPCIONAIS */}
+            <ProductDetailModal 
+                product={selectedProduct} 
+                open={!!selectedProduct} 
+                onClose={() => setSelectedProduct(null)} 
+                onAdd={handleAddItem} 
+            />
+
+            {/* Login Modal */}
+            <LoginModal 
+                open={loginModalOpen} 
+                onClose={() => setLoginModalOpen(false)} 
+                onLogin={login}
+            />
         </div>
     );
 }

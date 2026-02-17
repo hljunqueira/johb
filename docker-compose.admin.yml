@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  # Frontend Admin
+  frontend-admin:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.admin
+    container_name: saladasoul_frontend_admin
+    restart: always
+    ports:
+      - "3002:80"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    external: true
+    name: saladasoul_app_network

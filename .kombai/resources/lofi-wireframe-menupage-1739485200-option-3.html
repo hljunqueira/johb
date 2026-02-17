@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opção 3: Personalização e Tabs com AI Recommendations</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Comic Sans MS', cursive; 
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { 
+            background: white;
+            border-bottom: 3px solid #333;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo { 
+            width: 50px; 
+            height: 50px; 
+            background: #999; 
+            border: 2px solid #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .search-bar {
+            flex: 1;
+            max-width: 500px;
+            height: 40px;
+            border: 2px solid #333;
+            border-radius: 20px;
+            padding: 0 15px;
+            background: #f5f5f5;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: 2px solid #333;
+            background: #fff;
+            cursor: pointer;
+            border-radius: 6px;
+            font-family: 'Comic Sans MS', cursive;
+        }
+        .btn-primary {
+            background: #666;
+            color: white;
+        }
+        .tabs-container {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 12px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .tabs-header {
+            display: flex;
+            border-bottom: 2px solid #333;
+            background: #f5f5f5;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px 20px;
+            border-right: 2px solid #333;
+            cursor: pointer;
+            text-align: center;
+            background: #f5f5f5;
+        }
+        .tab:last-child { border-right: none; }
+        .tab.active {
+            background: white;
+            font-weight: bold;
+        }
+        .tab-content {
+            padding: 25px;
+        }
+        .personalization-box {
+            background: white;
+            border: 3px solid #666;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        .ingredient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        .ingredient-item {
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            background: #f5f5f5;
+        }
+        .ingredient-item.selected {
+            background: #666;
+            color: white;
+        }
+        .recommendation-card {
+            background: #fff3cd;
+            border: 3px dashed #ffc107;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .product-card {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: #ccc;
+            border-bottom: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px 10px;
+            background: #666;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border: 1px solid #666;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        .reuse-badge {
+            position: absolute;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .new-badge {
+            position: absolute;
+            background: #FF9800;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .sidebar-filters {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+        }
+        @media (max-width: 768px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .tabs-header { flex-direction: column; }
+            .tab { border-right: none; border-bottom: 2px solid #333; }
+        }
+    </style>
+</head>
+<body>
+    <div style="background: #333; color: white; padding: 20px; text-align: center;">
+        <h1>Opção 3: Personalização e Tabs com AI Recommendations</h1>
+        <p style="margin-top: 10px;">Foco: Experiência personalizada com recomendações inteligentes</p>
+    </div>
+
+    <!-- REUSABLE: Header -->
+    <div style="position: relative;">
+        <span class="reuse-badge" style="top: 4px; right: 4px;" title="src/components/ui/input.jsx">[REUSE] Input</span>
+        <span class="reuse-badge" style="top: 4px; right: 120px;" title="src/components/ui/button.jsx">[REUSE] Button</span>
+        <div class="header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="logo">SS</div>
+                <div>
+                    <div style="font-weight: bold; font-size: 18px;">Salada Soul</div>
+                    <div style="font-size: 11px; color: #666;">Olá, João! 👋</div>
+                </div>
+            </div>
+            
+            <input type="text" class="search-bar" placeholder="🔍 Buscar por ingredientes, sabores..." />
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn">❤️ Meus Favoritos (8)</button>
+                <button class="btn">🎯 Minhas Preferências</button>
+                <button class="btn btn-primary">🛒 (3) R$ 68,70</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- NEW: Personalized Recommendations -->
+        <div style="position: relative;">
+            <span class="new-badge" style="top: 10px; right: 10px;" title="To be created at src/components/PersonalizedRecommendations.jsx">[NEW] PersonalizedRecommendations</span>
+            <div class="recommendation-card">
+                <div style="display: flex; align-items: start; gap: 20px;">
+                    <div style="font-size: 48px;">🤖</div>
+                    <div style="flex: 1;">
+                        <h2 style="font-size: 20px; margin-bottom: 8px;">✨ Recomendações para Você</h2>
+                        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Baseado nos seus últimos 12 pedidos, você pode gostar destas opções:</p>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <div style="background: white; border: 2px solid #333; border-radius: 8px; padding: 12px; min-width: 200px;">
+                                <div style="font-weight: bold; margin-bottom: 5px;">Caesar Premium Especial</div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 8px;">95% de compatibilidade</div>
+                                <div style="font-weight: bold; color: #333;">R$ 28,90</div>
+                            </div>
+                            <div style="background: white; border: 2px solid #333; border-radius: 8px; padding: 12px; min-width: 200px;">
+                                <div style="font-weight: bold; margin-bottom: 5px;">Bowl Protein Power</div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 8px;">92% de compatibilidade</div>
+                                <div style="font-weight: bold; color: #333;">R$ 32,50</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Tab Navigation System -->
+        <div style="position: relative;">
+            <span class="new-badge" style="top: 10px; right: 10px;" title="To be created at src/components/TabNavigation.jsx">[NEW] TabNavigation</span>
+            <span class="reuse-badge" style="top: 10px; right: 200px;" title="src/components/ui/tabs.jsx">[REUSE] Tabs (base)</span>
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <div class="tab active">
+                        <div style="font-size: 20px; margin-bottom: 3px;">🍽️</div>
+                        <div>Menu Completo</div>
+                    </div>
+                    <div class="tab">
+                        <div style="font-size: 20px; margin-bottom: 3px;">🎨</div>
+                        <div>Monte sua Salada</div>
+                    </div>
+                    <div class="tab">
+                        <div style="font-size: 20px; margin-bottom: 3px;">❤️</div>
+                        <div>Meus Favoritos</div>
+                    </div>
+                    <div class="tab">
+                        <div style="font-size: 20px; margin-bottom: 3px;">🕐</div>
+                        <div>Pedir Novamente</div>
+                    </div>
+                </div>
+                
+                <div class="tab-content">
+                    <div class="main-layout">
+                        <!-- Sidebar with Faceted Filters -->
+                        <div>
+                            <!-- NEW: Faceted Filters -->
+                            <div style="position: relative;">
+                                <span class="new-badge" style="top: 4px; right: 4px;" title="To be created at src/components/FacetedFilters.jsx">[NEW] FacetedFilters</span>
+                                <div class="sidebar-filters">
+                                    <h3 style="margin-bottom: 15px;">Filtros Avançados</h3>
+                                    
+                                    <div style="margin-bottom: 20px;">
+                                        <h4 style="font-size: 14px; margin-bottom: 10px; font-weight: bold;">Categorias</h4>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" checked /> Saladas (24)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> Bowls (12)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> Lanches (8)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> Bebidas (10)
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="border-top: 2px solid #ccc; padding-top: 15px; margin-bottom: 20px;">
+                                        <h4 style="font-size: 14px; margin-bottom: 10px; font-weight: bold;">Preferências</h4>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> 🌱 Vegano (18)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> ⚡ Leve (22)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> 🎨 Personalizável (14)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> 🔥 Popular (16)
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="border-top: 2px solid #ccc; padding-top: 15px; margin-bottom: 20px;">
+                                        <h4 style="font-size: 14px; margin-bottom: 10px; font-weight: bold;">Faixa de Preço</h4>
+                                        <div style="border: 2px solid #333; height: 40px; background: #f5f5f5; border-radius: 20px; position: relative; margin-bottom: 10px;">
+                                            <div style="position: absolute; left: 20%; width: 60%; height: 100%; background: #666; border-radius: 20px;"></div>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
+                                            <span>R$ 15</span>
+                                            <span>R$ 45</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="border-top: 2px solid #ccc; padding-top: 15px; margin-bottom: 20px;">
+                                        <h4 style="font-size: 14px; margin-bottom: 10px; font-weight: bold;">Calorias</h4>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="radio" name="cal" /> Até 300 kcal (8)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="radio" name="cal" /> 300-500 kcal (15)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="radio" name="cal" checked /> Todas
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="border-top: 2px solid #ccc; padding-top: 15px;">
+                                        <h4 style="font-size: 14px; margin-bottom: 10px; font-weight: bold;">Avaliação</h4>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> ⭐⭐⭐⭐⭐ (12)
+                                        </div>
+                                        <div style="font-size: 13px; margin: 5px 0; cursor: pointer;">
+                                            <input type="checkbox" /> ⭐⭐⭐⭐ e acima (28)
+                                        </div>
+                                    </div>
+                                    
+                                    <button class="btn btn-primary" style="width: 100%; margin-top: 20px;">Aplicar Filtros</button>
+                                    <button class="btn" style="width: 100%; margin-top: 8px;">Limpar Tudo</button>
+                                </div>
+                            </div>
+                            
+                            <!-- NEW: My Preferences Summary -->
+                            <div style="position: relative;">
+                                <span class="new-badge" style="top: 4px; right: 4px;" title="To be created at src/components/PreferencesSummary.jsx">[NEW] PreferencesSummary</span>
+                                <div style="background: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
+                                    <h4 style="font-size: 13px; font-weight: bold; margin-bottom: 8px;">🎯 Suas Preferências</h4>
+                                    <div style="font-size: 11px; color: #666; margin-bottom: 5px;">• Gosta de: Frango, Abacate</div>
+                                    <div style="font-size: 11px; color: #666; margin-bottom: 5px;">• Evita: Cebola, Pimentão</div>
+                                    <div style="font-size: 11px; color: #666;">• Preço médio: R$ 28,50</div>
+                                    <button class="btn" style="width: 100%; margin-top: 10px; font-size: 11px;">Editar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Content Area -->
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <div>
+                                    <h2 style="font-size: 24px; margin-bottom: 5px;">Todas as Saladas</h2>
+                                    <p style="color: #666; font-size: 14px;">24 produtos encontrados</p>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px;">
+                                    <!-- REUSABLE: Select -->
+                                    <div style="position: relative;">
+                                        <span class="reuse-badge" style="top: -8px; right: -8px;" title="src/components/ui/select.jsx">[REUSE] Select</span>
+                                        <select class="btn" style="min-width: 160px;">
+                                            <option>Mais Relevantes</option>
+                                            <option>Menor Preço</option>
+                                            <option>Maior Preço</option>
+                                            <option>Melhor Avaliados</option>
+                                            <option>Mais Vendidos</option>
+                                            <option>Novidades</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn">▦ Grade</button>
+                                    <button class="btn">☰ Lista</button>
+                                </div>
+                            </div>
+
+                            <!-- Active Filters Display -->
+                            <div style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                <span style="background: #666; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;">
+                                    Saladas <button style="background: none; border: none; color: white; cursor: pointer; font-size: 14px;">×</button>
+                                </span>
+                            </div>
+
+                            <!-- REUSABLE: Products Grid -->
+                            <div style="position: relative;">
+                                <span class="reuse-badge" style="top: 4px; right: 4px;" title="src/components/ui/card.jsx">[REUSE] Card</span>
+                                <span class="reuse-badge" style="top: 4px; right: 100px;" title="src/components/ui/badge.jsx">[REUSE] Badge</span>
+                                <span class="reuse-badge" style="top: 4px; right: 180px;" title="src/components/ui/button.jsx">[REUSE] Button</span>
+                                
+                                <div class="products-grid">
+                                    <!-- Product Card with AI Badge -->
+                                    <div class="product-card">
+                                        <div class="product-image">
+                                            [Image: 280x200]
+                                            <span class="badge" style="background: #9c27b0;">🤖 AI Pick</span>
+                                            <button style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; background: white; border: 2px solid #333; border-radius: 50%; cursor: pointer;">❤️</button>
+                                        </div>
+                                        <div style="padding: 15px;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                                <h4 style="font-weight: bold; flex: 1;">Caesar Premium</h4>
+                                                <span style="font-weight: bold; white-space: nowrap; margin-left: 10px;">R$ 24,90</span>
+                                            </div>
+                                            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Alface romana, frango, croutons, parmesão</p>
+                                            <div style="margin-bottom: 10px;">
+                                                <span class="tag">⚡ Leve</span>
+                                                <span class="tag">⭐ 4.8</span>
+                                                <span class="tag">95% match</span>
+                                            </div>
+                                            <div style="background: #f3e5f5; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 11px;">
+                                                💡 Perfeito para você! Tem frango e abacate
+                                            </div>
+                                            <button class="btn btn-primary" style="width: 100%;">+ Adicionar</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Regular Product Card -->
+                                    <div class="product-card">
+                                        <div class="product-image">
+                                            [Image: 280x200]
+                                            <span class="badge">Popular</span>
+                                            <button style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; background: white; border: 2px solid #333; border-radius: 50%; cursor: pointer;">♡</button>
+                                        </div>
+                                        <div style="padding: 15px;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                                <h4 style="font-weight: bold; flex: 1;">Bowl Mediterrâneo</h4>
+                                                <span style="font-weight: bold; white-space: nowrap; margin-left: 10px;">R$ 28,50</span>
+                                            </div>
+                                            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Mix de folhas, tomate seco, azeitonas, feta</p>
+                                            <div style="margin-bottom: 10px;">
+                                                <span class="tag">🌱 Vegano</span>
+                                                <span class="tag">⭐ 4.9</span>
+                                            </div>
+                                            <button class="btn btn-primary" style="width: 100%;">+ Adicionar</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Product with Customization -->
+                                    <div class="product-card">
+                                        <div class="product-image">
+                                            [Image: 280x200]
+                                            <span class="badge" style="background: #673ab7;">Personalizável</span>
+                                            <button style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; background: white; border: 2px solid #333; border-radius: 50%; cursor: pointer;">♡</button>
+                                        </div>
+                                        <div style="padding: 15px;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                                <h4 style="font-weight: bold; flex: 1;">Build Your Bowl</h4>
+                                                <span style="font-weight: bold; white-space: nowrap; margin-left: 10px;">a partir de R$ 19,90</span>
+                                            </div>
+                                            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Monte com seus ingredientes favoritos</p>
+                                            <div style="margin-bottom: 10px;">
+                                                <span class="tag">🎨 Personalizável</span>
+                                            </div>
+                                            <button class="btn btn-primary" style="width: 100%;">🎨 Montar Agora</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- More products placeholder -->
+                                    <div class="product-card" style="opacity: 0.5;">
+                                        <div class="product-image">[Mais 21 produtos...]</div>
+                                        <div style="padding: 15px; text-align: center;">...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Custom Salad Builder (shown in tab 2) -->
+        <div style="position: relative; margin-top: 30px;">
+            <span class="new-badge" style="top: 10px; right: 10px;" title="To be created at src/components/SaladBuilder.jsx">[NEW] SaladBuilder</span>
+            <div class="personalization-box">
+                <h2 style="font-size: 24px; margin-bottom: 15px;">🎨 Monte sua Salada Perfeita</h2>
+                <p style="color: #666; margin-bottom: 20px;">Escolha até 8 ingredientes e crie a combinação ideal para você</p>
+                
+                <div style="margin-bottom: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="font-size: 16px;">1. Base de Folhas (escolha 1)</h3>
+                        <span style="font-size: 12px; color: #666;">Obrigatório</span>
+                    </div>
+                    <div class="ingredient-grid">
+                        <div class="ingredient-item selected">
+                            <div style="font-size: 24px; margin-bottom: 5px;">🥬</div>
+                            <div style="font-size: 12px; font-weight: bold;">Alface Romana</div>
+                            <div style="font-size: 11px; color: #666;">Grátis</div>
+                        </div>
+                        <div class="ingredient-item">
+                            <div style="font-size: 24px; margin-bottom: 5px;">🌿</div>
+                            <div style="font-size: 12px; font-weight: bold;">Rúcula</div>
+                            <div style="font-size: 11px; color: #666;">Grátis</div>
+                        </div>
+                        <div class="ingredient-item">
+                            <div style="font-size: 24px; margin-bottom: 5px;">🥬</div>
+                            <div style="font-size: 12px; font-weight: bold;">Espinafre</div>
+                            <div style="font-size: 11px; color: #666;">Grátis</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <h3 style="font-size: 16px; margin-bottom: 10px;">2. Proteína (escolha até 2)</h3>
+                    <div class="ingredient-grid">
+                        <div class="ingredient-item">
+                            <div style="font-size: 24px; margin-bottom: 5px;">🍗</div>
+                            <div style="font-size: 12px; font-weight: bold;">Frango Grelhado</div>
+                            <div style="font-size: 11px; color: #333; font-weight: bold;">+ R$ 8,00</div>
+                        </div>
+                        <div class="ingredient-item">
+                            <div style="font-size: 24px; margin-bottom: 5px;">🦐</div>
+                            <div style="font-size: 12px; font-weight: bold;">Camarão</div>
+                            <div style="font-size: 11px; color: #333; font-weight: bold;">+ R$ 12,00</div>
+                        </div>
+                        <div class="ingredient-item">
+                            <div style="font-size: 24px; margin-bottom: 5px;">🐟</div>
+                            <div style="font-size: 12px; font-weight: bold;">Atum</div>
+                            <div style="font-size: 11px; color: #333; font-weight: bold;">+ R$ 10,00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: #e3f2fd; border: 2px solid #2196f3; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: bold; margin-bottom: 5px;">Sua Salada Personalizada</div>
+                            <div style="font-size: 12px; color: #666;">Base: Alface Romana | 0 itens adicionados</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 24px; font-weight: bold;">R$ 19,90</div>
+                            <button class="btn btn-primary" style="margin-top: 8px;">Adicionar ao Carrinho</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REUSABLE: Floating Cart -->
+    <div style="position: relative;">
+        <span class="reuse-badge" style="bottom: 70px; right: 4px;" title="src/components/ui/button.jsx">[REUSE] Button</span>
+        <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; z-index: 100;">
+            <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                🛒 Ver Carrinho (3 itens) - R$ 68,70
+            </button>
+        </div>
+    </div>
+
+    <div style="background: #e0e0e0; padding: 30px; text-align: center; margin-top: 40px; border-top: 3px solid #333;">
+        <h3 style="margin-bottom: 15px;">Principais Melhorias - Opção 3</h3>
+        <div style="max-width: 800px; margin: 0 auto; text-align: left;">
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin: 10px 0;">✅ <strong>AI Recommendations:</strong> Sugestões personalizadas baseadas em histórico</li>
+                <li style="margin: 10px 0;">✅ <strong>Tab Navigation:</strong> Organização em abas (Menu, Monte, Favoritos, Repetir)</li>
+                <li style="margin: 10px 0;">✅ <strong>Filtros Facetados:</strong> Múltiplos critérios com contadores</li>
+                <li style="margin: 10px 0;">✅ <strong>Perfil de Preferências:</strong> Sistema que lembra gostos do usuário</li>
+                <li style="margin: 10px 0;">✅ <strong>Salad Builder Avançado:</strong> Construtor interativo de saladas</li>
+                <li style="margin: 10px 0;">✅ <strong>Match Score:</strong> Porcentagem de compatibilidade com preferências</li>
+                <li style="margin: 10px 0;">✅ <strong>Smart Suggestions:</strong> Dicas contextuais nos produtos</li>
+                <li style="margin: 10px 0;">✅ <strong>Favoritos Integrados:</strong> Acesso rápido aos produtos salvos</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -3,11 +3,14 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/context/CartContext";
+import { FavoritesProvider } from "@/context/FavoritesContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { CustomerProvider } from "@/context/CustomerContext";
 import MenuPage from "@/pages/MenuPage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import OrderHistoryPage from "@/pages/OrderHistoryPage";
+import FavoritesPage from "@/pages/FavoritesPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminOrdersPage from "@/pages/AdminOrdersPage";
 import AdminCardapioPage from "@/pages/AdminCardapioPage";
@@ -64,6 +67,7 @@ function AppRouter() {
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/pedido/:id" element={<OrderConfirmationPage />} />
             <Route path="/historico" element={<OrderHistoryPage />} />
+                        <Route path="/favoritos" element={<FavoritesPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/admin/pedidos" replace />} />
@@ -81,10 +85,14 @@ function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <CartProvider>
-                    <AppRouter />
-                    <Toaster position="top-center" richColors />
-                </CartProvider>
+                <CustomerProvider>
+                    <FavoritesProvider>
+                        <CartProvider>
+                            <AppRouter />
+                            <Toaster position="top-center" richColors />
+                        </CartProvider>
+                    </FavoritesProvider>
+                </CustomerProvider>
             </AuthProvider>
         </BrowserRouter>
     );

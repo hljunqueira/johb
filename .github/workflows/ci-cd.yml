@@ -1,0 +1,233 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ==========================================
+  # FRONTEND CHECKS
+  # ==========================================
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ./frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run ESLint
+        run: npm run lint --if-present
+      
+      - name: Check formatting
+        run: npm run format:check --if-present
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ./frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+        env:
+          CI: true
+          REACT_APP_BACKEND_URL: http://localhost:8000
+
+  # ==========================================
+  # BACKEND CHECKS
+  # ==========================================
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: ./backend/requirements.txt
+      
+      - name: Install dependencies
+        run: |
+          pip install flake8 black isort
+          pip install -r requirements.txt
+      
+      - name: Run flake8
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      
+      - name: Check formatting with black
+        run: black --check . || true
+
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: backend-lint
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: saladasoul_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: ./backend/requirements.txt
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          DB_HOST: localhost
+          DB_NAME: saladasoul_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_PORT: 5432
+          JWT_SECRET: test-secret-key
+          ENVIRONMENT: test
+
+  # ==========================================
+  # DEPLOY TO VPS (Production)
+  # ==========================================
+  deploy-vps:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: [frontend-build, backend-test]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 76.13.171.93
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            cd /opt/saladasoul
+            
+            # Backup do banco antes do deploy
+            echo "Creating backup..."
+            docker exec saladasoul_db pg_dump -U postgres saladasoul | gzip > /opt/saladasoul/backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql.gz
+            
+            # Pull das últimas alterações
+            git fetch origin
+            git reset --hard origin/main
+            
+            # Rebuild e restart dos containers
+            docker-compose down
+            docker-compose up -d --build
+            
+            # Build e deploy do frontend CLIENTE
+            echo "Building frontend CLIENTE..."
+            docker-compose -f docker-compose.client.yml down
+            docker-compose -f docker-compose.client.yml up -d --build
+            
+            # Build e deploy do frontend ADMIN
+            echo "Building frontend ADMIN..."
+            docker-compose -f docker-compose.admin.yml down
+            docker-compose -f docker-compose.admin.yml up -d --build
+            
+            # Aguardar health check
+            echo "Waiting for health check..."
+            sleep 15
+            
+            # Verificar se backend está respondendo
+            curl -f http://localhost:8003/api/ || exit 1
+            
+            echo "Deploy completed successfully!"
+            
+            # Limpar backups antigos (manter últimos 10)
+            ls -t /opt/saladasoul/backups/pre-deploy-*.sql.gz | tail -n +11 | xargs -r rm
+      
+      - name: Notify Success
+        if: success()
+        run: echo "✅ Deploy to VPS completed successfully!"
+      
+      - name: Notify Failure
+        if: failure()
+        run: echo "❌ Deploy to VPS failed!"
+
+  # ==========================================
+  # NOTIFICATIONS
+  # ==========================================
+  notify:
+    name: Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-vps]
+    if: always()
+    
+    steps:
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            Deployment ${{ job.status == 'success' && '✅ succeeded' || '❌ failed' }}
+            Branch: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: always()

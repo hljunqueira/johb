@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
         <div className="min-h-screen bg-background flex items-center justify-center px-4" data-testid="admin-login-page">
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
-                    <img src="https://customer-assets.emergentagent.com/job_soul-delivery/artifacts/3puvg49l_IMG_1929.jpeg" alt="Salada Soul" className="h-20 w-20 rounded-full mx-auto mb-4 shadow-lg" />
+                    <div className="h-20 w-20 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4 shadow-lg">SS</div>
                     <h1 className="text-3xl font-bold font-heading text-foreground">Salada Soul</h1>
                     <p className="text-muted-foreground mt-1">Painel Administrativo</p>
                 </div>

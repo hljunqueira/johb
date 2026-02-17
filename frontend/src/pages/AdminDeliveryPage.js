@@ -70,7 +70,7 @@ export default function AdminDeliveryPage() {
 
                     <div className="space-y-2">
                         <p className="text-sm font-medium">Bairros</p>
-                        {settings.areas.map((area, i) => (
+                        {Array.isArray(settings.areas) && settings.areas.map((area, i) => (
                             <div key={i} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
                                 <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                 <span className="text-sm flex-1">{area.name}</span>

@@ -9,26 +9,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { ArrowLeft, Truck, Store, Copy, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Truck, Store, Copy, Check, Loader2, Edit2, X, Plus, Minus } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const getImageUrl = (url) => { if (!url) return ""; if (url.startsWith("http")) return url; return `${BACKEND_URL}${url}`; };
 
 export default function CheckoutPage() {
-    const { items, total, clearCart } = useCart();
+    const { items, total, clearCart, updateObservation, updateQuantity, removeItem } = useCart();
+    const [editingItem, setEditingItem] = useState(null);
+    const [editObservation, setEditObservation] = useState("");
     const navigate = useNavigate();
     const [name, setName] = useState(() => localStorage.getItem("salada-soul-name") || "");
     const [phone, setPhone] = useState(() => localStorage.getItem("salada-soul-phone") || "");
     const [deliveryType, setDeliveryType] = useState("retirada");
-    const [address, setAddress] = useState("");
-    const [neighborhood, setNeighborhood] = useState("");
+    const [address, setAddress] = useState(() => localStorage.getItem("salada-soul-address") || "");
+    const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("salada-soul-neighborhood") || "");
     const [deliverySettings, setDeliverySettings] = useState(null);
     const [pixSettings, setPixSettings] = useState(null);
     const [showPix, setShowPix] = useState(false);
     const [pixCopied, setPixCopied] = useState(false);
     const [loading, setLoading] = useState(false);
     const [orderId, setOrderId] = useState(null);
+    const [saveAddress, setSaveAddress] = useState(true);
 
     useEffect(() => {
         if (items.length === 0) navigate("/");
@@ -39,8 +42,9 @@ export default function CheckoutPage() {
     const deliveryFee = (() => {
         if (deliveryType !== "entrega" || !deliverySettings) return 0;
         if (total >= (deliverySettings.min_free_delivery || 60)) return 0;
-        const area = deliverySettings.areas?.find(a => a.name === neighborhood);
-        return area ? area.fee : deliverySettings.delivery_fee || 5;
+        const areas = Array.isArray(deliverySettings?.areas) ? deliverySettings.areas : [];
+        const area = areas.find(a => a?.name === neighborhood);
+        return area ? area.fee : deliverySettings?.delivery_fee || 5;
     })();
     const grandTotal = total + deliveryFee;
 
@@ -64,6 +68,10 @@ export default function CheckoutPage() {
             });
             localStorage.setItem("salada-soul-phone", phone);
             localStorage.setItem("salada-soul-name", name);
+            if (saveAddress && deliveryType === "entrega") {
+                localStorage.setItem("salada-soul-address", address);
+                localStorage.setItem("salada-soul-neighborhood", neighborhood);
+            }
             setOrderId(res.data.id);
             if (pixSettings?.pix_key) { setShowPix(true); }
             else { clearCart(); navigate(`/pedido/${res.data.id}`); }
@@ -72,6 +80,22 @@ export default function CheckoutPage() {
     };
 
     const handlePixDone = () => { setShowPix(false); clearCart(); navigate(`/pedido/${orderId}`); };
+
+    const startEditObservation = (item) => {
+        setEditingItem(item.cart_id);
+        setEditObservation(item.observation || "");
+    };
+
+    const saveObservation = (cartId) => {
+        updateObservation(cartId, editObservation);
+        setEditingItem(null);
+        toast.success("Observação atualizada!");
+    };
+
+    const cancelEditObservation = () => {
+        setEditingItem(null);
+        setEditObservation("");
+    };
     const copyPixKey = () => {
         navigator.clipboard.writeText(pixSettings?.pix_key || "");
         setPixCopied(true); toast.success("Chave Pix copiada!");
@@ -92,16 +116,104 @@ export default function CheckoutPage() {
                     {/* Summary */}
                     <div className="bg-white rounded-2xl border border-border p-5">
                         <h2 className="font-semibold font-heading mb-3">Resumo do Pedido</h2>
-                        <div className="space-y-2.5">
+                        <div className="space-y-3">
                             {items.map(item => (
-                                <div key={item.cart_id} className="flex items-center gap-3">
-                                    <img src={getImageUrl(item.image_url)} alt="" className="h-11 w-11 rounded-lg object-cover" />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">{item.quantity}x {item.product_name}</p>
-                                        {item.additionals?.length > 0 && <p className="text-xs text-accent">+ {item.additionals.map(a => a.name).join(", ")}</p>}
-                                        {item.observation && <p className="text-xs text-muted-foreground italic">"{item.observation}"</p>}
+                                <div key={item.cart_id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
+                                    <img src={getImageUrl(item.image_url)} alt="" className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium">{item.product_name}</p>
+                                                {item.additionals?.length > 0 && (
+                                                    <p className="text-xs text-accent mt-0.5">+ {item.additionals.map(a => a.name).join(", ")}</p>
+                                                )}
+                                            </div>
+                                            <span className="text-sm font-semibold text-primary">R$ {(item.price * item.quantity).toFixed(2)}</span>
+                                        </div>
+                                        
+                                        {/* Quantity Controls */}
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateQuantity(item.cart_id, item.quantity - 1)}
+                                                className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
+                                            >
+                                                <Minus className="h-3 w-3" />
+                                            </button>
+                                            <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateQuantity(item.cart_id, item.quantity + 1)}
+                                                className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
+                                            >
+                                                <Plus className="h-3 w-3" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeItem(item.cart_id)}
+                                                className="ml-2 text-xs text-red-500 hover:text-red-700 underline"
+                                            >
+                                                Remover
+                                            </button>
+                                        </div>
+
+                                        {/* Observation Section */}
+                                        <div className="mt-2">
+                                            {editingItem === item.cart_id ? (
+                                                <div className="space-y-2">
+                                                    <Textarea
+                                                        value={editObservation}
+                                                        onChange={e => setEditObservation(e.target.value)}
+                                                        placeholder="Ex: Sem cebola, molho à parte..."
+                                                        className="text-xs min-h-[60px] rounded-lg"
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-7 text-xs rounded-full"
+                                                            onClick={() => saveObservation(item.cart_id)}
+                                                        >
+                                                            <Check className="h-3 w-3 mr-1" /> Salvar
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-7 text-xs rounded-full"
+                                                            onClick={cancelEditObservation}
+                                                        >
+                                                            <X className="h-3 w-3 mr-1" /> Cancelar
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    {item.observation ? (
+                                                        <>
+                                                            <p className="text-xs text-muted-foreground italic flex-1">"{item.observation}"</p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => startEditObservation(item)}
+                                                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                                                            >
+                                                                <Edit2 className="h-3 w-3" /> Editar
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => startEditObservation(item)}
+                                                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                                                        >
+                                                            <Edit2 className="h-3 w-3" /> Adicionar observação
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <span className="text-sm font-medium">R$ {(item.price * item.quantity).toFixed(2)}</span>
                                 </div>
                             ))}
                         </div>
@@ -134,10 +246,20 @@ export default function CheckoutPage() {
                                     <select data-testid="checkout-neighborhood" value={neighborhood} onChange={e => setNeighborhood(e.target.value)}
                                         className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm" required>
                                         <option value="">Selecione o bairro</option>
-                                        {deliverySettings?.areas?.map(a => <option key={a.name} value={a.name}>{a.name} {a.fee > 0 ? `(R$ ${a.fee.toFixed(2)})` : "(Gratis)"}</option>)}
+                                        {Array.isArray(deliverySettings?.areas) && deliverySettings.areas.map(a => a?.name && <option key={a.name} value={a.name}>{a.name} {a.fee > 0 ? `(R$ ${a.fee.toFixed(2)})` : "(Gratis)"}</option>)}
                                     </select>
                                 </div>
                                 <div><Label>Endereco completo</Label><Textarea data-testid="checkout-address" value={address} onChange={e => setAddress(e.target.value)} placeholder="Rua, numero, complemento..." className="mt-1 rounded-lg" required /></div>
+                                {/* Checkbox para salvar endereço */}
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={saveAddress} 
+                                        onChange={e => setSaveAddress(e.target.checked)}
+                                        className="rounded border-gray-300"
+                                    />
+                                    <span className="text-sm text-muted-foreground">Salvar endereço para próximas compras</span>
+                                </label>
                                 {deliverySettings?.min_free_delivery && <p className="text-xs text-muted-foreground">Frete gratis para pedidos acima de R$ {deliverySettings.min_free_delivery.toFixed(2)}</p>}
                             </div>
                         )}

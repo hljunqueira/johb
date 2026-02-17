@@ -138,61 +138,216 @@ export default function AdminProductsPage() {
                 <div className="text-center py-16"><Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">Nenhum produto cadastrado</p></div>
             )}
 
-            {/* Product Form Dialog */}
+            {/* Product Form Dialog - Layout Horizontal */}
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto" data-testid="product-form">
-                    <DialogHeader><DialogTitle className="font-heading">{editingProduct ? "Editar Produto" : "Novo Produto"}</DialogTitle></DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="product-name" /></div>
-                        <div><Label>Descricao</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-desc" /></div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div><Label>Preco (R$)</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-lg" required data-testid="product-price" /></div>
-                            <div><Label>Estoque (-1 = ilimitado)</Label><Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-stock" /></div>
-                        </div>
-                        <div>
-                            <Label>Categoria</Label>
-                            <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm" required data-testid="product-category">
-                                <option value="">Selecione</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <Label>Imagem</Label>
-                            <div className="mt-1 flex gap-2 items-center">
-                                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="rounded-lg flex-1" data-testid="product-image-url" />
-                                <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
-                            </div>
-                            {form.image_url && <img src={getImageUrl(form.image_url)} alt="" className="mt-2 h-24 w-24 object-cover rounded-lg" />}
-                        </div>
-                        <div>
-                            <Label>Tags</Label>
-                            <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                                {["vegano", "leve", "mais_pedido", "recomendado"].map(tag => (
-                                    <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${form.tags.includes(tag) ? "bg-primary text-white" : "bg-muted text-foreground"}`}>
-                                        {tag}
-                                    </button>
-                                ))}
-                            </div>
-                            {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mb-2">
-                                    {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).map(tag => (
-                                        <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent/15 text-accent">
-                                            <Tag className="h-3 w-3" />{tag}
-                                            <button type="button" onClick={() => removeTag(tag)} className="hover:text-destructive"><X className="h-3 w-3" /></button>
-                                        </span>
-                                    ))}
+                <DialogContent className="max-w-4xl rounded-2xl max-h-[90vh] overflow-y-auto p-0" data-testid="product-form">
+                    <DialogHeader className="px-6 pt-6 pb-2">
+                        <DialogTitle className="font-heading">{editingProduct ? "Editar Produto" : "Novo Produto"}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="px-6 pb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Coluna Esquerda - Imagem e Preview */}
+                            <div className="space-y-4">
+                                {/* Upload de Imagem com Drag & Drop */}
+                                <div>
+                                    <Label>Imagem do Produto</Label>
+                                    <div 
+                                        className="mt-2 relative border-2 border-dashed border-muted-foreground/25 rounded-xl hover:border-primary/50 transition-colors bg-muted/30"
+                                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-primary/5'); }}
+                                        onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-primary', 'bg-primary/5'); }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+                                            const file = e.dataTransfer.files?.[0];
+                                            if (file && file.type.startsWith('image/')) {
+                                                const input = document.createElement('input');
+                                                input.type = 'file';
+                                                input.files = e.dataTransfer.files;
+                                                handleUpload({ target: input });
+                                            }
+                                        }}
+                                    >
+                                        {form.image_url ? (
+                                            <div className="relative aspect-square">
+                                                <img 
+                                                    src={getImageUrl(form.image_url)} 
+                                                    alt="Preview" 
+                                                    className="w-full h-full object-cover rounded-xl"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setForm(f => ({ ...f, image_url: "" }))}
+                                                    className="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full hover:bg-white shadow-sm"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <label className="flex flex-col items-center justify-center py-12 cursor-pointer">
+                                                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-3">
+                                                    <Upload className="h-8 w-8 text-muted-foreground" />
+                                                </div>
+                                                <p className="text-sm font-medium text-foreground">Clique ou arraste uma imagem</p>
+                                                <p className="text-xs text-muted-foreground mt-1">PNG, JPG até 5MB</p>
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={handleUpload}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                    {uploading && <p className="text-xs text-muted-foreground mt-2">Enviando...</p>}
                                 </div>
-                            )}
-                            <div className="flex gap-2">
-                                <Input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Nova tag customizada..." className="rounded-lg flex-1 text-sm" data-testid="new-tag-input"
-                                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }} />
-                                <Button type="button" size="sm" variant="outline" onClick={addCustomTag} className="rounded-lg" data-testid="add-tag-btn"><Plus className="h-3 w-3 mr-1" />Tag</Button>
+
+                                {/* Preview do Produto */}
+                                <div className="bg-muted/50 rounded-xl p-4">
+                                    <Label className="text-xs text-muted-foreground mb-2 block">Preview</Label>
+                                    <div className="flex items-center gap-3">
+                                        {form.image_url ? (
+                                            <img src={getImageUrl(form.image_url)} alt="" className="h-16 w-16 object-cover rounded-lg" />
+                                        ) : (
+                                            <div className="h-16 w-16 bg-muted rounded-lg flex items-center justify-center">
+                                                <Package className="h-8 w-8 text-muted-foreground" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate">{form.name || "Nome do produto"}</p>
+                                            <p className="text-sm text-primary font-semibold">
+                                                {form.price ? `R$ ${parseFloat(form.price).toFixed(2)}` : "R$ 0,00"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Coluna Direita - Dados do Produto */}
+                            <div className="space-y-4">
+                                <div>
+                                    <Label>Nome do Produto *</Label>
+                                    <Input 
+                                        value={form.name} 
+                                        onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
+                                        className="mt-1.5 rounded-lg" 
+                                        placeholder="Ex: Salada Caesar"
+                                        required 
+                                        data-testid="product-name" 
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label>Descrição</Label>
+                                    <textarea 
+                                        value={form.description} 
+                                        onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                                        className="w-full mt-1.5 rounded-lg border border-input bg-white px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        placeholder="Descreva o produto..."
+                                        data-testid="product-desc"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <Label>Preço (R$) *</Label>
+                                        <Input 
+                                            type="number" 
+                                            step="0.01" 
+                                            value={form.price} 
+                                            onChange={e => setForm(f => ({ ...f, price: e.target.value }))} 
+                                            className="mt-1.5 rounded-lg" 
+                                            placeholder="0,00"
+                                            required 
+                                            data-testid="product-price" 
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label>Estoque</Label>
+                                        <Input 
+                                            type="number" 
+                                            value={form.stock} 
+                                            onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} 
+                                            className="mt-1.5 rounded-lg" 
+                                            placeholder="-1 = ilimitado"
+                                            data-testid="product-stock" 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label>Categoria *</Label>
+                                    <select 
+                                        value={form.category_id} 
+                                        onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} 
+                                        className="w-full mt-1.5 rounded-lg border border-input bg-white px-3 py-2.5 text-sm" 
+                                        required 
+                                        data-testid="product-category"
+                                    >
+                                        <option value="">Selecione uma categoria</option>
+                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+
+                                {/* Tags */}
+                                <div>
+                                    <Label>Tags</Label>
+                                    <div className="flex flex-wrap gap-2 mt-1.5 mb-2">
+                                        {["vegano", "leve", "mais_pedido", "recomendado"].map(tag => (
+                                            <button 
+                                                key={tag} 
+                                                type="button" 
+                                                onClick={() => toggleTag(tag)}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${form.tags.includes(tag) ? "bg-primary text-white" : "bg-muted text-foreground hover:bg-muted/80"}`}
+                                            >
+                                                {tag.replace("mais_pedido", "mais pedido").replace("_", " ")}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 mb-2">
+                                            {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).map(tag => (
+                                                <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent/15 text-accent">
+                                                    <Tag className="h-3 w-3" />{tag}
+                                                    <button type="button" onClick={() => removeTag(tag)} className="hover:text-destructive"><X className="h-3 w-3" /></button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <Input 
+                                            value={newTag} 
+                                            onChange={e => setNewTag(e.target.value)} 
+                                            placeholder="Nova tag..." 
+                                            className="rounded-lg flex-1 text-sm" 
+                                            data-testid="new-tag-input"
+                                            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }} 
+                                        />
+                                        <Button type="button" size="sm" variant="outline" onClick={addCustomTag} className="rounded-lg" data-testid="add-tag-btn">
+                                            <Plus className="h-3 w-3 mr-1" />Tag
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full" data-testid="save-product-btn">
-                            {editingProduct ? "Atualizar" : "Criar"} Produto
-                        </Button>
+
+                        {/* Botões de Ação */}
+                        <div className="flex gap-3 mt-6 pt-4 border-t">
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                className="flex-1 rounded-full"
+                                onClick={() => setShowForm(false)}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button 
+                                type="submit" 
+                                className="flex-1 bg-primary text-white rounded-full" 
+                                data-testid="save-product-btn"
+                            >
+                                {editingProduct ? "Atualizar" : "Criar"} Produto
+                            </Button>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>

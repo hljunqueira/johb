@@ -1,8 +1,13 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const AuthContext = createContext();
+
+AuthProvider.propTypes = {
+    children: PropTypes.node.isRequired,
+};
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -31,9 +36,8 @@ export function AuthProvider({ children }) {
     };
 
     const loginWithGoogle = () => {
-        // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-        const redirectUrl = window.location.origin + "/admin/pedidos";
-        window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+        // Login com Google desabilitado temporariamente
+        console.warn("Login com Google nao disponivel");
     };
 
     const processGoogleSession = async (sessionId) => {

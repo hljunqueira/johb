@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opção 1: Navegação Simplificada e Filtros Inteligentes</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Comic Sans MS', cursive; 
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .wireframe-box { 
+            background: white; 
+            border: 2px solid #333; 
+            padding: 20px; 
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .header { 
+            background: white;
+            border-bottom: 3px solid #333;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo { 
+            width: 50px; 
+            height: 50px; 
+            background: #999; 
+            border: 2px solid #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .search-bar {
+            flex: 1;
+            max-width: 500px;
+            height: 40px;
+            border: 2px solid #333;
+            border-radius: 20px;
+            padding: 0 15px;
+            background: #f5f5f5;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: 2px solid #333;
+            background: #fff;
+            cursor: pointer;
+            border-radius: 6px;
+            font-family: 'Comic Sans MS', cursive;
+        }
+        .btn-primary {
+            background: #666;
+            color: white;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            padding: 15px 0;
+            overflow-x: auto;
+            border-bottom: 2px solid #ccc;
+        }
+        .filter-chip {
+            padding: 8px 16px;
+            border: 2px solid #333;
+            border-radius: 20px;
+            background: #f5f5f5;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .filter-chip.active {
+            background: #666;
+            color: white;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .sidebar {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        .category-item {
+            padding: 12px;
+            border: 2px solid #ccc;
+            margin: 8px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .category-item.active {
+            background: #666;
+            color: white;
+            border-color: #333;
+        }
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .product-card {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: #ccc;
+            border-bottom: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 4px 8px;
+            background: #666;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .favorite-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .product-info {
+            padding: 15px;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border: 1px solid #666;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        .reuse-badge {
+            position: absolute;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .new-badge {
+            position: absolute;
+            background: #FF9800;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .banner {
+            background: #e0e0e0;
+            border: 3px dashed #666;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .quick-view-panel {
+            position: fixed;
+            right: 20px;
+            top: 100px;
+            width: 350px;
+            background: white;
+            border: 3px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.1);
+        }
+        @media (max-width: 768px) {
+            .main-content { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .quick-view-panel { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div style="background: #333; color: white; padding: 20px; text-align: center;">
+        <h1>Opção 1: Navegação Simplificada e Filtros Inteligentes</h1>
+        <p style="margin-top: 10px;">Foco: UX otimizada com hierarquia reduzida e acesso rápido</p>
+    </div>
+
+    <!-- REUSABLE: Header components -->
+    <div style="position: relative;">
+        <span class="reuse-badge" style="top: 4px; right: 4px;" title="src/components/ui/input.jsx">[REUSE] Input</span>
+        <span class="reuse-badge" style="top: 4px; right: 120px;" title="src/components/ui/button.jsx">[REUSE] Button</span>
+        <div class="header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="logo">SS</div>
+                <div>
+                    <div style="font-weight: bold; font-size: 18px;">Salada Soul</div>
+                    <div style="font-size: 11px; color: #666;">Nutre o corpo, alimenta a alma</div>
+                </div>
+            </div>
+            
+            <input type="text" class="search-bar" placeholder="🔍 Buscar saladas, ingredientes..." />
+            
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn">❤️ Favoritos</button>
+                <button class="btn">🕐 Histórico</button>
+                <button class="btn btn-primary">🛒 Carrinho (3)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- NEW: Promotional Banner -->
+        <div style="position: relative;">
+            <span class="new-badge" style="top: 4px; right: 4px;" title="To be created at src/components/PromoBanner.jsx">[NEW] PromoBanner</span>
+            <div class="banner">
+                <h2>🎉 PROMOÇÃO DE VERÃO</h2>
+                <p>Combo 2 Saladas + Bebida por R$ 39,90</p>
+                <button class="btn btn-primary" style="margin-top: 10px;">Ver Oferta</button>
+            </div>
+        </div>
+
+        <!-- NEW: Smart Filters Bar -->
+        <div style="position: relative;">
+            <span class="new-badge" style="top: -5px; right: 4px;" title="To be created at src/components/FilterBar.jsx">[NEW] FilterBar</span>
+            <div class="filter-bar">
+                <div class="filter-chip active">🥗 Todas</div>
+                <div class="filter-chip">🌱 Vegano</div>
+                <div class="filter-chip">⚡ Leve</div>
+                <div class="filter-chip">🔥 Popular</div>
+                <div class="filter-chip">⭐ Recomendado</div>
+                <div class="filter-chip">🎨 Personalizável</div>
+                <div class="filter-chip">💰 Até R$ 20</div>
+                <div class="filter-chip">💰 R$ 20-30</div>
+                <div class="filter-chip">💰 Acima R$ 30</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- REUSABLE: Sidebar Navigation -->
+            <div style="position: relative;">
+                <span class="reuse-badge" style="top: 4px; right: 4px;" title="src/components/ui/button.jsx">[REUSE] Button (categories)</span>
+                <aside class="sidebar">
+                    <h3 style="margin-bottom: 15px;">Categorias</h3>
+                    <div class="category-item active">
+                        <span>🥗</span>
+                        <span>Monte sua Salada</span>
+                    </div>
+                    <div class="category-item">
+                        <span>🍃</span>
+                        <span>Saladas Prontas</span>
+                    </div>
+                    <div class="category-item">
+                        <span>🥪</span>
+                        <span>Lanches Frios</span>
+                    </div>
+                    <div class="category-item">
+                        <span>☕</span>
+                        <span>Bebidas</span>
+                    </div>
+                    
+                    <div style="border-top: 2px solid #ccc; margin: 20px 0; padding-top: 20px;">
+                        <h4 style="margin-bottom: 10px;">Filtros Avançados</h4>
+                        
+                        <!-- NEW: Advanced Filters -->
+                        <div style="position: relative;">
+                            <span class="new-badge" style="top: 4px; right: 4px;" title="To be created at src/components/AdvancedFilters.jsx">[NEW] AdvancedFilters</span>
+                            <div style="margin: 10px 0;">
+                                <label style="display: block; font-size: 12px; margin-bottom: 5px;">Calorias</label>
+                                <div style="border: 2px solid #333; height: 30px; background: #f5f5f5; border-radius: 15px; position: relative;">
+                                    <div style="width: 60%; height: 100%; background: #666; border-radius: 15px;"></div>
+                                </div>
+                                <div style="font-size: 11px; color: #666; margin-top: 3px;">0 - 500 kcal</div>
+                            </div>
+                            
+                            <div style="margin: 15px 0;">
+                                <label style="display: block; font-size: 12px; margin-bottom: 5px;">Ingredientes</label>
+                                <div style="border: 2px solid #333; padding: 8px; border-radius: 6px; background: #f5f5f5;">
+                                    <div style="font-size: 11px;">☑️ Frango</div>
+                                    <div style="font-size: 11px;">☐ Camarão</div>
+                                    <div style="font-size: 11px;">☐ Atum</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #e0e0e0; padding: 15px; border-radius: 6px; text-align: center; margin-top: 20px;">
+                        <div style="font-size: 24px; margin-bottom: 5px;">💬</div>
+                        <div style="font-size: 12px; font-weight: bold;">Precisa de Ajuda?</div>
+                        <div style="font-size: 11px; color: #666;">Fale conosco</div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Products Grid -->
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 24px;">Monte sua Salada (12 produtos)</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <!-- NEW: View Toggle -->
+                        <div style="position: relative;">
+                            <span class="new-badge" style="top: -5px; right: -5px;" title="To be created at src/components/ViewToggle.jsx">[NEW] ViewToggle</span>
+                            <button class="btn">▦ Grade</button>
+                            <button class="btn">☰ Lista</button>
+                        </div>
+                        
+                        <!-- REUSABLE: Sort Dropdown -->
+                        <div style="position: relative;">
+                            <span class="reuse-badge" style="top: -5px; right: -5px;" title="src/components/ui/select.jsx">[REUSE] Select</span>
+                            <select class="btn" style="width: 150px;">
+                                <option>Ordenar por</option>
+                                <option>Menor preço</option>
+                                <option>Maior preço</option>
+                                <option>Mais popular</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Recommended Section -->
+                <div style="position: relative;">
+                    <span class="new-badge" style="top: 4px; right: 4px;" title="To be created at src/components/RecommendedSection.jsx">[NEW] RecommendedSection</span>
+                    <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 10px;">⭐ Recomendado para você</h3>
+                        <div style="display: flex; gap: 15px; overflow-x: auto;">
+                            <div style="min-width: 200px; border: 2px solid #333; border-radius: 6px; padding: 10px; background: white;">
+                                <div style="width: 100%; height: 120px; background: #ccc; border-radius: 4px; margin-bottom: 8px;"></div>
+                                <div style="font-weight: bold;">Caesar Premium</div>
+                                <div style="color: #666; font-size: 12px;">R$ 28,90</div>
+                            </div>
+                            <div style="min-width: 200px; border: 2px solid #333; border-radius: 6px; padding: 10px; background: white;">
+                                <div style="width: 100%; height: 120px; background: #ccc; border-radius: 4px; margin-bottom: 8px;"></div>
+                                <div style="font-weight: bold;">Bowl Protein</div>
+                                <div style="color: #666; font-size: 12px;">R$ 32,50</div>
+                            </div>
+                            <div style="min-width: 200px; border: 2px solid #333; border-radius: 6px; padding: 10px; background: white;">
+                                <div style="width: 100%; height: 120px; background: #ccc; border-radius: 4px; margin-bottom: 8px;"></div>
+                                <div style="font-weight: bold;">Green Energy</div>
+                                <div style="color: #666; font-size: 12px;">R$ 25,90</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REUSABLE: Products Grid -->
+                <div style="position: relative;">
+                    <span class="reuse-badge" style="top: 4px; right: 4px;" title="src/components/ui/card.jsx">[REUSE] Card</span>
+                    <span class="reuse-badge" style="top: 4px; right: 100px;" title="src/components/ui/badge.jsx">[REUSE] Badge</span>
+                    <span class="reuse-badge" style="top: 4px; right: 180px;" title="src/components/ui/button.jsx">[REUSE] Button</span>
+                    
+                    <div class="products-grid">
+                        <!-- Product Card 1 -->
+                        <div class="product-card">
+                            <div class="product-image">
+                                [Image: 280x200]
+                                <span class="badge">Popular</span>
+                                <button class="favorite-btn">♡</button>
+                            </div>
+                            <div class="product-info">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <h4 style="font-weight: bold;">Caesar com Frango</h4>
+                                    <span style="font-weight: bold;">R$ 24,90</span>
+                                </div>
+                                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Alface romana, frango grelhado, croutons, parmesão...</p>
+                                <div style="margin-bottom: 10px;">
+                                    <span class="tag">🌱 Vegano</span>
+                                    <span class="tag">⚡ Leve</span>
+                                </div>
+                                <button class="btn btn-primary" style="width: 100%;">+ Adicionar</button>
+                            </div>
+                        </div>
+
+                        <!-- Product Card 2 -->
+                        <div class="product-card">
+                            <div class="product-image">
+                                [Image: 280x200]
+                                <span class="badge">Recomendado</span>
+                                <button class="favorite-btn">❤️</button>
+                            </div>
+                            <div class="product-info">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <h4 style="font-weight: bold;">Bowl Mediterrâneo</h4>
+                                    <span style="font-weight: bold;">R$ 28,50</span>
+                                </div>
+                                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Mix de folhas, tomate seco, azeitonas pretas...</p>
+                                <div style="margin-bottom: 10px;">
+                                    <span class="tag">🎨 Personalizável</span>
+                                </div>
+                                <button class="btn btn-primary" style="width: 100%;">+ Escolher opcionais</button>
+                            </div>
+                        </div>
+
+                        <!-- Product Card 3 -->
+                        <div class="product-card">
+                            <div class="product-image">
+                                [Image: 280x200]
+                                <span class="badge">Vegano</span>
+                                <button class="favorite-btn">♡</button>
+                            </div>
+                            <div class="product-info">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <h4 style="font-weight: bold;">Green Power</h4>
+                                    <span style="font-weight: bold;">R$ 22,90</span>
+                                </div>
+                                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Espinafre, rúcula, abacate, quinoa, sementes...</p>
+                                <div style="margin-bottom: 10px;">
+                                    <span class="tag">🌱 Vegano</span>
+                                    <span class="tag">⚡ Leve</span>
+                                </div>
+                                <button class="btn btn-primary" style="width: 100%;">+ Adicionar</button>
+                            </div>
+                        </div>
+
+                        <!-- More products... -->
+                        <div class="product-card" style="opacity: 0.6;">
+                            <div class="product-image">[Mais 9 produtos...]</div>
+                            <div class="product-info">
+                                <div style="text-align: center; padding: 20px;">...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Quick View Panel (Desktop) -->
+        <div style="position: relative;">
+            <span class="new-badge" style="top: 4px; right: 4px;" title="To be created at src/components/QuickViewPanel.jsx">[NEW] QuickViewPanel</span>
+            <div class="quick-view-panel">
+                <h3 style="margin-bottom: 15px;">Quick View</h3>
+                <div style="width: 100%; height: 180px; background: #ccc; border: 2px solid #333; margin-bottom: 15px; display: flex; align-items: center; justify-content: center;">
+                    [Product Image]
+                </div>
+                <h4 style="font-weight: bold; margin-bottom: 5px;">Caesar com Frango</h4>
+                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Alface romana, frango grelhado, croutons...</p>
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px;">R$ 24,90</div>
+                <div style="border: 2px solid #ccc; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                    <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">Adicionais:</div>
+                    <div style="font-size: 11px;">☑️ Frango extra (+R$ 5)</div>
+                    <div style="font-size: 11px;">☐ Bacon (+R$ 4)</div>
+                    <div style="font-size: 11px;">☐ Ovo (+R$ 3)</div>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">Adicionar ao Carrinho</button>
+                <button class="btn" style="width: 100%;">Ver Detalhes Completos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REUSABLE: Mobile Floating Cart -->
+    <div style="position: relative;">
+        <span class="reuse-badge" style="bottom: 70px; right: 4px;" title="src/components/ui/button.jsx">[REUSE] Button</span>
+        <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; z-index: 100; display: none;" id="mobile-cart">
+            <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 16px;">
+                Finalizar Pedido - R$ 52,40
+            </button>
+        </div>
+    </div>
+
+    <div style="background: #e0e0e0; padding: 30px; text-align: center; margin-top: 40px; border-top: 3px solid #333;">
+        <h3 style="margin-bottom: 15px;">Principais Melhorias - Opção 1</h3>
+        <div style="max-width: 800px; margin: 0 auto; text-align: left;">
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin: 10px 0;">✅ <strong>Hierarquia Simplificada:</strong> Categorias diretas sem Menu intermediário</li>
+                <li style="margin: 10px 0;">✅ <strong>Filtros Inteligentes:</strong> Chips de filtro rápido (vegano, leve, preço)</li>
+                <li style="margin: 10px 0;">✅ <strong>Filtros Avançados:</strong> Sidebar com calorias, ingredientes</li>
+                <li style="margin: 10px 0;">✅ <strong>Sistema de Favoritos:</strong> Salvar produtos preferidos</li>
+                <li style="margin: 10px 0;">✅ <strong>Quick View:</strong> Painel lateral com preview rápido</li>
+                <li style="margin: 10px 0;">✅ <strong>Recomendações:</strong> Seção de produtos recomendados</li>
+                <li style="margin: 10px 0;">✅ <strong>Banner Promocional:</strong> Destaque para ofertas</li>
+                <li style="margin: 10px 0;">✅ <strong>View Toggle:</strong> Alternar entre grade e lista</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

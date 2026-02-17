@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  # Frontend Cliente
+  frontend-client:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.client
+    container_name: saladasoul_frontend_client
+    restart: always
+    ports:
+      - "3001:80"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    external: true
+    name: saladasoul_app_network

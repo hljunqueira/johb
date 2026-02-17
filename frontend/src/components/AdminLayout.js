@@ -54,7 +54,7 @@ export default function AdminLayout() {
                                 <NavContent onNav={() => setMobileNav(false)} />
                             </SheetContent>
                         </Sheet>
-                        <img src="https://customer-assets.emergentagent.com/job_soul-delivery/artifacts/3puvg49l_IMG_1929.jpeg" alt="" className="h-8 w-8 rounded-full" />
+                        <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-sm">SS</div>
                         <span className="font-bold font-heading text-foreground hidden sm:block">Salada Soul</span>
                         <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full hidden sm:block">Admin</span>
                     </div>
