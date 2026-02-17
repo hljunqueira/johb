@@ -9,7 +9,7 @@ services:
     container_name: saladasoul_frontend_admin
     restart: always
     ports:
-      - "3002:80"
+      - "3003:80"
     networks:
       - app_network
 
