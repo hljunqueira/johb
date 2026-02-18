@@ -170,7 +170,7 @@ class OrderItemCreate(BaseModel):
 class OrderCreate(BaseModel):
     customer_name: str = Field(..., min_length=2, max_length=100, description="Nome do cliente")
     customer_phone: str = Field(..., min_length=10, max_length=20, description="Telefone do cliente")
-    delivery_type: str = Field(..., regex="^(entrega|retirada)$", description="Tipo: entrega ou retirada")
+    delivery_type: str = Field(..., pattern="^(entrega|retirada)$", description="Tipo: entrega ou retirada")
     address: str = Field(default="", max_length=300, description="Endereço de entrega")
     neighborhood: str = Field(default="", max_length=100, description="Bairro")
     items: List[OrderItemCreate] = Field(..., min_items=1, max_items=20, description="Itens do pedido")
