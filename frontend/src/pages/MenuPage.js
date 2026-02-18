@@ -62,11 +62,13 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         );
     }, []);
 
+    // Calculate prices only if product exists
     const addPrice = selectedAdditionals.reduce((s, a) => s + a.price, 0);
-    const unitTotal = product.price + addPrice;
+    const unitTotal = product ? product.price + addPrice : 0;
     const totalPrice = unitTotal * quantity;
 
     const handleAdd = useCallback(() => {
+        if (!product) return;
         onAdd(product, quantity, selectedAdditionals, observation);
         onClose();
     }, [product, quantity, selectedAdditionals, observation, onAdd, onClose]);
