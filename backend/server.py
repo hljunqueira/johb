@@ -1923,27 +1923,22 @@ async def upload_file(file: UploadFile = File(...), user=Depends(get_current_adm
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
-if ENVIRONMENT == 'production':
-    # Production: only allow specific origins
-    allowed_origins = [
-        FRONTEND_URL,
-        "https://saladasoul.com",
-        "https://www.saladasoul.com",
-        "https://saladasoul.shop",
-        "https://www.saladasoul.shop",
-    ]
-    # Add any additional origins from env var
-    additional_origins = os.environ.get('ADDITIONAL_CORS_ORIGINS', '')
-    if additional_origins:
-        allowed_origins.extend([o.strip() for o in additional_origins.split(',') if o.strip()])
-else:
-    # Development: allow localhost origins
-    allowed_origins = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-    ]
+# Always use production CORS settings for HTTPS domains
+allowed_origins = [
+    FRONTEND_URL,
+    "https://saladasoul.com",
+    "https://www.saladasoul.com",
+    "https://saladasoul.shop",
+    "https://www.saladasoul.shop",
+    "http://localhost:3000",
+    "http://localhost:3001",
+]
+# Add any additional origins from env var
+additional_origins = os.environ.get('ADDITIONAL_CORS_ORIGINS', '')
+if additional_origins:
+    allowed_origins.extend([o.strip() for o in additional_origins.split(',') if o.strip()])
+
+logger.info(f"CORS allowed origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
