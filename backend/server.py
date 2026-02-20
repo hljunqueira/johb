@@ -1020,7 +1020,19 @@ async def get_admin_orders(status: str = None, user=Depends(get_current_admin)):
             )
         else:
             rows = await conn.fetch("SELECT * FROM orders ORDER BY created_at DESC")
-        return [dict(r) for r in rows]
+        orders = []
+        for r in rows:
+            order = dict(r)
+            # Ensure items is always a list
+            if isinstance(order.get('items'), str):
+                try:
+                    order['items'] = json.loads(order['items'])
+                except:
+                    order['items'] = []
+            elif not isinstance(order.get('items'), list):
+                order['items'] = []
+            orders.append(order)
+        return orders
 
 @api_router.put("/admin/orders/{order_id}/status")
 async def update_order_status(order_id: str, body: dict, user=Depends(get_current_admin)):
