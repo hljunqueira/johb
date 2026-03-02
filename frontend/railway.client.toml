@@ -1,0 +1,8 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.client"
+
+[deploy]
+startCommand = "nginx -g 'daemon off;'"
+healthcheckPath = "/"
+healthcheckTimeout = 100

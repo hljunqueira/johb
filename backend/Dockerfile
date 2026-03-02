@@ -12,7 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Expose the port the app runs on
-EXPOSE 8001
-
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+# Railway fornece a variável PORT
+# Não expor porta fixa, usar a variável de ambiente PORT
+CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8001}
