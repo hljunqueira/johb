@@ -33,11 +33,26 @@ load_dotenv(ROOT_DIR / '.env')
 limiter = Limiter(key_func=get_remote_address)
 
 # Database configuration
-DB_HOST = os.environ.get('DB_HOST', 'db')
-DB_NAME = os.environ.get('DB_NAME', 'saladasoul')
-DB_USER = os.environ.get('DB_USER', 'postgres')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', 'postgres')
-DB_PORT = os.environ.get('DB_PORT', '5432')
+# Support both individual env vars and DATABASE_URL (Railway/Supabase style)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Parse DATABASE_URL
+    # Format: postgresql://user:password@host:port/database
+    import urllib.parse
+    parsed = urllib.parse.urlparse(DATABASE_URL)
+    DB_USER = parsed.username or 'postgres'
+    DB_PASSWORD = parsed.password or ''
+    DB_HOST = parsed.hostname or 'db'
+    DB_PORT = str(parsed.port) if parsed.port else '5432'
+    DB_NAME = parsed.path.lstrip('/') if parsed.path else 'postgres'
+else:
+    # Fallback to individual env vars
+    DB_HOST = os.environ.get('DB_HOST', 'db')
+    DB_NAME = os.environ.get('DB_NAME', 'saladasoul')
+    DB_USER = os.environ.get('DB_USER', 'postgres')
+    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'postgres')
+    DB_PORT = os.environ.get('DB_PORT', '5432')
 
 JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key-change-in-production')
 JWT_ALGORITHM = "HS256"
@@ -1971,6 +1986,9 @@ async def startup():
         'environment': ENVIRONMENT,
         'version': '1.0.0'
     })
+    # SSL is required for Supabase connections
+    ssl_mode = 'require' if DATABASE_URL and 'supabase' in DATABASE_URL else None
+    
     db_pool = await asyncpg.create_pool(
         host=DB_HOST,
         database=DB_NAME,
@@ -1978,7 +1996,8 @@ async def startup():
         password=DB_PASSWORD,
         port=DB_PORT,
         min_size=5,
-        max_size=20
+        max_size=20,
+        ssl=ssl_mode
     )
     logger.info("Database pool created", extra={
         'host': DB_HOST,
