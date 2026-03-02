@@ -50,7 +50,7 @@ COPY --from=build-admin /admin-build /var/www/admin
 
 # Create nginx config file directly
 RUN mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-RUN printf 'server {\n    listen 8080;\n    server_name _;\n\n    location / {\n        root /var/www/client;\n        index index.html;\n        try_files $uri $uri/ /index.html;\n    }\n\n    location /admin {\n        alias /var/www/admin;\n        index index.html;\n        try_files $uri $uri/ /admin/index.html;\n    }\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:8001;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n}\n' > /etc/nginx/sites-available/default && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+RUN printf 'server {\n    listen 8080;\n    server_name _;\n\n    location / {\n        root /var/www/client;\n        index index.html;\n        try_files $uri $uri/ /index.html;\n    }\n\n    location /admin {\n        alias /var/www/admin;\n        index index.html;\n        try_files $uri $uri/ /admin/index.html;\n    }\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:8001/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n}\n' > /etc/nginx/sites-available/default && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # Remove default nginx config to avoid conflicts
 RUN rm -f /etc/nginx/conf.d/default.conf
