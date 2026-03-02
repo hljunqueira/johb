@@ -8,7 +8,8 @@ RUN npm install --legacy-peer-deps
 RUN npm install ajv@^8.0.0 --legacy-peer-deps
 COPY frontend/ .
 ENV REACT_APP_MODE=cliente
-ENV REACT_APP_BACKEND_URL=http://localhost:8001
+# Use relative path since frontend and backend are on same domain
+ENV REACT_APP_BACKEND_URL=/api
 RUN npm run build
 RUN mv build /client-build
 
@@ -19,7 +20,8 @@ RUN npm install --legacy-peer-deps
 RUN npm install ajv@^8.0.0 --legacy-peer-deps
 COPY frontend/ .
 ENV REACT_APP_MODE=admin
-ENV REACT_APP_BACKEND_URL=http://localhost:8001
+# Use relative path since frontend and backend are on same domain
+ENV REACT_APP_BACKEND_URL=/api
 RUN npm run build
 RUN mv build /admin-build
 
