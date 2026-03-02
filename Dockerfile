@@ -46,26 +46,33 @@ COPY backend/ .
 COPY --from=build-client /client-build /var/www/client
 COPY --from=build-admin /admin-build /var/www/admin
 
-# Nginx configuration - listen on PORT env var (Railway requirement)
-RUN echo 'server { \
-    listen ${PORT}; \
-    \
-    location / { \
-        root /var/www/client; \
-        try_files $uri $uri/ /index.html; \
-    } \
-    \
-    location /admin { \
-        alias /var/www/admin; \
-        try_files $uri $uri/ /admin/index.html; \
-    } \
-    \
-    location /api/ { \
-        proxy_pass http://localhost:8001; \
-        proxy_set_header Host $host; \
-        proxy_set_header X-Real-IP $remote_addr; \
-    } \
-}' > /etc/nginx/template.conf
+# Nginx configuration - Railway provides PORT env var
+# Using a startup script to handle dynamic port
+RUN echo '#!/bin/bash\n\
+PORT=${PORT:-8080}\n\
+cat > /etc/nginx/sites-available/default << EOF\n\
+server {\n\
+    listen \$PORT;\n\
+    \n\
+    location / {\n\
+        root /var/www/client;\n\
+        try_files \$uri \$uri/ /index.html;\n\
+    }\n\
+    \n\
+    location /admin {\n\
+        alias /var/www/admin;\n\
+        try_files \$uri \$uri/ /admin/index.html;\n\
+    }\n\
+    \n\
+    location /api/ {\n\
+        proxy_pass http://localhost:8001;\n\
+        proxy_set_header Host \$host;\n\
+        proxy_set_header X-Real-IP \$remote_addr;\n\
+    }\n\
+}\n\
+EOF\n\
+nginx -g "daemon off;"\n\
+' > /start-nginx.sh && chmod +x /start-nginx.sh
 
 # Supervisor configuration to manage both processes
 RUN echo '[supervisord]\n\
@@ -81,7 +88,7 @@ stderr_logfile=/var/log/backend.err.log\n\
 stdout_logfile=/var/log/backend.out.log\n\
 \n\
 [program:nginx]\n\
-command=bash -c "envsubst < /etc/nginx/template.conf > /etc/nginx/sites-available/default && nginx -g daemon off;"\n\
+command=/start-nginx.sh\n\
 autostart=true\n\
 autorestart=true\n\
 stderr_logfile=/var/log/nginx.err.log\n\
