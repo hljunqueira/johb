@@ -46,54 +46,15 @@ COPY backend/ .
 COPY --from=build-client /client-build /var/www/client
 COPY --from=build-admin /admin-build /var/www/admin
 
-# Nginx configuration - Railway provides PORT env var
-# Using a startup script to handle dynamic port
-RUN echo '#!/bin/bash\n\
-PORT=${PORT:-8080}\n\
-cat > /etc/nginx/sites-available/default << EOF\n\
-server {\n\
-    listen \$PORT;\n\
-    \n\
-    location / {\n\
-        root /var/www/client;\n\
-        try_files \$uri \$uri/ /index.html;\n\
-    }\n\
-    \n\
-    location /admin {\n\
-        alias /var/www/admin;\n\
-        try_files \$uri \$uri/ /admin/index.html;\n\
-    }\n\
-    \n\
-    location /api/ {\n\
-        proxy_pass http://localhost:8001;\n\
-        proxy_set_header Host \$host;\n\
-        proxy_set_header X-Real-IP \$remote_addr;\n\
-    }\n\
-}\n\
-EOF\n\
-nginx -g "daemon off;"\n\
-' > /start-nginx.sh && chmod +x /start-nginx.sh
+# Create nginx config file directly
+RUN mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+RUN printf 'server {\n    listen 8080;\n    server_name _;\n\n    location / {\n        root /var/www/client;\n        index index.html;\n        try_files $uri $uri/ /index.html;\n    }\n\n    location /admin {\n        alias /var/www/admin;\n        index index.html;\n        try_files $uri $uri/ /admin/index.html;\n    }\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:8001;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n}\n' > /etc/nginx/sites-available/default && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
+# Remove default nginx config to avoid conflicts
+RUN rm -f /etc/nginx/conf.d/default.conf
 
 # Supervisor configuration to manage both processes
-RUN echo '[supervisord]\n\
-nodaemon=true\n\
-user=root\n\
-\n\
-[program:backend]\n\
-command=uvicorn server:app --host 0.0.0.0 --port 8001 --workers 2\n\
-directory=/app\n\
-autostart=true\n\
-autorestart=true\n\
-stderr_logfile=/var/log/backend.err.log\n\
-stdout_logfile=/var/log/backend.out.log\n\
-\n\
-[program:nginx]\n\
-command=/start-nginx.sh\n\
-autostart=true\n\
-autorestart=true\n\
-stderr_logfile=/var/log/nginx.err.log\n\
-stdout_logfile=/var/log/nginx.out.log\n\
-' > /etc/supervisor/conf.d/supervisord.conf
+RUN printf '[supervisord]\nnodaemon=true\nuser=root\n\n[program:backend]\ncommand=uvicorn server:app --host 0.0.0.0 --port 8001 --workers 2\ndirectory=/app\nautostart=true\nautorestart=true\nstderr_logfile=/var/log/backend.err.log\nstdout_logfile=/var/log/backend.out.log\n\n[program:nginx]\ncommand=nginx -g "daemon off;"\nautostart=true\nautorestart=true\nstderr_logfile=/var/log/nginx.err.log\nstdout_logfile=/var/log/nginx.out.log\n' > /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 8080
 
