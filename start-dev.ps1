@@ -55,8 +55,8 @@ Write-Host "   Backend:   http://localhost:8001/api/" -ForegroundColor White
 Write-Host "   Docs API:  http://localhost:8001/docs" -ForegroundColor White
 Write-Host ""
 Write-Host "⚠️  IMPORTANTE:" -ForegroundColor Yellow
-Write-Host "   - O backend está usando a VPS como banco de dados" -ForegroundColor White
-Write-Host "   - Certifique-se de que a VPS está acessível" -ForegroundColor White
+Write-Host "   - Verifique se o arquivo backend/.env está configurado" -ForegroundColor White
+Write-Host "   - O banco de dados pode ser local ou Supabase" -ForegroundColor White
 Write-Host ""
 Write-Host "🛑 Para parar, feche as janelas do PowerShell" -ForegroundColor Red
 Write-Host ""

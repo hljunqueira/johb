@@ -36,13 +36,6 @@ limiter = Limiter(key_func=get_remote_address)
 # Support both individual env vars and DATABASE_URL (Railway/Supabase style)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# Debug log
-logger.info(f"DATABASE_URL present: {bool(DATABASE_URL)}")
-if DATABASE_URL:
-    # Hide password in logs
-    safe_url = DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'invalid-url'
-    logger.info(f"DATABASE_URL host: {safe_url}")
-
 if DATABASE_URL:
     # Parse DATABASE_URL
     # Format: postgresql://user:password@host:port/database
@@ -53,7 +46,6 @@ if DATABASE_URL:
     DB_HOST = parsed.hostname or 'db'
     DB_PORT = str(parsed.port) if parsed.port else '5432'
     DB_NAME = parsed.path.lstrip('/') if parsed.path else 'postgres'
-    logger.info(f"Parsed DB_HOST: {DB_HOST}, DB_PORT: {DB_PORT}, DB_NAME: {DB_NAME}")
 else:
     # Fallback to individual env vars
     DB_HOST = os.environ.get('DB_HOST', 'db')
@@ -61,7 +53,6 @@ else:
     DB_USER = os.environ.get('DB_USER', 'postgres')
     DB_PASSWORD = os.environ.get('DB_PASSWORD', 'postgres')
     DB_PORT = os.environ.get('DB_PORT', '5432')
-    logger.info(f"Using individual env vars - DB_HOST: {DB_HOST}")
 
 JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key-change-in-production')
 JWT_ALGORITHM = "HS256"

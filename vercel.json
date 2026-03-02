@@ -10,6 +10,6 @@
     }
   ],
   "env": {
-    "REACT_APP_BACKEND_URL": "http://76.13.171.93:8003"
+    "REACT_APP_BACKEND_URL": "https://api.saladasoul.com"
   }
 }
