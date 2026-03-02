@@ -1,6 +1,5 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile.admin"
 
 [deploy]
 startCommand = "nginx -g 'daemon off;'"
