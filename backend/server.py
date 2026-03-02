@@ -1986,24 +1986,35 @@ async def startup():
         'environment': ENVIRONMENT,
         'version': '1.0.0'
     })
+    
+    # Log database configuration (without password)
+    logger.info(f"Database config - Host: {DB_HOST}, Port: {DB_PORT}, Database: {DB_NAME}, User: {DB_USER}")
+    logger.info(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
+    
     # SSL is required for Supabase connections
     ssl_mode = 'require' if DATABASE_URL and 'supabase' in DATABASE_URL else None
+    logger.info(f"SSL mode: {ssl_mode}")
     
-    db_pool = await asyncpg.create_pool(
-        host=DB_HOST,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        port=DB_PORT,
-        min_size=5,
-        max_size=20,
-        ssl=ssl_mode
-    )
-    logger.info("Database pool created", extra={
-        'host': DB_HOST,
-        'database': DB_NAME,
-        'pool_size': '5-20'
-    })
+    try:
+        db_pool = await asyncpg.create_pool(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT,
+            min_size=5,
+            max_size=20,
+            ssl=ssl_mode
+        )
+        logger.info("Database pool created", extra={
+            'host': DB_HOST,
+            'database': DB_NAME,
+            'pool_size': '5-20'
+        })
+    except Exception as e:
+        logger.error(f"Failed to connect to database: {e}")
+        logger.error(f"DB_HOST: {DB_HOST}, DB_PORT: {DB_PORT}, DB_NAME: {DB_NAME}")
+        raise
 
 @app.on_event("shutdown")
 async def shutdown():
