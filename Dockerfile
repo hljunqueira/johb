@@ -31,6 +31,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     nginx \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend requirements and install
@@ -44,9 +45,9 @@ COPY backend/ .
 COPY --from=build-client /client-build /var/www/client
 COPY --from=build-admin /admin-build /var/www/admin
 
-# Nginx configuration
+# Nginx configuration - listen on PORT env var (Railway requirement)
 RUN echo 'server { \
-    listen 80; \
+    listen ${PORT}; \
     \
     location / { \
         root /var/www/client; \
@@ -63,13 +64,29 @@ RUN echo 'server { \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
     } \
-}' > /etc/nginx/sites-available/default
+}' > /etc/nginx/template.conf
 
-# Startup script
-RUN echo '#!/bin/bash\n\
-nginx\n\
-uvicorn server:app --host 0.0.0.0 --port 8001 --workers 2\n' > /start.sh && chmod +x /start.sh
+# Supervisor configuration to manage both processes
+RUN echo '[supervisord]\n\
+nodaemon=true\n\
+user=root\n\
+\n\
+[program:backend]\n\
+command=uvicorn server:app --host 0.0.0.0 --port 8001 --workers 2\n\
+directory=/app\n\
+autostart=true\n\
+autorestart=true\n\
+stderr_logfile=/var/log/backend.err.log\n\
+stdout_logfile=/var/log/backend.out.log\n\
+\n\
+[program:nginx]\n\
+command=bash -c "envsubst < /etc/nginx/template.conf > /etc/nginx/sites-available/default && nginx -g daemon off;"\n\
+autostart=true\n\
+autorestart=true\n\
+stderr_logfile=/var/log/nginx.err.log\n\
+stdout_logfile=/var/log/nginx.out.log\n\
+' > /etc/supervisor/conf.d/supervisord.conf
 
-EXPOSE 80
+EXPOSE 8080
 
-CMD ["/start.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
