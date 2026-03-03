@@ -20,10 +20,9 @@ RUN npm install --legacy-peer-deps
 RUN npm install ajv@^8.0.0 --legacy-peer-deps
 COPY frontend/ .
 ENV REACT_APP_MODE=admin
-# Empty string so axios uses relative path without prefix
+# Empty string so axios uses relative path /api without prefix duplication
 ENV REACT_APP_BACKEND_URL=
-# Set PUBLIC_URL so assets are served from /admin/
-ENV PUBLIC_URL=/admin
+# No PUBLIC_URL needed - admin served at root of saladasoul.shop
 RUN npm run build
 RUN mv build /admin-build
 
@@ -50,9 +49,9 @@ COPY backend/ .
 COPY --from=build-client /client-build /var/www/client
 COPY --from=build-admin /admin-build /var/www/admin
 
-# Create nginx config file directly
+# Create nginx config with domain-based routing
 RUN mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-RUN printf 'server {\n    listen 8080;\n    server_name _;\n\n    location / {\n        root /var/www/client;\n        index index.html;\n        try_files $uri $uri/ /index.html;\n    }\n\n    location /admin/ {\n        alias /var/www/admin/;\n        index index.html;\n        try_files $uri $uri/ =404;\n    }\n    \n    location = /admin {\n        return 301 /admin/;\n    }\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:8001/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n}\n' > /etc/nginx/sites-available/default && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+RUN printf '# Frontend Cliente - saladasoul.com\nserver {\n    listen 8080;\n    server_name saladasoul.com www.saladasoul.com;\n\n    location / {\n        root /var/www/client;\n        index index.html;\n        try_files $uri $uri/ /index.html;\n    }\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:8001/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n}\n\n# Frontend Admin - saladasoul.shop\nserver {\n    listen 8080;\n    server_name saladasoul.shop www.saladasoul.shop;\n\n    location / {\n        root /var/www/admin;\n        index index.html;\n        try_files $uri $uri/ /index.html;\n    }\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:8001/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n}\n\n# Default fallback - mostra o cliente\nserver {\n    listen 8080 default_server;\n    server_name _;\n\n    location / {\n        root /var/www/client;\n        index index.html;\n        try_files $uri $uri/ /index.html;\n    }\n\n    location /admin/ {\n        alias /var/www/admin/;\n        index index.html;\n        try_files $uri $uri/ /var/www/admin/index.html;\n    }\n\n    location = /admin {\n        return 301 /admin/;\n    }\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:8001/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n}\n' > /etc/nginx/sites-available/default && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # Remove default nginx config to avoid conflicts
 RUN rm -f /etc/nginx/conf.d/default.conf
