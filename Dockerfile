@@ -22,6 +22,8 @@ COPY frontend/ .
 ENV REACT_APP_MODE=admin
 # Use relative path since frontend and backend are on same domain
 ENV REACT_APP_BACKEND_URL=/api
+# Set PUBLIC_URL so assets are served from /admin/
+ENV PUBLIC_URL=/admin
 RUN npm run build
 RUN mv build /admin-build
 
