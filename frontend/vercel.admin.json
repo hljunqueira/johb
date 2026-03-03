@@ -6,7 +6,8 @@
   "framework": "create-react-app",
   "env": {
     "REACT_APP_MODE": "admin",
-    "REACT_APP_BACKEND_URL": "https://api.saladasoul.com"
+    "REACT_APP_BACKEND_URL": "https://api.saladasoul.com",
+      "REACT_APP_API_URL": "https://api.saladasoul.com/api"
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://api.saladasoul.com/api/$1" }
