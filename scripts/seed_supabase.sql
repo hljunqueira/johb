@@ -73,3 +73,9 @@ ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email;
 
 SELECT 'Admin users:' as info, COUNT(*) as count FROM admin_users;
+
+-- Remove o usuário admin original genérico
+DELETE FROM admin_users WHERE id = 'admin_fccb0e4aa40a';
+
+-- Verifica usuários finais
+SELECT id, email, name FROM admin_users ORDER BY created_at;
