@@ -1959,6 +1959,8 @@ allowed_origins = [
     "https://www.saladasoul.shop",
     "http://localhost:3000",
     "http://localhost:3001",
+    "https://saladasoul-cliente.vercel.app",
+    "https://saladasoul-admin.vercel.app",
 ]
 # Add any additional origins from env var
 additional_origins = os.environ.get('ADDITIONAL_CORS_ORIGINS', '')
