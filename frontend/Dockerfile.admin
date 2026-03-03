@@ -15,7 +15,7 @@ COPY . .
 # REACT_APP_BACKEND_URL deve ser passado como build-arg
 ARG REACT_APP_BACKEND_URL
 ENV REACT_APP_MODE=admin
-ENV REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-https://api.saladasoul.com}
+ENV REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-}
 RUN npm run build
 
 # Production Stage

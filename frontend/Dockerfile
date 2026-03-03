@@ -13,7 +13,7 @@ COPY . .
 
 # Build como CLIENTE
 ENV REACT_APP_MODE=cliente
-ENV REACT_APP_BACKEND_URL=https://api.saladasoul.com
+ENV REACT_APP_BACKEND_URL=
 RUN npm run build
 
 # Production Stage
