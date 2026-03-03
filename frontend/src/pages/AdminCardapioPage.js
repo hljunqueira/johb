@@ -12,8 +12,8 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Copy, Upload, Package, Layers, Tag, Grid3X3, X, Image, Gift } from "lucide-react";
 import { useMenus } from "@/hooks/useCardapioData";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const getImageUrl = (url) => { if (!url) return ""; if (url.startsWith("http")) return url; return `${BACKEND_URL}${url}`; };
 
 export default function AdminCardapioPage() {

@@ -1,5 +1,6 @@
 # Dockerfile unificado para Backend + Frontend Cliente + Frontend Admin
 # Usa Nginx como proxy reverso para servir tudo na mesma porta
+# Cache bust: 2026-03-03
 
 FROM node:20-alpine AS build-client
 WORKDIR /app

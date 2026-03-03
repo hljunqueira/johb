@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Clock, Package, CheckCircle, DollarSign, RefreshCw } from "lucide-react";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const statusConfig = {
     aguardando: { label: "Aguardando", color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock, next: "preparando" },
     preparando: { label: "Preparando", color: "bg-blue-100 text-blue-800 border-blue-200", icon: Package, next: "entregue" },

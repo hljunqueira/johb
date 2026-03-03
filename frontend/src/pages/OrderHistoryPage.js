@@ -8,7 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { ArrowLeft, Search, Clock, RotateCcw } from "lucide-react";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const statusColors = { aguardando: "bg-yellow-100 text-yellow-800", preparando: "bg-blue-100 text-blue-800", entregue: "bg-green-100 text-green-800" };
 
 export default function OrderHistoryPage() {

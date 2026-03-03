@@ -1,5 +1,6 @@
 // API Configuration
-export const API_URL = process.env.REACT_APP_BACKEND_URL;
+// When REACT_APP_BACKEND_URL is empty, use relative paths (same domain via Nginx proxy)
+export const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 export const API = `${API_URL}/api`;
 
 // Helper to get full image URL

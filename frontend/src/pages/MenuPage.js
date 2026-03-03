@@ -13,8 +13,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw } from "lucide-react";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 const getImageUrl = (url) => {
     if (!url) return "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=400";

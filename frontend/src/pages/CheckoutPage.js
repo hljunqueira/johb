@@ -11,8 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { ArrowLeft, Truck, Store, Copy, Check, Loader2, Edit2, X, Plus, Minus } from "lucide-react";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const getImageUrl = (url) => { if (!url) return ""; if (url.startsWith("http")) return url; return `${BACKEND_URL}${url}`; };
 
 export default function CheckoutPage() {

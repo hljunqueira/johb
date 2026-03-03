@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Truck, Plus, Trash2, DollarSign, MapPin, Save } from "lucide-react";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 
 export default function AdminDeliveryPage() {
     const [settings, setSettings] = useState({ areas: [], delivery_fee: 5, min_free_delivery: 60, active: true });

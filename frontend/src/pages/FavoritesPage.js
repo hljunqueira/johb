@@ -6,7 +6,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { ArrowLeft, Heart, ShoppingCart, Trash2, Plus } from "lucide-react";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 const getImageUrl = (url) => {
     if (!url) return "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=400";
