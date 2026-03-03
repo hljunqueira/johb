@@ -8,8 +8,8 @@ RUN npm install --legacy-peer-deps
 RUN npm install ajv@^8.0.0 --legacy-peer-deps
 COPY frontend/ .
 ENV REACT_APP_MODE=cliente
-# Use relative path since frontend and backend are on same domain
-ENV REACT_APP_BACKEND_URL=/api
+# Empty string so axios uses relative path /api without prefix duplication
+ENV REACT_APP_BACKEND_URL=
 RUN npm run build
 RUN mv build /client-build
 
@@ -20,8 +20,8 @@ RUN npm install --legacy-peer-deps
 RUN npm install ajv@^8.0.0 --legacy-peer-deps
 COPY frontend/ .
 ENV REACT_APP_MODE=admin
-# Use relative path since frontend and backend are on same domain
-ENV REACT_APP_BACKEND_URL=/api
+# Empty string so axios uses relative path without prefix
+ENV REACT_APP_BACKEND_URL=
 # Set PUBLIC_URL so assets are served from /admin/
 ENV PUBLIC_URL=/admin
 RUN npm run build
