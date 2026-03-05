@@ -4,6 +4,7 @@ Servidor simplificado para Railway - Salada Soul API
 import os
 import sys
 import logging
+import asyncio
 from datetime import datetime, timezone
 
 # Configurar logging simples
@@ -50,16 +51,29 @@ async def startup():
     global db_pool
     logger.info("Starting up Salada Soul API")
     logger.info(f"DATABASE_URL configured: True")
+    logger.info(f"DATABASE_URL starts with: {DATABASE_URL[:50]}...")
     
-    try:
-        db_pool = await asyncpg.create_pool(
-            DATABASE_URL,
-            ssl='require'
-        )
-        logger.info("Database pool created successfully")
-    except Exception as e:
-        logger.error(f"Failed to create database pool: {e}")
-        raise
+    # Retry connection up to 5 times
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            db_pool = await asyncpg.create_pool(
+                DATABASE_URL,
+                ssl='require',
+                min_size=1,
+                max_size=10
+            )
+            logger.info("Database pool created successfully")
+            return
+        except Exception as e:
+            logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2)
+            else:
+                logger.error("Failed to create database pool after all retries")
+                # Don't raise - let the app start without DB for healthcheck
+                logger.warning("Starting without database connection")
+                db_pool = None
 
 @app.on_event("shutdown")
 async def shutdown():
