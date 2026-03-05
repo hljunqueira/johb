@@ -1,5 +1,5 @@
 # Dockerfile unificado para Railway - Backend + Nginx
-# Cache bust: 2026-03-05-api-23
+# Cache bust: 2026-03-05-api-24
 
 FROM python:3.10-slim
 
@@ -22,7 +22,7 @@ COPY backend/ .
 # Create uploads directory
 RUN mkdir -p uploads
 
-# Configure nginx
+# Configure nginx to use $PORT from Railway
 RUN echo 'server { \
     listen 8000; \
     location / { \
@@ -31,6 +31,9 @@ RUN echo 'server { \
         proxy_set_header X-Real-IP $remote_addr; \
     } \
 }' > /etc/nginx/sites-available/default
+
+# Also create default nginx.conf that doesn't conflict
+RUN rm -f /etc/nginx/sites-enabled/default && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
 # Create supervisor config file
 COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
