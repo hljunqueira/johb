@@ -32,6 +32,28 @@ export function CustomerProvider({ children }) {
         }
     }, [customer]);
 
+    // Carregar últimos pedidos
+    const loadLastOrders = useCallback(async (phone) => {
+        try {
+            const response = await axios.get(`${API}/customers/${phone}/orders?limit=5`);
+            setLastOrders(response.data);
+        } catch (error) {
+            console.error("Erro ao carregar pedidos:", error);
+            setLastOrders([]);
+        }
+    }, []);
+
+    // Carregar sugestões de "pedir novamente"
+    const loadReorderSuggestions = useCallback(async (phone) => {
+        try {
+            const response = await axios.get(`${API}/customers/${phone}/reorder-suggestions`);
+            setReorderSuggestions(response.data);
+        } catch (error) {
+            console.error("Erro ao carregar sugestões:", error);
+            setReorderSuggestions([]);
+        }
+    }, []);
+
     // Login/Identificação do cliente (apenas telefone, sem senha)
     const login = useCallback(async (phone, name = null) => {
         setLoading(true);
@@ -58,29 +80,7 @@ export function CustomerProvider({ children }) {
         } finally {
             setLoading(false);
         }
-    }, []);
-
-    // Carregar últimos pedidos
-    const loadLastOrders = useCallback(async (phone) => {
-        try {
-            const response = await axios.get(`${API}/customers/${phone}/orders?limit=5`);
-            setLastOrders(response.data);
-        } catch (error) {
-            console.error("Erro ao carregar pedidos:", error);
-            setLastOrders([]);
-        }
-    }, []);
-
-    // Carregar sugestões de "pedir novamente"
-    const loadReorderSuggestions = useCallback(async (phone) => {
-        try {
-            const response = await axios.get(`${API}/customers/${phone}/reorder-suggestions`);
-            setReorderSuggestions(response.data);
-        } catch (error) {
-            console.error("Erro ao carregar sugestões:", error);
-            setReorderSuggestions([]);
-        }
-    }, []);
+    }, [loadLastOrders, loadReorderSuggestions]);
 
     // Atualizar dados do cliente
     const updateCustomer = useCallback(async (data) => {
