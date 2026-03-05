@@ -58,37 +58,26 @@ async def get_db_pool():
             import urllib.parse
             parsed = urllib.parse.urlparse(DATABASE_URL)
             
-            # Resolve hostname to IP to avoid DNS issues
-            import socket
-            logger.info(f"Resolving {parsed.hostname} to IP...")
-            ip = socket.gethostbyname(parsed.hostname)
-            logger.info(f"Resolved to IP: {ip}")
-            
-            # Build DSN with IP instead of hostname
-            # Replace hostname with IP in the URL
-            netloc = f"{parsed.username}:{parsed.password}@{ip}:{parsed.port}"
-            dsn = urllib.parse.urlunparse((
-                parsed.scheme, netloc, parsed.path, 
-                parsed.params, parsed.query, parsed.fragment
-            ))
-            
             # Supabase requires SSL - use sslmode=require
+            dsn = DATABASE_URL
             if 'sslmode' not in dsn:
                 dsn += "?sslmode=require"
             
-            logger.info(f"Connecting to database at {ip}...")
-            logger.info(f"DSN (masked): postgresql://{parsed.username}:****@{ip}:{parsed.port}{parsed.path}?sslmode=require")
+            logger.info(f"Connecting to database at {parsed.hostname}...")
             
-            # Try with explicit SSL context
-            import ssl
-            ssl_context = ssl.create_default_context()
+            # Use hostaddr to bypass DNS resolution in asyncpg
+            # This tells asyncpg to connect directly to the IP
+            import socket
+            ip = socket.gethostbyname(parsed.hostname)
+            dsn += f"&hostaddr={ip}"
+            
+            logger.info(f"Using hostaddr={ip} to bypass DNS")
             
             db_pool = await asyncpg.create_pool(
                 dsn, 
                 min_size=1, 
                 max_size=5,
-                command_timeout=60,
-                ssl=ssl_context
+                command_timeout=60
             )
             logger.info("Database pool created successfully")
         except Exception as e:
