@@ -3,6 +3,7 @@ import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -593,58 +594,156 @@ function ProductsTab({ headers }) {
             <ConfirmDialog open={confirmOpen} title="Excluir produto?" description="Esta ação não pode ser desfeita. O produto será removido do cardápio." confirmLabel="Excluir" danger onConfirm={confirmDelete} onCancel={() => { setConfirmOpen(false); setConfirmTarget(null); }} />
 
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto" data-testid="product-form">
-                    <DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Produto" : "Novo Produto"}</DialogTitle></DialogHeader>
-                    <form onSubmit={save} className="space-y-4">
-                        <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="product-name" /></div>
-                        <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-desc" /></div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div><Label>Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-lg" required data-testid="product-price" /></div>
-                            <div><Label>Estoque (-1 = ilimitado)</Label><Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-stock" /></div>
+                <DialogContent className="max-w-2xl rounded-2xl max-h-[92vh] overflow-y-auto" data-testid="product-form">
+                    <DialogHeader>
+                        <DialogTitle className="font-heading text-lg">{editing ? "Editar Produto" : "Novo Produto"}</DialogTitle>
+                        <p className="text-xs text-muted-foreground">{editing ? "Atualize as informações do produto" : "Preencha os dados para criar um novo produto"}</p>
+                    </DialogHeader>
+                    <form onSubmit={save} className="space-y-5 pt-1">
+
+                        {/* Linha 1: Nome + Status */}
+                        <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+                            <div>
+                                <Label className="text-sm font-medium">Nome <span className="text-destructive">*</span></Label>
+                                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" placeholder="Ex: Salada Caesar" required data-testid="product-name" />
+                            </div>
+                            <div className="flex flex-col items-center gap-1 pb-1">
+                                <span className="text-xs text-muted-foreground">Ativo</span>
+                                <Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} />
+                            </div>
                         </div>
-                        <div><Label>Categoria</Label>
-                            <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm" required>
+
+                        {/* Descrição */}
+                        <div>
+                            <Label className="text-sm font-medium">Descrição</Label>
+                            <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg resize-none" rows={3} placeholder="Descreva os ingredientes, sabor, diferencial..." data-testid="product-desc" />
+                        </div>
+
+                        {/* Preço + Estoque */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-sm font-medium">Preço (R$) <span className="text-destructive">*</span></Label>
+                                <div className="relative mt-1">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                                    <Input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="rounded-lg pl-9" placeholder="0.00" required data-testid="product-price" />
+                                </div>
+                                {(form.price === "0" || form.price === "0.00" || form.price === 0 || form.price === "") && (
+                                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1"><svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>Preço sob consulta — soma dos complementos</p>
+                                )}
+                            </div>
+                            <div>
+                                <Label className="text-sm font-medium">Estoque</Label>
+                                <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-stock" />
+                                <p className="text-xs text-muted-foreground mt-1">Use -1 para ilimitado</p>
+                            </div>
+                        </div>
+
+                        {/* Categoria */}
+                        <div>
+                            <Label className="text-sm font-medium">Categoria <span className="text-destructive">*</span></Label>
+                            <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" required>
                                 <option value="">Selecione uma categoria</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
-                        <div><Label>Imagem</Label>
-                            <div className="mt-1 flex gap-2 items-center">
-                                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="rounded-lg flex-1" data-testid="product-image-url" />
-                                <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
-                            </div>
-                            {form.image_url && <img src={getImageUrl(form.image_url)} alt="" className="mt-2 h-20 w-20 object-cover rounded-lg" />}
+
+                        {/* Imagem */}
+                        <div>
+                            <Label className="text-sm font-medium">Imagem do produto</Label>
+                            {form.image_url ? (
+                                <div className="mt-2 relative inline-block">
+                                    <img src={getImageUrl(form.image_url)} alt="" className="h-28 w-28 object-cover rounded-xl border" />
+                                    <button type="button" onClick={() => setForm(f => ({ ...f, image_url: "" }))}
+                                        className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                    <label className="absolute bottom-1 right-1 cursor-pointer">
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                                        <span className="flex items-center justify-center h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 transition">
+                                            <Upload className="h-3 w-3 text-white" />
+                                        </span>
+                                    </label>
+                                </div>
+                            ) : (
+                                <label className="cursor-pointer mt-2 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl p-6 hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                                    <Image className="h-8 w-8 text-muted-foreground/40" />
+                                    <span className="text-sm text-muted-foreground">Clique para enviar imagem</span>
+                                    <span className="text-xs text-muted-foreground/60">JPG, PNG, WEBP — máx. 2MB</span>
+                                </label>
+                            )}
+                            {form.image_url && (
+                                <div className="mt-2 flex gap-2 items-center">
+                                    <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="Ou cole a URL da imagem" className="rounded-lg flex-1 text-xs" data-testid="product-image-url" />
+                                </div>
+                            )}
                         </div>
-                        <div><Label>Tags</Label>
-                            <div className="flex flex-wrap gap-2 mt-1 mb-2">{["vegano", "leve", "mais_pedido", "recomendado"].map(t => (
-                                <button key={t} type="button" onClick={() => toggleTag(t)} className={`px-3 py-1 rounded-full text-xs font-medium ${form.tags.includes(t) ? "bg-primary text-white" : "bg-muted text-foreground"}`}>{t}</button>
-                            ))}</div>
-                            {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).map(t => (
-                                <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 mr-1 mb-1 rounded-full text-xs font-medium bg-accent/15 text-accent"><Tag className="h-3 w-3" />{t}<button type="button" onClick={() => toggleTag(t)}><X className="h-3 w-3" /></button></span>
-                            ))}
-                            <div className="flex gap-2 mt-1"><Input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Nova tag..." className="rounded-lg flex-1 text-sm" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }} data-testid="new-tag-input" /><Button type="button" size="sm" variant="outline" onClick={addCustomTag} className="rounded-lg"><Plus className="h-3 w-3 mr-1" />Tag</Button></div>
-                        </div>
-                        <div><Label>Opcionais / Complementos</Label>
-                            <p className="text-xs text-muted-foreground mb-2">Selecione os complementos disponiveis para este produto</p>
-                            <div className="space-y-1.5 max-h-40 overflow-auto">
-                                {complements.filter(c => c.active).map(c => (
-                                    <button key={c.id} type="button" onClick={() => toggleComp(c.id)}
-                                        className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-all ${form.complement_ids.includes(c.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`} data-testid={`comp-select-${c.id}`}>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${form.complement_ids.includes(c.id) ? "bg-primary border-primary" : "border-gray-300"}`}>
-                                                {form.complement_ids.includes(c.id) && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                                            </div>
-                                            <span className="font-medium">{c.name}</span>
-                                        </div>
-                                        <span className="text-primary font-medium">R$ {c.price.toFixed(2)}</span>
+
+                        {/* Tags */}
+                        <div>
+                            <Label className="text-sm font-medium">Tags</Label>
+                            <p className="text-xs text-muted-foreground mb-2">Clique para ativar/desativar</p>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {["vegano", "leve", "mais_pedido", "recomendado"].map(t => (
+                                    <button key={t} type="button" onClick={() => toggleTag(t)}
+                                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                                            form.tags.includes(t)
+                                                ? "bg-primary text-white border-primary"
+                                                : "bg-white text-foreground border-border hover:border-primary/50"
+                                        }`}>{t}
                                     </button>
                                 ))}
-                                {complements.filter(c => c.active).length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Nenhum complemento. Crie na aba "Opcionais".</p>}
+                                {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).map(t => (
+                                    <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent/15 text-accent border border-accent/30">
+                                        {t}
+                                        <button type="button" onClick={() => toggleTag(t)} className="hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="flex gap-2">
+                                <Input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Nova tag personalizada..." className="rounded-lg flex-1 text-sm" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }} data-testid="new-tag-input" />
+                                <Button type="button" size="sm" variant="outline" onClick={addCustomTag} className="rounded-lg shrink-0"><Plus className="h-3 w-3 mr-1" />Adicionar</Button>
                             </div>
                         </div>
-                        <div className="flex gap-3 pt-2">
+
+                        {/* Opcionais */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <Label className="text-sm font-medium">Opcionais / Complementos</Label>
+                                {form.complement_ids.length > 0 && (
+                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{form.complement_ids.length} selecionado{form.complement_ids.length > 1 ? "s" : ""}</span>
+                                )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2">Selecione os complementos disponíveis para este produto</p>
+                            <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1 rounded-lg">
+                                {complements.filter(c => c.active).length === 0
+                                    ? <div className="text-center py-6 border-2 border-dashed border-border rounded-lg"><p className="text-xs text-muted-foreground">Nenhum complemento cadastrado.</p><p className="text-xs text-muted-foreground">Crie na aba <strong>Opcionais</strong>.</p></div>
+                                    : complements.filter(c => c.active).map(c => (
+                                        <button key={c.id} type="button" onClick={() => toggleComp(c.id)}
+                                            className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-all ${
+                                                form.complement_ids.includes(c.id)
+                                                    ? "border-primary bg-primary/5 shadow-sm"
+                                                    : "border-border hover:border-primary/30 bg-white"
+                                            }`} data-testid={`comp-select-${c.id}`}>
+                                            <div className="flex items-center gap-2.5">
+                                                <div className={`h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${
+                                                    form.complement_ids.includes(c.id) ? "bg-primary border-primary" : "border-gray-300"
+                                                }`}>
+                                                    {form.complement_ids.includes(c.id) && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                </div>
+                                                <span className="font-medium text-sm">{c.name}</span>
+                                            </div>
+                                            <span className="text-primary font-semibold text-sm">R$ {c.price.toFixed(2)}</span>
+                                        </button>
+                                    ))
+                                }
+                            </div>
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex gap-3 pt-2 border-t">
                             <Button type="button" variant="outline" className="flex-1 rounded-full" onClick={() => setShowForm(false)}>Cancelar</Button>
-                            <Button type="submit" className="flex-1 bg-primary text-white rounded-full" data-testid="save-product-btn">{editing ? "Atualizar" : "Criar"} Produto</Button>
+                            <Button type="submit" className="flex-1 bg-primary text-white rounded-full" data-testid="save-product-btn">{editing ? "Salvar alterações" : "Criar Produto"}</Button>
                         </div>
                     </form>
                 </DialogContent>
