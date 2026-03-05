@@ -173,7 +173,8 @@ async def get_db_pool():
                 min_size=1,
                 max_size=5,
                 command_timeout=60,
-                timeout=30
+                timeout=30,
+                statement_cache_size=0  # Necessário para pgbouncer com pool_mode=transaction
             )
             logger.info("Database pool created successfully")
         except Exception as e:
