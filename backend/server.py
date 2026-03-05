@@ -72,7 +72,8 @@ async def get_db_pool():
                 ssl='require',
                 min_size=1, 
                 max_size=5,
-                command_timeout=60
+                command_timeout=60,
+                timeout=30
             )
             logger.info("Database pool created successfully")
         except Exception as e:
