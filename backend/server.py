@@ -86,35 +86,15 @@ def setup_logging():
     # Clear existing handlers
     logger.handlers = []
     
-    # Create formatter
-    if ENVIRONMENT == 'production':
-        # JSON format for production
-        formatter = jsonlogger.JsonFormatter(
-            '%(timestamp)s %(level)s %(name)s %(message)s %(pathname)s %(lineno)d',
-            rename_fields={'levelname': 'level', 'asctime': 'timestamp'}
-        )
-    else:
-        # Human-readable format for development
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+    # Create formatter - use simple format for Railway to avoid jsonlogger issues
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     
     # Console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
-    
-    # File handler for production
-    if ENVIRONMENT == 'production':
-        log_dir = ROOT_DIR / 'logs'
-        log_dir.mkdir(exist_ok=True)
-        file_handler = logging.handlers.RotatingFileHandler(
-            log_dir / 'app.log',
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
     
     return logger
 
@@ -563,16 +543,27 @@ async def get_combos(request: Request):
 
 # ==================== HEALTH CHECK ====================
 @app.get("/health")
-@limiter.limit("60/minute")
 async def health_check(request: Request):
     """Health check endpoint for monitoring"""
+    # Simple health check that doesn't require database
+    # Railway healthcheck needs this to pass during startup
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "version": "1.0.0"
+    }
+
+@app.get("/health/db")
+@limiter.limit("60/minute")
+async def health_check_db(request: Request):
+    """Database health check endpoint"""
     try:
         if db_pool:
             async with db_pool.acquire() as conn:
                 await conn.fetchval("SELECT 1")
             db_status = "healthy"
         else:
-            db_status = "unhealthy"
+            db_status = "unhealthy - pool not ready"
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
     
