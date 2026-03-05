@@ -18,6 +18,7 @@ python-multipart==0.0.22
 requests==2.32.5
 httpx==0.28.1
 starlette==0.37.2
+aiofiles==23.2.1
 
 # Rate Limiting
 slowapi==0.1.9
