@@ -65,13 +65,15 @@ async def get_db_pool():
             
             logger.info(f"Connecting to database at {parsed.hostname}...")
             
-            # Use hostaddr to bypass DNS resolution in asyncpg
-            # This tells asyncpg to connect directly to the IP
+            # Use IP directly instead of hostname to bypass DNS
             import socket
             ip = socket.gethostbyname(parsed.hostname)
-            dsn += f"&hostaddr={ip}"
             
-            logger.info(f"Using hostaddr={ip} to bypass DNS")
+            # Rebuild DSN with IP instead of hostname
+            # postgresql://user:pass@IP:port/db?sslmode=require
+            dsn = f"postgresql://{parsed.username}:{parsed.password}@{ip}:{parsed.port}{parsed.path}?sslmode=require"
+            
+            logger.info(f"Using IP {ip} directly to bypass DNS")
             
             db_pool = await asyncpg.create_pool(
                 dsn, 
