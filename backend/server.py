@@ -55,25 +55,21 @@ async def get_db_pool():
     global db_pool
     if db_pool is None:
         try:
-            import urllib.parse
-            parsed = urllib.parse.urlparse(DATABASE_URL)
-            
             logger.info(f"Connecting to database...")
             
-            # Use IP directly instead of hostname to bypass DNS
-            import socket
-            ip = socket.gethostbyname(parsed.hostname)
+            # Use DATABASE_URL directly - let asyncpg handle DNS and SSL
+            # Make sure to use port 6543 for Transaction Pooler in Supabase
+            dsn = DATABASE_URL
             
-            # Rebuild DSN with IP instead of hostname
-            # Note: asyncpg handles password encoding internally
-            # postgresql://user:pass@IP:port/db?sslmode=require
-            # Add pool_mode=session for Supabase Session Pooler compatibility
-            dsn = f"postgresql://{parsed.username}:{parsed.password}@{ip}:{parsed.port}{parsed.path}?sslmode=require&pool_mode=session"
+            # Ensure sslmode=require is present
+            if 'sslmode' not in dsn:
+                dsn += "?sslmode=require"
             
-            logger.info(f"Using IP {ip} directly to bypass DNS")
+            logger.info(f"Using DSN: {dsn.split('@')[0]}@****")
             
             db_pool = await asyncpg.create_pool(
                 dsn, 
+                ssl='require',
                 min_size=1, 
                 max_size=5,
                 command_timeout=60
