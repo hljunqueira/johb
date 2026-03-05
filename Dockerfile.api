@@ -1,5 +1,5 @@
 # Dockerfile unificado para Railway - Backend + Nginx
-# Cache bust: 2026-03-05-api-22
+# Cache bust: 2026-03-05-api-23
 
 FROM python:3.10-slim
 
@@ -32,20 +32,22 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/sites-available/default
 
-# Configure supervisor
-RUN echo '[supervisord] \
-nodaemon=true \
-user=root \
-\
-[program:backend] \
-command=uvicorn server:app --host 127.0.0.1 --port 8001 \
-autostart=true \
-autorestart=true \
-\
-[program:nginx] \
-command=nginx -g "daemon off;" \
-autostart=true \
-autorestart=true' > /etc/supervisor/conf.d/supervisord.conf
+# Create supervisor config file
+COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+[supervisord]
+nodaemon=true
+user=root
+
+[program:backend]
+command=uvicorn server:app --host 127.0.0.1 --port 8001
+autostart=true
+autorestart=true
+
+[program:nginx]
+command=nginx -g "daemon off;"
+autostart=true
+autorestart=true
+EOF
 
 # Expose port
 EXPOSE 8000
