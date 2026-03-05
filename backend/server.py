@@ -43,11 +43,17 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS - permite múltiplos domínios
-CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,https://salada-soul-admin.vercel.app,https://saladasoul.shop,https://www.saladasoul.shop').split(',')
+# CORS - permite todas as origens por padrão (API pública)
+# Para restringir, defina CORS_ORIGINS no Railway com domínios separados por vírgula
+CORS_ORIGINS_ENV = os.environ.get('CORS_ORIGINS', '*')
+if CORS_ORIGINS_ENV == '*':
+    allow_origins = ["*"]
+else:
+    allow_origins = CORS_ORIGINS_ENV.split(',')
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
