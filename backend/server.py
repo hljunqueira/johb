@@ -55,11 +55,28 @@ async def get_db_pool():
     global db_pool
     if db_pool is None:
         try:
-            dsn = DATABASE_URL
-            # Supabase direct connection requires SSL
+            import urllib.parse
+            parsed = urllib.parse.urlparse(DATABASE_URL)
+            
+            # Resolve hostname to IP to avoid DNS issues
+            import socket
+            logger.info(f"Resolving {parsed.hostname} to IP...")
+            ip = socket.gethostbyname(parsed.hostname)
+            logger.info(f"Resolved to IP: {ip}")
+            
+            # Build DSN with IP instead of hostname
+            # Replace hostname with IP in the URL
+            netloc = f"{parsed.username}:{parsed.password}@{ip}:{parsed.port}"
+            dsn = urllib.parse.urlunparse((
+                parsed.scheme, netloc, parsed.path, 
+                parsed.params, parsed.query, parsed.fragment
+            ))
+            
+            # Supabase requires SSL
             if 'sslmode' not in dsn:
                 dsn += "?sslmode=require"
-            logger.info(f"Connecting to database...")
+            
+            logger.info(f"Connecting to database at {ip}...")
             db_pool = await asyncpg.create_pool(
                 dsn, 
                 min_size=1, 
@@ -83,15 +100,24 @@ async def startup():
     import socket
     parsed = urllib.parse.urlparse(DATABASE_URL)
     logger.info(f"Testing DNS for: {parsed.hostname}")
+    logger.info(f"Full URL (masked): postgresql://{parsed.username}:****@{parsed.hostname}:{parsed.port}{parsed.path}")
     
+    # Try multiple DNS resolution methods
     try:
         ip = socket.gethostbyname(parsed.hostname)
-        logger.info(f"DNS OK: {parsed.hostname} -> {ip}")
+        logger.info(f"DNS OK (gethostbyname): {parsed.hostname} -> {ip}")
     except socket.gaierror as e:
-        logger.error(f"DNS FAILED: {e}")
-        logger.warning("Starting without database - DNS resolution failed")
-        db_pool = None
-        return
+        logger.error(f"DNS FAILED (gethostbyname): {e}")
+        
+        # Try with getaddrinfo
+        try:
+            result = socket.getaddrinfo(parsed.hostname, None)
+            logger.info(f"DNS OK (getaddrinfo): {result}")
+        except socket.gaierror as e2:
+            logger.error(f"DNS FAILED (getaddrinfo): {e2}")
+            logger.warning("Starting without database - DNS resolution failed")
+            db_pool = None
+            return
     
     # Try to connect to database
     logger.info("Attempting database connection...")
