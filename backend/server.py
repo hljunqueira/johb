@@ -57,27 +57,32 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS - permite todas as origens por padrão (API pública)
-# Para restringir, defina CORS_ORIGINS no Railway com domínios separados por vírgula
-CORS_ORIGINS_ENV = os.environ.get('CORS_ORIGINS', '*')
-if CORS_ORIGINS_ENV == '*':
-    # Quando usa *, não pode ter credentials
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-else:
-    # Com origins específicas, pode usar credentials
-    allow_origins = [origin.strip() for origin in CORS_ORIGINS_ENV.split(',')]
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allow_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# CORS - Origens permitidas
+# Inclui domínios do Vercel e Railway por padrão
+DEFAULT_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://saladasoul.com",
+    "https://www.saladasoul.com",
+    "https://saladasoul.shop",
+    "https://www.saladasoul.shop",
+    "https://salada-soul-admin.vercel.app",
+    "https://salada-soul.vercel.app",
+]
+
+# Adicionar origens da variável de ambiente se existir
+CORS_ORIGINS_ENV = os.environ.get('CORS_ORIGINS', '')
+if CORS_ORIGINS_ENV:
+    env_origins = [origin.strip() for origin in CORS_ORIGINS_ENV.split(',') if origin.strip()]
+    DEFAULT_ORIGINS.extend(env_origins)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=DEFAULT_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Database pool
 db_pool = None
