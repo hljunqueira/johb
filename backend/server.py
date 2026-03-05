@@ -78,9 +78,29 @@ async def startup():
     logger.info("Starting up Salada Soul API")
     logger.info(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
     
-    # Start without waiting for DB - connect lazily
-    logger.info("Starting server without waiting for database")
-    db_pool = None
+    # Test DNS resolution first
+    import urllib.parse
+    import socket
+    parsed = urllib.parse.urlparse(DATABASE_URL)
+    logger.info(f"Testing DNS for: {parsed.hostname}")
+    
+    try:
+        ip = socket.gethostbyname(parsed.hostname)
+        logger.info(f"DNS OK: {parsed.hostname} -> {ip}")
+    except socket.gaierror as e:
+        logger.error(f"DNS FAILED: {e}")
+        logger.warning("Starting without database - DNS resolution failed")
+        db_pool = None
+        return
+    
+    # Try to connect to database
+    logger.info("Attempting database connection...")
+    try:
+        pool = await get_db_pool()
+        logger.info("Database connected successfully!")
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+        logger.warning("Starting without database connection")
 
 @app.on_event("shutdown")
 async def shutdown():
