@@ -1,14 +1,15 @@
-# Dockerfile para Backend API apenas
-# Usado no Railway para servir apenas a API
-# Cache bust: 2026-03-05-api-21
+# Dockerfile unificado para Railway - Backend + Nginx
+# Cache bust: 2026-03-05-api-22
 
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies + nginx + supervisor
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    nginx \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend requirements and install
@@ -21,8 +22,33 @@ COPY backend/ .
 # Create uploads directory
 RUN mkdir -p uploads
 
+# Configure nginx
+RUN echo 'server { \
+    listen 8000; \
+    location / { \
+        proxy_pass http://127.0.0.1:8001; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+    } \
+}' > /etc/nginx/sites-available/default
+
+# Configure supervisor
+RUN echo '[supervisord] \
+nodaemon=true \
+user=root \
+\
+[program:backend] \
+command=uvicorn server:app --host 127.0.0.1 --port 8001 \
+autostart=true \
+autorestart=true \
+\
+[program:nginx] \
+command=nginx -g "daemon off;" \
+autostart=true \
+autorestart=true' > /etc/supervisor/conf.d/supervisord.conf
+
 # Expose port
 EXPOSE 8000
 
-# Railway will use startCommand from railway.toml
-# No CMD here to avoid conflicts
+# Start supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
