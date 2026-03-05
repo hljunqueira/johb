@@ -607,7 +607,13 @@ async def get_order(order_id: str):
     """Buscar pedido por ID"""
     if not db_pool:
         raise HTTPException(status_code=404, detail="Order not found")
-
+    
+    # Validar UUID
+    try:
+        uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM orders WHERE id = $1", order_id)
         if not row:
