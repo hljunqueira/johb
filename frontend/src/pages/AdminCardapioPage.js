@@ -375,7 +375,7 @@ function ProductsTab({ headers }) {
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ 
-        name: "", description: "", price: "", category_id: "", image_url: "", stock: -1, tags: [], complement_ids: [], active: true 
+        name: "", description: "", price: "", category_id: "", image_url: "", stock: -1, tags: [], complement_ids: [], complement_rules: {}, active: true 
     });
     const [newTag, setNewTag] = useState("");
     const [search, setSearch] = useState("");
@@ -418,10 +418,26 @@ function ProductsTab({ headers }) {
 
     const save = async (e) => {
         e.preventDefault();
+        // Montar additionals a partir dos complement_ids selecionados + regras por categoria
+        const selectedComps = complements.filter(c => form.complement_ids.includes(c.id));
+        const additionals = selectedComps.map(c => {
+            const catKey = c.category || "extras";
+            const rule = form.complement_rules[catKey] || {};
+            return {
+                name: c.name,
+                price: parseFloat(c.price),
+                category: catKey,
+                image_url: c.image_url || null,
+                required: rule.required || false,
+                min_select: rule.min_select !== undefined ? parseInt(rule.min_select) : 0,
+                max_select: rule.max_select !== undefined ? parseInt(rule.max_select) : 1,
+            };
+        });
         const data = { 
             ...form, 
             price: parseFloat(form.price), 
-            stock: parseInt(form.stock) 
+            stock: parseInt(form.stock),
+            additionals,
         };
         try {
             if (editing) await axios.put(`${API}/admin/products/${editing}`, data, { headers });
@@ -455,10 +471,30 @@ function ProductsTab({ headers }) {
     
     const edit = (p) => { 
         setEditing(p.id); 
+        // Extrair complement_ids e complement_rules a partir de additionals ou complement_ids existentes
+        const existingAdditionals = Array.isArray(p.additionals) ? p.additionals : [];
+        const matchedIds = existingAdditionals
+            .map(add => { const found = complements.find(c => c.name === add.name); return found?.id; })
+            .filter(Boolean);
+        // Construir regras por categoria a partir dos additionals existentes
+        const rules = {};
+        existingAdditionals.forEach(add => {
+            const catKey = add.category || "extras";
+            if (!rules[catKey]) {
+                rules[catKey] = {
+                    required: add.required || false,
+                    min_select: add.min_select || 0,
+                    max_select: add.max_select || 1,
+                };
+            }
+        });
         setForm({ 
             name: p.name, description: p.description, price: p.price, 
             category_id: p.category_id || "", image_url: p.image_url, stock: p.stock, 
-            tags: p.tags || [], complement_ids: p.complement_ids || [], active: p.active 
+            tags: p.tags || [], 
+            complement_ids: matchedIds.length > 0 ? matchedIds : (p.complement_ids || []),
+            complement_rules: rules,
+            active: p.active 
         }); 
         setShowForm(true); 
     };
@@ -467,7 +503,7 @@ function ProductsTab({ headers }) {
         setEditing(null); 
         setForm({ 
             name: "", description: "", price: "", category_id: "", 
-            image_url: "", stock: -1, tags: [], complement_ids: [], active: true 
+            image_url: "", stock: -1, tags: [], complement_ids: [], complement_rules: {}, active: true 
         }); 
         setShowForm(true); 
     };
@@ -484,6 +520,13 @@ function ProductsTab({ headers }) {
         setNewTag(""); 
     };
     const toggleComp = (id) => setForm(f => ({ ...f, complement_ids: f.complement_ids.includes(id) ? f.complement_ids.filter(c => c !== id) : [...f.complement_ids, id] }));
+    const updateCatRule = (catKey, field, value) => setForm(f => ({
+        ...f,
+        complement_rules: {
+            ...f.complement_rules,
+            [catKey]: { ...(f.complement_rules[catKey] || { required: false, min_select: 0, max_select: 1 }), [field]: value }
+        }
+    }));
 
     const handleUpload = async (e) => {
         const file = e.target.files?.[0]; if (!file) return;
@@ -714,30 +757,143 @@ function ProductsTab({ headers }) {
                                     <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{form.complement_ids.length} selecionado{form.complement_ids.length > 1 ? "s" : ""}</span>
                                 )}
                             </div>
-                            <p className="text-xs text-muted-foreground mb-2">Selecione os complementos disponíveis para este produto</p>
-                            <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1 rounded-lg">
-                                {complements.filter(c => c.active).length === 0
-                                    ? <div className="text-center py-6 border-2 border-dashed border-border rounded-lg"><p className="text-xs text-muted-foreground">Nenhum complemento cadastrado.</p><p className="text-xs text-muted-foreground">Crie na aba <strong>Opcionais</strong>.</p></div>
-                                    : complements.filter(c => c.active).map(c => (
-                                        <button key={c.id} type="button" onClick={() => toggleComp(c.id)}
-                                            className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-all ${
-                                                form.complement_ids.includes(c.id)
-                                                    ? "border-primary bg-primary/5 shadow-sm"
-                                                    : "border-border hover:border-primary/30 bg-white"
-                                            }`} data-testid={`comp-select-${c.id}`}>
-                                            <div className="flex items-center gap-2.5">
-                                                <div className={`h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${
-                                                    form.complement_ids.includes(c.id) ? "bg-primary border-primary" : "border-gray-300"
+                            <p className="text-xs text-muted-foreground mb-3">Selecione os complementos e configure as regras por categoria</p>
+
+                            {complements.filter(c => c.active).length === 0 ? (
+                                <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
+                                    <p className="text-xs text-muted-foreground">Nenhum complemento cadastrado.</p>
+                                    <p className="text-xs text-muted-foreground">Crie na aba <strong>Opcionais</strong>.</p>
+                                </div>
+                            ) : (() => {
+                                // Agrupar complementos ativos por categoria
+                                const catOrder = ["base_folhas","proteina","legumes","frutas","extras","molhos","temperos"];
+                                const catLabels = {
+                                    base_folhas: { label: "Base de Folhas", icon: "🥬" },
+                                    proteina: { label: "Proteína", icon: "🍗" },
+                                    legumes: { label: "Legumes & Verduras", icon: "🥕" },
+                                    frutas: { label: "Frutas", icon: "🍓" },
+                                    extras: { label: "Extras & Crocância", icon: "🥜" },
+                                    molhos: { label: "Molhos & Cremes", icon: "🥣" },
+                                    temperos: { label: "Temperos", icon: "🧂" },
+                                };
+                                const grouped = {};
+                                complements.filter(c => c.active).forEach(c => {
+                                    const k = c.category || "extras";
+                                    if (!grouped[k]) grouped[k] = [];
+                                    grouped[k].push(c);
+                                });
+                                const sortedCats = [
+                                    ...catOrder.filter(k => grouped[k]),
+                                    ...Object.keys(grouped).filter(k => !catOrder.includes(k))
+                                ];
+                                return (
+                                    <div className="space-y-4">
+                                        {sortedCats.map(catKey => {
+                                            const info = catLabels[catKey] || { label: catKey, icon: "➕" };
+                                            const items = grouped[catKey];
+                                            const rule = form.complement_rules[catKey] || { required: false, min_select: 0, max_select: 1 };
+                                            const selectedInCat = items.filter(c => form.complement_ids.includes(c.id)).length;
+                                            const hasSomeSelected = selectedInCat > 0;
+                                            return (
+                                                <div key={catKey} className={`rounded-xl border-2 overflow-hidden transition-all ${
+                                                    hasSomeSelected ? "border-primary/40" : "border-border"
                                                 }`}>
-                                                    {form.complement_ids.includes(c.id) && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                    {/* Cabeçalho da categoria */}
+                                                    <div className={`flex items-center justify-between px-3 py-2 ${
+                                                        hasSomeSelected ? "bg-primary/5" : "bg-muted/30"
+                                                    }`}>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-base">{info.icon}</span>
+                                                            <span className="text-sm font-semibold">{info.label}</span>
+                                                            {hasSomeSelected && (
+                                                                <span className="text-xs bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">{selectedInCat} item{selectedInCat > 1 ? "ns" : ""}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Itens da categoria */}
+                                                    <div className="p-2 space-y-1.5">
+                                                        {items.map(c => (
+                                                            <button key={c.id} type="button" onClick={() => toggleComp(c.id)}
+                                                                className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-sm transition-all ${
+                                                                    form.complement_ids.includes(c.id)
+                                                                        ? "border-primary bg-primary/5 shadow-sm"
+                                                                        : "border-border hover:border-primary/30 bg-white"
+                                                                }`} data-testid={`comp-select-${c.id}`}>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className={`h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center ${
+                                                                        form.complement_ids.includes(c.id) ? "bg-primary border-primary" : "border-gray-300"
+                                                                    }`}>
+                                                                        {form.complement_ids.includes(c.id) && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                    </div>
+                                                                    <span className="font-medium">{c.name}</span>
+                                                                </div>
+                                                                <span className="text-primary font-semibold">R$ {parseFloat(c.price).toFixed(2)}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Regras da categoria — só aparece se tem algum selecionado */}
+                                                    {hasSomeSelected && (
+                                                        <div className="border-t border-primary/20 bg-primary/3 px-3 py-2.5 space-y-2">
+                                                            <p className="text-xs font-semibold text-primary/80">Regras para "{info.label}"</p>
+                                                            <div className="flex flex-wrap items-center gap-3">
+                                                                {/* Obrigatório */}
+                                                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                    <div
+                                                                        role="checkbox"
+                                                                        aria-checked={rule.required}
+                                                                        onClick={() => updateCatRule(catKey, "required", !rule.required)}
+                                                                        className={`h-4 w-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${
+                                                                            rule.required ? "bg-amber-500 border-amber-500" : "border-gray-300 bg-white"
+                                                                        }`}>
+                                                                        {rule.required && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                    </div>
+                                                                    <span className="text-xs font-medium text-gray-700">
+                                                                        Seleção obrigatória
+                                                                        {rule.required && <span className="ml-1 text-xs text-amber-600">(cliente deve escolher)</span>}
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+                                                            <div className="flex items-center gap-4">
+                                                                {/* Mínimo */}
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs text-gray-600 whitespace-nowrap">Mín:</span>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <button type="button"
+                                                                            onClick={() => updateCatRule(catKey, "min_select", Math.max(0, (rule.min_select || 0) - 1))}
+                                                                            className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">−</button>
+                                                                        <span className="w-6 text-center text-sm font-semibold">{rule.min_select || 0}</span>
+                                                                        <button type="button"
+                                                                            onClick={() => updateCatRule(catKey, "min_select", Math.min(rule.max_select || 1, (rule.min_select || 0) + 1))}
+                                                                            className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">+</button>
+                                                                    </div>
+                                                                </div>
+                                                                {/* Máximo */}
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs text-gray-600 whitespace-nowrap">Máx:</span>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <button type="button"
+                                                                            onClick={() => updateCatRule(catKey, "max_select", Math.max(rule.min_select || 0, Math.max(1, (rule.max_select || 1) - 1)))}
+                                                                            className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">−</button>
+                                                                        <span className="w-6 text-center text-sm font-semibold">{rule.max_select || 1}</span>
+                                                                        <button type="button"
+                                                                            onClick={() => updateCatRule(catKey, "max_select", (rule.max_select || 1) + 1)}
+                                                                            className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">+</button>
+                                                                    </div>
+                                                                </div>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {rule.max_select > 1 ? `cliente pode escolher até ${rule.max_select}` : "apenas 1 escolha"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <span className="font-medium text-sm">{c.name}</span>
-                                            </div>
-                                            <span className="text-primary font-semibold text-sm">R$ {c.price.toFixed(2)}</span>
-                                        </button>
-                                    ))
-                                }
-                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Ações */}

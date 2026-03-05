@@ -47,28 +47,78 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
     const [selectedAdditionals, setSelectedAdditionals] = useState([]);
     const [quantity, setQuantity] = useState(1);
     const [observation, setObservation] = useState("");
+    const [validationErrors, setValidationErrors] = useState({});
 
     useEffect(() => {
         if (open) { 
             setSelectedAdditionals([]); 
             setQuantity(1); 
             setObservation(""); 
+            setValidationErrors({});
         }
     }, [open]);
 
-    const toggleAdditional = useCallback((add) => {
-        setSelectedAdditionals(prev =>
-            prev.find(a => a.name === add.name) ? prev.filter(a => a.name !== add.name) : [...prev, add]
-        );
+    const toggleAdditional = useCallback((add, catKey, catRule) => {
+        setValidationErrors(prev => ({ ...prev, [catKey]: null }));
+        setSelectedAdditionals(prev => {
+            const isSelected = prev.find(a => a.name === add.name);
+            if (isSelected) return prev.filter(a => a.name !== add.name);
+            // Verificar limite máximo da categoria
+            const max = catRule?.max_select || 1;
+            const countInCat = prev.filter(a => a.category === catKey).length;
+            if (countInCat >= max) {
+                // Substituir o último se max = 1, senão bloquear
+                if (max === 1) {
+                    return [...prev.filter(a => a.category !== catKey), add];
+                }
+                setValidationErrors(p => ({ ...p, [catKey]: `Máximo de ${max} itens para esta categoria` }));
+                return prev;
+            }
+            return [...prev, add];
+        });
     }, []);
 
-    // Calculate prices only if product exists
+    // Calcular preços
     const addPrice = selectedAdditionals.reduce((s, a) => s + a.price, 0);
     const unitTotal = product ? product.price + addPrice : 0;
     const totalPrice = unitTotal * quantity;
 
-    const handleAdd = useCallback(() => {
+    // Validar regras obrigatórias antes de adicionar
+    const validateAndAdd = useCallback(() => {
         if (!product) return;
+        const additionals = Array.isArray(product.additionals) ? product.additionals : [];
+        if (additionals.length === 0) {
+            onAdd(product, quantity, selectedAdditionals, observation);
+            onClose();
+            return;
+        }
+        // Agrupar regras por categoria
+        const catRules = {};
+        additionals.forEach(add => {
+            const k = add.category || "outros";
+            if (!catRules[k]) catRules[k] = { required: add.required, min_select: add.min_select || 0, max_select: add.max_select || 1, label: k };
+        });
+        const errors = {};
+        let hasError = false;
+        Object.entries(catRules).forEach(([catKey, rule]) => {
+            const countInCat = selectedAdditionals.filter(a => a.category === catKey).length;
+            if (rule.required && countInCat === 0) {
+                const label = complementCategories[catKey]?.label || catKey;
+                errors[catKey] = `É obrigatório selecionar pelo menos 1 item de "${label}"`;
+                hasError = true;
+            } else if (rule.min_select > 0 && countInCat < rule.min_select) {
+                const label = complementCategories[catKey]?.label || catKey;
+                errors[catKey] = `Selecione no mínimo ${rule.min_select} item${rule.min_select > 1 ? "s" : ""} de "${label}"`;
+                hasError = true;
+            }
+        });
+        if (hasError) {
+            setValidationErrors(errors);
+            // Scroll para o primeiro erro
+            const firstErrKey = Object.keys(errors)[0];
+            document.getElementById(`cat-section-${firstErrKey}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+        }
         onAdd(product, quantity, selectedAdditionals, observation);
         onClose();
     }, [product, quantity, selectedAdditionals, observation, onAdd, onClose]);
@@ -82,8 +132,8 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
     if (additionals.length > 0) {
         additionals.forEach(add => {
             const cat = add.category || "outros";
-            if (!groupedAdditionals[cat]) groupedAdditionals[cat] = [];
-            groupedAdditionals[cat].push(add);
+            if (!groupedAdditionals[cat]) groupedAdditionals[cat] = { items: [], rule: { required: add.required, min_select: add.min_select || 0, max_select: add.max_select || 1 } };
+            groupedAdditionals[cat].items.push(add);
         });
     }
     const sortedCategories = Object.keys(groupedAdditionals).sort((a, b) => 
@@ -96,7 +146,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="p-0 rounded-2xl overflow-hidden max-w-lg max-h-[90vh] overflow-y-auto !block !gap-0" data-testid="product-detail-modal">
                 <DialogTitle className="sr-only">{product?.name || "Detalhes do produto"}</DialogTitle>
-                {/* Image - Proporção compacta */}
+                {/* Image */}
                 <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted max-h-[180px] flex-shrink-0">
                     <img 
                         src={getImageUrl(product.image_url)} 
@@ -113,9 +163,10 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                     <div>
                         <div className="flex justify-between items-start gap-2">
                             <h2 className="text-lg font-bold font-heading text-foreground flex-1">{product.name}</h2>
-                            <span className="text-lg font-bold text-primary whitespace-nowrap">R$ {product.price.toFixed(2)}</span>
+                            <span className="text-lg font-bold text-primary whitespace-nowrap">
+                                {product.price > 0 ? `R$ ${product.price.toFixed(2)}` : "A partir de R$ 0,00"}
+                            </span>
                         </div>
-                        {/* Descrição abaixo do nome */}
                         <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
                     </div>
 
@@ -127,39 +178,65 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                             
                             {sortedCategories.map(catKey => {
                                 const catInfo = complementCategories[catKey] || { label: catKey, icon: "+" };
-                                const items = groupedAdditionals[catKey];
-                                
-                                const hasRequired = items.some(add => add.required);
-                                const catMinSelect = items[0]?.min_select || 0;
-                                const catMaxSelect = items[0]?.max_select || 1;
+                                const { items, rule } = groupedAdditionals[catKey];
+                                const selectedInCat = selectedAdditionals.filter(a => a.category === catKey).length;
+                                const catError = validationErrors[catKey];
                                 
                                 return (
-                                    <div key={catKey} className="space-y-2">
-                                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                                            <span>{catInfo.icon}</span>
-                                            <span>{catInfo.label}</span>
-                                            {hasRequired && (
-                                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Obrigatório</span>
-                                            )}
-                                            {!hasRequired && catMaxSelect > 1 && (
-                                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Até {catMaxSelect}</span>
-                                            )}
+                                    <div key={catKey} id={`cat-section-${catKey}`} className="space-y-2">
+                                        {/* Cabeçalho da categoria */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-sm font-medium">
+                                                <span>{catInfo.icon}</span>
+                                                <span className="text-foreground">{catInfo.label}</span>
+                                                {rule.required && (
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                                        catError ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                                                    }`}>Obrigatório</span>
+                                                )}
+                                                {!rule.required && rule.max_select > 1 && (
+                                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Até {rule.max_select}</span>
+                                                )}
+                                            </div>
+                                            {/* Contador de seleções */}
+                                            <span className={`text-xs font-medium ${
+                                                rule.required && selectedInCat === 0 ? "text-amber-600" :
+                                                selectedInCat > 0 ? "text-primary" : "text-muted-foreground"
+                                            }`}>
+                                                {selectedInCat}/{rule.max_select || 1}
+                                            </span>
                                         </div>
+
+                                        {/* Mensagem de erro */}
+                                        {catError && (
+                                            <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                                <svg className="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+                                                {catError}
+                                            </div>
+                                        )}
+
                                         <div className="grid grid-cols-1 gap-2">
                                             {items.map(add => {
-                                                const isSelected = selectedAdditionals.find(a => a.name === add.name);
-                                                const isRequired = add.required;
-                                                const selectionInfo = add.min_select > 0 
-                                                    ? `Mínimo ${add.min_select}` 
-                                                    : add.max_select > 1 
-                                                        ? `Até ${add.max_select}` 
-                                                        : null;
+                                                const isSelected = !!selectedAdditionals.find(a => a.name === add.name);
+                                                const countInCat = selectedAdditionals.filter(a => a.category === catKey).length;
+                                                const isAtMax = !isSelected && countInCat >= (rule.max_select || 1);
                                                 return (
-                                                    <button key={add.name} type="button" onClick={() => toggleAdditional(add)}
+                                                    <button key={add.name} type="button"
+                                                        onClick={() => toggleAdditional(add, catKey, rule)}
+                                                        disabled={isAtMax}
                                                         data-testid={`additional-${add.name.replace(/\s+/g, '-').toLowerCase()}`}
-                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5" : isRequired ? "border-amber-300 bg-amber-50/30" : "border-border hover:border-primary/30"}`}>
+                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
+                                                            isSelected
+                                                                ? "border-primary bg-primary/5"
+                                                                : isAtMax
+                                                                    ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
+                                                                    : catError
+                                                                        ? "border-red-300 bg-red-50/30 hover:border-primary/30"
+                                                                        : rule.required
+                                                                            ? "border-amber-200 bg-amber-50/20 hover:border-primary/50"
+                                                                            : "border-border hover:border-primary/30"
+                                                        }`}>
                                                         <div className="flex items-center gap-3">
-                                                            {/* Foto do complemento */}
                                                             {add.image_url ? (
                                                                 <img 
                                                                     src={getImageUrl(add.image_url)} 
@@ -167,22 +244,23 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                                                                     className="h-10 w-10 rounded-lg object-cover border border-border"
                                                                 />
                                                             ) : (
-                                                                <div className={`h-10 w-10 rounded-lg border-2 flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30 bg-muted"}`}>
+                                                                <div className={`h-10 w-10 rounded-lg border-2 flex items-center justify-center ${
+                                                                    isSelected ? "bg-primary border-primary" : "border-muted-foreground/30 bg-muted"
+                                                                }`}>
                                                                     {isSelected && <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                                                                 </div>
                                                             )}
                                                             <div className="flex flex-col">
                                                                 <span className="text-sm font-medium">{add.name}</span>
-                                                                {isRequired && (
-                                                                    <span className="text-xs text-amber-600 font-medium">Obrigatório</span>
-                                                                )}
-                                                                {selectionInfo && !isRequired && (
-                                                                    <span className="text-xs text-muted-foreground">{selectionInfo}</span>
+                                                                {rule.max_select > 1 && (
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        {isSelected ? "Selecionado" : isAtMax ? `Limite de ${rule.max_select} atingido` : "Toque para selecionar"}
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                         </div>
                                                         <span className="text-sm font-semibold text-primary">
-                                                            {add.price > 0 ? `+ R$ ${add.price.toFixed(2)}` : "Gratis"}
+                                                            {add.price > 0 ? `+ R$ ${add.price.toFixed(2)}` : "Grátis"}
                                                         </span>
                                                     </button>
                                                 );
@@ -197,7 +275,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                     {/* Observation */}
                     <div>
                         <Separator className="mb-3" />
-                        <h3 className="font-semibold text-sm font-heading mb-2">Alguma observacao?</h3>
+                        <h3 className="font-semibold text-sm font-heading mb-2">Alguma observação?</h3>
                         <textarea value={observation} onChange={e => setObservation(e.target.value)}
                             placeholder="Ex: Sem cebola, molho a parte..."
                             className="w-full rounded-xl border border-input bg-white p-3 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -215,7 +293,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                                 <Plus className="h-4 w-4" />
                             </button>
                         </div>
-                        <Button onClick={handleAdd} className="flex-1 bg-accent hover:bg-accent/90 text-white rounded-full py-5 font-semibold text-base" data-testid="modal-add-btn">
+                        <Button onClick={validateAndAdd} className="flex-1 bg-accent hover:bg-accent/90 text-white rounded-full py-5 font-semibold text-base" data-testid="modal-add-btn">
                             Adicionar - R$ {totalPrice.toFixed(2)}
                         </Button>
                     </div>

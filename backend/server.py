@@ -131,7 +131,7 @@ class ProductCreate(BaseModel):
     image_url: Optional[str] = None
     stock: int = -1
     tags: Optional[List[str]] = []
-    additionals: Optional[dict] = {}
+    additionals: Optional[List[dict]] = []  # [{name, price, category, required, min_select, max_select, ...}]
     complement_ids: Optional[List[str]] = []
     order: int = 0
     active: bool = True
