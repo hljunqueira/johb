@@ -2,7 +2,7 @@
 dockerfilePath = "Dockerfile.api"
 
 [deploy]
-startCommand = "uvicorn server:app --host 0.0.0.0 --port 8000"
+startCommand = "python -c \"import os; os.environ['ENVIRONMENT'] = 'production'; import uvicorn; uvicorn.run('server:app', host='0.0.0.0', port=8000, workers=2)\""
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
