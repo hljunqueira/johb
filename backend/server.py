@@ -43,8 +43,8 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS
-CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')
+# CORS - permite múltiplos domínios
+CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,https://salada-soul-admin.vercel.app,https://saladasoul.shop,https://www.saladasoul.shop').split(',')
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
