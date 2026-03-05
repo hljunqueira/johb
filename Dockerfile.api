@@ -1,6 +1,6 @@
 # Dockerfile para Backend API apenas
 # Usado no Railway para servir apenas a API
-# Cache bust: 2026-02-17-api-1
+# Cache bust: 2026-03-05-api-2
 
 FROM python:3.10-slim
 
