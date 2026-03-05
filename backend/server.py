@@ -20,6 +20,10 @@ if not DATABASE_URL:
     logger.error("DATABASE_URL não configurada!")
     sys.exit(1)
 
+# For Supabase session pooler, we might need to adjust the connection
+# Try to use direct connection if available, otherwise use session pooler
+logger.info(f"Using DATABASE_URL from environment")
+
 JWT_SECRET = os.environ.get('JWT_SECRET', 'default-secret-change-in-production')
 
 from fastapi import FastAPI, Request
@@ -46,49 +50,37 @@ app.add_middleware(
 # Database pool
 db_pool = None
 
+async def get_db_pool():
+    """Get or create database pool lazily"""
+    global db_pool
+    if db_pool is None:
+        try:
+            dsn = DATABASE_URL
+            # Supabase direct connection requires SSL
+            if 'sslmode' not in dsn:
+                dsn += "?sslmode=require"
+            logger.info(f"Connecting to database...")
+            db_pool = await asyncpg.create_pool(
+                dsn, 
+                min_size=1, 
+                max_size=5,
+                command_timeout=60
+            )
+            logger.info("Database pool created successfully")
+        except Exception as e:
+            logger.error(f"Failed to create database pool: {e}")
+            raise
+    return db_pool
+
 @app.on_event("startup")
 async def startup():
     global db_pool
     logger.info("Starting up Salada Soul API")
-    logger.info(f"DATABASE_URL configured: True")
-    logger.info(f"DATABASE_URL starts with: {DATABASE_URL[:50]}...")
+    logger.info(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
     
-    # Retry connection up to 10 times with longer delays
-    max_retries = 10
-    for attempt in range(max_retries):
-        try:
-            # Parse DATABASE_URL to check if it's Supabase
-            import urllib.parse
-            parsed = urllib.parse.urlparse(DATABASE_URL)
-            logger.info(f"Connecting to host: {parsed.hostname}, port: {parsed.port}, db: {parsed.path}")
-            
-            # For Supabase, we need to use sslmode=require in the DSN
-            # Modify the DATABASE_URL to include sslmode
-            if 'sslmode' not in DATABASE_URL:
-                dsn = DATABASE_URL + "?sslmode=require"
-            else:
-                dsn = DATABASE_URL
-            
-            db_pool = await asyncpg.create_pool(
-                dsn,
-                min_size=1,
-                max_size=10,
-                command_timeout=60,
-                server_settings={
-                    'jit': 'off'
-                }
-            )
-            logger.info("Database pool created successfully")
-            return
-        except Exception as e:
-            logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
-            if attempt < max_retries - 1:
-                await asyncio.sleep(5)  # Wait longer between retries
-            else:
-                logger.error("Failed to create database pool after all retries")
-                # Don't raise - let the app start without DB for healthcheck
-                logger.warning("Starting without database connection")
-                db_pool = None
+    # Start without waiting for DB - connect lazily
+    logger.info("Starting server without waiting for database")
+    db_pool = None
 
 @app.on_event("shutdown")
 async def shutdown():
