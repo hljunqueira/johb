@@ -1246,20 +1246,39 @@ async def admin_get_sales_report(
 
 @app.post("/api/admin/upload")
 async def admin_upload_file(file: UploadFile = File(...), user=Depends(get_current_user)):
-    """Upload de arquivo"""
-    import aiofiles
+    """Upload de imagem para o Supabase Storage (bucket Fotos)"""
+    SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+    SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
+    BUCKET = 'Fotos'
 
+    content = await file.read()
+    file_ext = os.path.splitext(file.filename or 'img.jpg')[1].lower() or '.jpg'
+    file_name = f"{uuid.uuid4()}{file_ext}"
+
+    # Se Supabase Storage estiver configurado, usa ele
+    if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+        try:
+            from supabase import create_client
+            sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+            mime = file.content_type or 'image/jpeg'
+            sb.storage.from_(BUCKET).upload(
+                path=file_name,
+                file=content,
+                file_options={"content-type": mime, "upsert": "true"}
+            )
+            public_url = sb.storage.from_(BUCKET).get_public_url(file_name)
+            return {"url": public_url}
+        except Exception as e:
+            logger.error(f"Erro no upload Supabase Storage: {e}")
+            raise HTTPException(status_code=500, detail=f"Erro no upload: {str(e)}")
+
+    # Fallback: salva localmente (apenas para dev local)
+    import aiofiles
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
-
-    file_ext = os.path.splitext(file.filename)[1]
-    file_name = f"{uuid.uuid4()}{file_ext}"
     file_path = os.path.join(upload_dir, file_name)
-
     async with aiofiles.open(file_path, 'wb') as f:
-        content = await file.read()
         await f.write(content)
-
     return {"url": f"/uploads/{file_name}"}
 
 
