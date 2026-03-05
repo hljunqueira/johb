@@ -371,6 +371,7 @@ function ProductsTab({ headers }) {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [complements, setComplements] = useState([]);
+    const [compCategories, setCompCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -387,14 +388,16 @@ function ProductsTab({ headers }) {
     const fetchAll = async () => {
         setLoading(true);
         try {
-            const [p, c, co] = await Promise.all([
+            const [p, c, co, cc] = await Promise.all([
                 axios.get(`${API}/admin/products`, { headers }),
                 axios.get(`${API}/admin/categories`, { headers }),
-                axios.get(`${API}/admin/complements`, { headers })
+                axios.get(`${API}/admin/complements`, { headers }),
+                axios.get(`${API}/admin/complement-categories`, { headers })
             ]);
             setProducts(p.data);
             setCategories(c.data);
             setComplements(co.data);
+            setCompCategories(cc.data);
         } catch { toast.error("Erro ao carregar produtos"); }
         finally { setLoading(false); }
     };
@@ -765,31 +768,23 @@ function ProductsTab({ headers }) {
                                     <p className="text-xs text-muted-foreground">Crie na aba <strong>Opcionais</strong>.</p>
                                 </div>
                             ) : (() => {
-                                // Agrupar complementos ativos por categoria
-                                const catOrder = ["base_folhas","proteina","legumes","frutas","extras","molhos","temperos"];
-                                const catLabels = {
-                                    base_folhas: { label: "Base de Folhas", icon: "🥬" },
-                                    proteina: { label: "Proteína", icon: "🍗" },
-                                    legumes: { label: "Legumes & Verduras", icon: "🥕" },
-                                    frutas: { label: "Frutas", icon: "🍓" },
-                                    extras: { label: "Extras & Crocância", icon: "🥜" },
-                                    molhos: { label: "Molhos & Cremes", icon: "🥣" },
-                                    temperos: { label: "Temperos", icon: "🧂" },
-                                };
+                                // Usar categorias dinâmicas do banco
                                 const grouped = {};
                                 complements.filter(c => c.active).forEach(c => {
                                     const k = c.category || "extras";
                                     if (!grouped[k]) grouped[k] = [];
                                     grouped[k].push(c);
                                 });
-                                const sortedCats = [
-                                    ...catOrder.filter(k => grouped[k]),
-                                    ...Object.keys(grouped).filter(k => !catOrder.includes(k))
-                                ];
+                                // Ordenar categorias pelo order_index
+                                const sortedCats = compCategories
+                                    .filter(cat => grouped[cat.key])
+                                    .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+                                    .map(cat => cat.key);
                                 return (
                                     <div className="space-y-4">
                                         {sortedCats.map(catKey => {
-                                            const info = catLabels[catKey] || { label: catKey, icon: "➕" };
+                                            const catInfo = compCategories.find(c => c.key === catKey);
+                                            const info = catInfo ? { label: catInfo.name, icon: catInfo.icon || "➕" } : { label: catKey, icon: "➕" };
                                             const items = grouped[catKey];
                                             const rule = form.complement_rules[catKey] || { required: false, min_select: 0, max_select: 1 };
                                             const selectedInCat = items.filter(c => form.complement_ids.includes(c.id)).length;
