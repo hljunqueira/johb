@@ -90,6 +90,8 @@ frontend/node_modules/.cache/default-development/4.pack
 # Environment files
 *.env
 *.env.*
+# Exceto .env.production (necessário para build do Vercel)
+!frontend/.env.production
 -e 
 # Environment files
 *.env
