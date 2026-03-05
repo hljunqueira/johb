@@ -64,12 +64,10 @@ async def get_db_pool():
             import socket
             ip = socket.gethostbyname(parsed.hostname)
             
-            # URL-encode password to handle special characters like @
-            encoded_password = urllib.parse.quote(parsed.password, safe='')
-            
             # Rebuild DSN with IP instead of hostname
+            # Note: asyncpg handles password encoding internally
             # postgresql://user:pass@IP:port/db?sslmode=require
-            dsn = f"postgresql://{parsed.username}:{encoded_password}@{ip}:{parsed.port}{parsed.path}?sslmode=require"
+            dsn = f"postgresql://{parsed.username}:{parsed.password}@{ip}:{parsed.port}{parsed.path}?sslmode=require"
             
             logger.info(f"Using IP {ip} directly to bypass DNS")
             
