@@ -71,7 +71,7 @@ async def get_db_pool():
                 dsn, 
                 ssl='require',
                 min_size=1, 
-                max_size=5,
+                max_size=3,
                 command_timeout=60,
                 timeout=30
             )
