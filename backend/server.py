@@ -36,6 +36,20 @@ from passlib.context import CryptContext
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
+def serialize_product(row: dict) -> dict:
+    """Garante que campos JSONB (additionals) sejam retornados como lista Python"""
+    d = dict(row)
+    additionals = d.get('additionals')
+    if isinstance(additionals, str):
+        try:
+            d['additionals'] = json.loads(additionals)
+        except Exception:
+            d['additionals'] = []
+    elif additionals is None:
+        d['additionals'] = []
+    return d
+
 app = FastAPI(
     title="Salada Soul API",
     version="1.0.0",
@@ -293,7 +307,7 @@ async def get_products(category_id: Optional[str] = None):
             params.append(category_id)
         query += ' ORDER BY "order", name'
         rows = await conn.fetch(query, *params)
-        return [dict(r) for r in rows]
+        return [serialize_product(r) for r in rows]
 
 
 @app.get("/api/products/{product_id}")
@@ -305,7 +319,7 @@ async def get_product(product_id: str):
         row = await conn.fetchrow("SELECT * FROM products WHERE id = $1", product_id)
         if not row:
             raise HTTPException(status_code=404, detail="Product not found")
-        return dict(row)
+        return serialize_product(row)
 
 
 @app.get("/api/categories")
@@ -359,7 +373,7 @@ async def get_category_products(category_id: str):
             'SELECT * FROM products WHERE category_id = $1 AND active = TRUE ORDER BY "order"',
             uuid.UUID(category_id)
         )
-        return [dict(r) for r in rows]
+        return [serialize_product(r) for r in rows]
 
 
 @app.get("/api/complements")
@@ -749,7 +763,7 @@ async def admin_get_products(user=Depends(get_current_user)):
         return []
     async with db_pool.acquire() as conn:
         rows = await conn.fetch('SELECT * FROM products ORDER BY "order", name')
-        return [dict(r) for r in rows]
+        return [serialize_product(r) for r in rows]
 
 
 @app.post("/api/admin/products")
