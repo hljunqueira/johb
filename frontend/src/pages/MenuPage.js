@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store } from "lucide-react";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -27,23 +27,122 @@ const tagLabels = {
     leve: { label: "Leve", color: "bg-sky-100 text-sky-700" },
     mais_pedido: { label: "Popular", color: "bg-orange-100 text-orange-700" },
     recomendado: { label: "Recomendado", color: "bg-amber-100 text-amber-700" },
-    personalizavel: { label: "Personalizavel", color: "bg-purple-100 text-purple-700" }
+    personalizavel: { label: "Personalizável", color: "bg-purple-100 text-purple-700" }
 };
 const getTagStyle = (tag) => tagLabels[tag] || { label: tag, color: "bg-gray-100 text-gray-700" };
 
 // Complement category labels and order
 const complementCategories = {
     base_folhas: { label: "Base de Folhas", order: 0, icon: "🥬" },
-    proteina: { label: "Proteina", order: 1, icon: "🍗" },
+    proteina: { label: "Proteína", order: 1, icon: "🍗" },
     legumes: { label: "Legumes & Verduras", order: 2, icon: "🥕" },
     frutas: { label: "Frutas", order: 3, icon: "🍓" },
-    extras: { label: "Extras & Crocancia", order: 4, icon: "🥜" },
+    extras: { label: "Extras & Crocância", order: 4, icon: "🥜" },
     molhos: { label: "Molhos & Cremes", order: 5, icon: "🥣" },
     temperos: { label: "Temperos", order: 6, icon: "🧂" }
 };
 
+// ============ STORE STATUS HELPER ============
+function useStoreStatus() {
+    const [status, setStatus] = useState({ isOpen: true, message: "", nextOpen: null });
+    const [deliverySettings, setDeliverySettings] = useState(null);
+
+    useEffect(() => {
+        axios.get(`${API}/delivery-settings`).then(r => {
+            setDeliverySettings(r.data);
+            checkStatus(r.data.business_hours);
+        }).catch(() => {});
+    }, []);
+
+    const checkStatus = (businessHours) => {
+        if (!businessHours) {
+            setStatus({ isOpen: true, message: "Aberto agora", nextOpen: null });
+            return;
+        }
+        const now = new Date();
+        const dayMap = { 0: "dom", 1: "seg", 2: "ter", 3: "qua", 4: "qui", 5: "sex", 6: "sab" };
+        const todayKey = dayMap[now.getDay()];
+        const todayConfig = businessHours[todayKey];
+
+        if (!todayConfig || !todayConfig.open) {
+            setStatus({ isOpen: false, message: "Fechado hoje", nextOpen: findNextOpen(businessHours, now) });
+            return;
+        }
+
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const [openH, openM] = (todayConfig.start || "00:00").split(":").map(Number);
+        const [closeH, closeM] = (todayConfig.end || "23:59").split(":").map(Number);
+        const openMinutes = openH * 60 + openM;
+        const closeMinutes = closeH * 60 + closeM;
+
+        if (currentTime < openMinutes) {
+            setStatus({ isOpen: false, message: `Abre às ${todayConfig.start}`, nextOpen: todayConfig.start });
+        } else if (currentTime >= closeMinutes) {
+            setStatus({ isOpen: false, message: "Fechado agora", nextOpen: findNextOpen(businessHours, now) });
+        } else {
+            const minutesUntilClose = closeMinutes - currentTime;
+            const hoursUntil = Math.floor(minutesUntilClose / 60);
+            const minsUntil = minutesUntilClose % 60;
+            const closingSoon = minutesUntilClose <= 60;
+            setStatus({
+                isOpen: true,
+                message: closingSoon ? `Fecha em ${minsUntil}min` : `Aberto até ${todayConfig.end}`,
+                nextOpen: null,
+                closingSoon
+            });
+        }
+    };
+
+    const findNextOpen = (hours, now) => {
+        const dayMap = { 0: "dom", 1: "seg", 2: "ter", 3: "qua", 4: "qui", 5: "sex", 6: "sab" };
+        const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        for (let i = 1; i <= 7; i++) {
+            const nextDay = new Date(now);
+            nextDay.setDate(now.getDate() + i);
+            const key = dayMap[nextDay.getDay()];
+            if (hours[key]?.open) {
+                return `${dayNames[nextDay.getDay()]} às ${hours[key].start}`;
+            }
+        }
+        return null;
+    };
+
+    return { ...status, deliverySettings };
+}
+
+// ============ SKELETON COMPONENTS ============
+function ProductCardSkeleton() {
+    return (
+        <div className="bg-white rounded-2xl border border-border overflow-hidden">
+            <div className="aspect-[4/3] bg-muted animate-pulse" />
+            <div className="p-4 space-y-3">
+                <div className="flex justify-between">
+                    <div className="h-5 bg-muted rounded w-2/3 animate-pulse" />
+                    <div className="h-5 bg-muted rounded w-16 animate-pulse" />
+                </div>
+                <div className="h-4 bg-muted rounded w-full animate-pulse" />
+                <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
+                <div className="flex gap-1">
+                    <div className="h-5 bg-muted rounded w-16 animate-pulse" />
+                    <div className="h-5 bg-muted rounded w-16 animate-pulse" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function CategorySkeleton() {
+    return (
+        <div className="flex gap-2 overflow-x-auto pb-2">
+            {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-10 w-32 bg-muted rounded-full animate-pulse flex-shrink-0" />
+            ))}
+        </div>
+    );
+}
+
 /* ============ PRODUCT DETAIL MODAL ============ */
-const ProductDetailModal = memo(function ProductDetailModal({ product, open, onClose, onAdd }) {
+const ProductDetailModal = memo(function ProductDetailModal({ product, open, onClose, onAdd, storeOpen }) {
     const [selectedAdditionals, setSelectedAdditionals] = useState([]);
     const [quantity, setQuantity] = useState(1);
     const [observation, setObservation] = useState("");
@@ -63,11 +162,9 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         setSelectedAdditionals(prev => {
             const isSelected = prev.find(a => a.name === add.name);
             if (isSelected) return prev.filter(a => a.name !== add.name);
-            // Verificar limite máximo da categoria
             const max = catRule?.max_select || 1;
             const countInCat = prev.filter(a => a.category === catKey).length;
             if (countInCat >= max) {
-                // Substituir o último se max = 1, senão bloquear
                 if (max === 1) {
                     return [...prev.filter(a => a.category !== catKey), add];
                 }
@@ -78,21 +175,22 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         });
     }, []);
 
-    // Calcular preços
     const addPrice = selectedAdditionals.reduce((s, a) => s + a.price, 0);
     const unitTotal = product ? product.price + addPrice : 0;
     const totalPrice = unitTotal * quantity;
 
-    // Validar regras obrigatórias antes de adicionar
     const validateAndAdd = useCallback(() => {
         if (!product) return;
+        if (!storeOpen) {
+            toast.error("Loja fechada no momento");
+            return;
+        }
         const additionals = Array.isArray(product.additionals) ? product.additionals : [];
         if (additionals.length === 0) {
             onAdd(product, quantity, selectedAdditionals, observation);
             onClose();
             return;
         }
-        // Agrupar regras por categoria
         const catRules = {};
         additionals.forEach(add => {
             const k = add.category || "outros";
@@ -114,19 +212,16 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         });
         if (hasError) {
             setValidationErrors(errors);
-            // Scroll para o primeiro erro
             const firstErrKey = Object.keys(errors)[0];
             document.getElementById(`cat-section-${firstErrKey}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
         }
         onAdd(product, quantity, selectedAdditionals, observation);
         onClose();
-    }, [product, quantity, selectedAdditionals, observation, onAdd, onClose]);
+    }, [product, quantity, selectedAdditionals, observation, onAdd, onClose, storeOpen]);
 
-    // Return null if no product (after all hooks)
     if (!product) return null;
 
-    // Group additionals by category
     const groupedAdditionals = {};
     const additionals = Array.isArray(product.additionals) ? product.additionals : [];
     if (additionals.length > 0) {
@@ -146,20 +241,16 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="p-0 rounded-2xl overflow-hidden max-w-lg max-h-[90vh] overflow-y-auto !block !gap-0" data-testid="product-detail-modal">
                 <DialogTitle className="sr-only">{product?.name || "Detalhes do produto"}</DialogTitle>
-                {/* Image */}
                 <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted max-h-[180px] flex-shrink-0">
                     <img 
                         src={getImageUrl(product.image_url)} 
                         alt={product.name} 
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                            e.target.src = "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=600";
-                        }}
+                        onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=600"; }}
                     />
                 </div>
 
                 <div className="p-4 space-y-3">
-                    {/* Name, Price & Description */}
                     <div>
                         <div className="flex justify-between items-start gap-2">
                             <h2 className="text-lg font-bold font-heading text-foreground flex-1">{product.name}</h2>
@@ -170,7 +261,6 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
                     </div>
 
-                    {/* Grouped Additionals */}
                     {isCustomizable && sortedCategories.length > 0 && (
                         <div className="space-y-4">
                             <Separator />
@@ -184,37 +274,27 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                                 
                                 return (
                                     <div key={catKey} id={`cat-section-${catKey}`} className="space-y-2">
-                                        {/* Cabeçalho da categoria */}
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2 text-sm font-medium">
                                                 <span>{catInfo.icon}</span>
                                                 <span className="text-foreground">{catInfo.label}</span>
                                                 {rule.required && (
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                                        catError ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                                                    }`}>Obrigatório</span>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catError ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>Obrigatório</span>
                                                 )}
                                                 {!rule.required && rule.max_select > 1 && (
                                                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Até {rule.max_select}</span>
                                                 )}
                                             </div>
-                                            {/* Contador de seleções */}
-                                            <span className={`text-xs font-medium ${
-                                                rule.required && selectedInCat === 0 ? "text-amber-600" :
-                                                selectedInCat > 0 ? "text-primary" : "text-muted-foreground"
-                                            }`}>
+                                            <span className={`text-xs font-medium ${rule.required && selectedInCat === 0 ? "text-amber-600" : selectedInCat > 0 ? "text-primary" : "text-muted-foreground"}`}>
                                                 {selectedInCat}/{rule.max_select || 1}
                                             </span>
                                         </div>
-
-                                        {/* Mensagem de erro */}
                                         {catError && (
                                             <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
                                                 <svg className="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
                                                 {catError}
                                             </div>
                                         )}
-
                                         <div className="grid grid-cols-1 gap-2">
                                             {items.map(add => {
                                                 const isSelected = !!selectedAdditionals.find(a => a.name === add.name);
@@ -226,42 +306,24 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                                                         disabled={isAtMax}
                                                         data-testid={`additional-${add.name.replace(/\s+/g, '-').toLowerCase()}`}
                                                         className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
-                                                            isSelected
-                                                                ? "border-primary bg-primary/5"
-                                                                : isAtMax
-                                                                    ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
-                                                                    : catError
-                                                                        ? "border-red-300 bg-red-50/30 hover:border-primary/30"
-                                                                        : rule.required
-                                                                            ? "border-amber-200 bg-amber-50/20 hover:border-primary/50"
-                                                                            : "border-border hover:border-primary/30"
+                                                            isSelected ? "border-primary bg-primary/5" : isAtMax ? "border-border bg-muted/30 opacity-50 cursor-not-allowed" : catError ? "border-red-300 bg-red-50/30 hover:border-primary/30" : rule.required ? "border-amber-200 bg-amber-50/20 hover:border-primary/50" : "border-border hover:border-primary/30"
                                                         }`}>
                                                         <div className="flex items-center gap-3">
                                                             {add.image_url ? (
-                                                                <img 
-                                                                    src={getImageUrl(add.image_url)} 
-                                                                    alt={add.name}
-                                                                    className="h-10 w-10 rounded-lg object-cover border border-border"
-                                                                />
+                                                                <img src={getImageUrl(add.image_url)} alt={add.name} className="h-10 w-10 rounded-lg object-cover border border-border" />
                                                             ) : (
-                                                                <div className={`h-10 w-10 rounded-lg border-2 flex items-center justify-center ${
-                                                                    isSelected ? "bg-primary border-primary" : "border-muted-foreground/30 bg-muted"
-                                                                }`}>
+                                                                <div className={`h-10 w-10 rounded-lg border-2 flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30 bg-muted"}`}>
                                                                     {isSelected && <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                                                                 </div>
                                                             )}
                                                             <div className="flex flex-col">
                                                                 <span className="text-sm font-medium">{add.name}</span>
                                                                 {rule.max_select > 1 && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        {isSelected ? "Selecionado" : isAtMax ? `Limite de ${rule.max_select} atingido` : "Toque para selecionar"}
-                                                                    </span>
+                                                                    <span className="text-xs text-muted-foreground">{isSelected ? "Selecionado" : isAtMax ? `Limite de ${rule.max_select} atingido` : "Toque para selecionar"}</span>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <span className="text-sm font-semibold text-primary">
-                                                            {add.price > 0 ? `+ R$ ${add.price.toFixed(2)}` : "Grátis"}
-                                                        </span>
+                                                        <span className="text-sm font-semibold text-primary">{add.price > 0 ? `+ R$ ${add.price.toFixed(2)}` : "Grátis"}</span>
                                                     </button>
                                                 );
                                             })}
@@ -272,7 +334,6 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         </div>
                     )}
 
-                    {/* Observation */}
                     <div>
                         <Separator className="mb-3" />
                         <h3 className="font-semibold text-sm font-heading mb-2">Alguma observação?</h3>
@@ -282,7 +343,6 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                             data-testid="product-observation" />
                     </div>
 
-                    {/* Quantity + Add */}
                     <div className="flex items-center gap-4 pt-1">
                         <div className="flex items-center gap-2 bg-muted rounded-full px-1 py-1">
                             <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-9 w-9 rounded-full bg-white border border-border flex items-center justify-center hover:bg-gray-50 transition-colors" data-testid="modal-qty-minus">
@@ -293,8 +353,10 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                                 <Plus className="h-4 w-4" />
                             </button>
                         </div>
-                        <Button onClick={validateAndAdd} className="flex-1 bg-accent hover:bg-accent/90 text-white rounded-full py-5 font-semibold text-base" data-testid="modal-add-btn">
-                            Adicionar - R$ {totalPrice.toFixed(2)}
+                        <Button onClick={validateAndAdd} disabled={!storeOpen}
+                            className={`flex-1 rounded-full py-5 font-semibold text-base ${storeOpen ? "bg-accent hover:bg-accent/90 text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
+                            data-testid="modal-add-btn">
+                            {storeOpen ? `Adicionar - R$ ${totalPrice.toFixed(2)}` : "Loja fechada"}
                         </Button>
                     </div>
                 </div>
@@ -302,52 +364,6 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
         </Dialog>
     );
 });
-
-/* ============ CART CONTENT ============ */
-function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout }) {
-    if (itemCount === 0) return (
-        <div className="text-center py-8">
-            <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">Seu carrinho esta vazio</p>
-        </div>
-    );
-    return (
-        <div className="flex flex-col">
-            <div className="space-y-3 max-h-[40vh] overflow-auto pr-1">
-                {items.map(item => (
-                    <div key={item.cart_id} className="flex items-start gap-3" data-testid={`cart-item-${item.cart_id}`}>
-                        <img src={getImageUrl(item.image_url)} alt={item.product_name} className="h-14 w-14 rounded-xl object-cover flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{item.product_name}</p>
-                            {item.additionals?.length > 0 && (
-                                <p className="text-xs text-accent">+ {item.additionals.map(a => a.name).join(", ")}</p>
-                            )}
-                            {item.observation && <p className="text-xs text-muted-foreground italic">"{item.observation}"</p>}
-                            <p className="text-sm text-muted-foreground">R$ {item.price.toFixed(2)}</p>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                            <button onClick={() => updateQuantity(item.cart_id, item.quantity - 1)} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted" data-testid={`decrease-${item.cart_id}`}>
-                                <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.cart_id, item.quantity + 1)} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted" data-testid={`increase-${item.cart_id}`}>
-                                <Plus className="h-3 w-3" />
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <Separator className="my-4" />
-            <div className="space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>R$ {total.toFixed(2)}</span></div>
-                <div className="flex justify-between text-lg font-bold font-heading"><span>Total</span><span className="text-primary">R$ {total.toFixed(2)}</span></div>
-            </div>
-            <Button onClick={onCheckout} className="w-full mt-4 bg-accent hover:bg-accent/90 text-white rounded-full py-5 font-semibold text-base" data-testid="checkout-btn">
-                Finalizar Pedido
-            </Button>
-        </div>
-    );
-}
 
 /* ============ PRODUCT CARD ============ */
 function ProductCard({ product, onClick, backendUrl }) {
@@ -362,6 +378,10 @@ function ProductCard({ product, onClick, backendUrl }) {
 
     const hasOpcionais = (Array.isArray(product.additionals) && product.additionals.length > 0) || 
                              (Array.isArray(product.complement_ids) && product.complement_ids.length > 0);
+    
+    const minPrice = hasOpcionais && product.price === 0
+        ? (Array.isArray(product.additionals) ? Math.min(...product.additionals.map(a => a.price || 0)) : 0)
+        : product.price;
 
     const handleFavoriteClick = (e) => {
         e.stopPropagation();
@@ -371,7 +391,7 @@ function ProductCard({ product, onClick, backendUrl }) {
     return (
         <div 
             onClick={() => onClick(product)}
-            className="bg-white rounded-2xl border border-border overflow-hidden cursor-pointer hover:shadow-lg transition-shadow group"
+            className="bg-white rounded-2xl border border-border overflow-hidden cursor-pointer hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 group"
             data-testid={`product-${product.id}`}
         >
             <div className="relative aspect-[4/3] overflow-hidden bg-muted">
@@ -381,22 +401,24 @@ function ProductCard({ product, onClick, backendUrl }) {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                 />
                 {product.tags?.includes("mais_pedido") && (
-                    <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        Popular
+                    <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                        <Flame className="h-3 w-3" /> Popular
+                    </div>
+                )}
+                {product.tags?.includes("novo") && (
+                    <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                        Novo
                     </div>
                 )}
                 {hasOpcionais && (
-                    <div className="absolute bottom-2 right-2 bg-primary/90 text-white text-xs px-2 py-1 rounded-full">
+                    <div className="absolute bottom-2 right-2 bg-primary/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
                         Personalizável
                     </div>
                 )}
-                {/* Botão de Favorito */}
                 <button
                     onClick={handleFavoriteClick}
-                    className={`absolute top-2 right-2 p-2 rounded-full transition-all ${
-                        favorite 
-                            ? "bg-red-500 text-white" 
-                            : "bg-white/80 text-muted-foreground hover:bg-white hover:text-red-500"
+                    className={`absolute top-2 right-2 p-2 rounded-full transition-all shadow-md ${
+                        favorite ? "bg-red-500 text-white" : "bg-white/90 text-muted-foreground hover:bg-white hover:text-red-500"
                     }`}
                 >
                     <Heart className={`h-4 w-4 ${favorite ? "fill-current" : ""}`} />
@@ -405,7 +427,9 @@ function ProductCard({ product, onClick, backendUrl }) {
             <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold font-heading text-foreground line-clamp-1">{product.name}</h3>
-                    <span className="font-bold text-primary whitespace-nowrap ml-2">R$ {product.price?.toFixed(2)}</span>
+                    <span className="font-bold text-primary whitespace-nowrap ml-2">
+                        {product.price > 0 ? `R$ ${product.price.toFixed(2)}` : minPrice > 0 ? `A partir de R$ ${minPrice.toFixed(2)}` : "Monte seu preço"}
+                    </span>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{product.description}</p>
                 <div className="flex flex-wrap gap-1">
@@ -423,12 +447,55 @@ function ProductCard({ product, onClick, backendUrl }) {
     );
 }
 
-/* ============ MENU PAGE ============ */
+/* ============ CART CONTENT ============ */
+function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout }) {
+    if (itemCount === 0) return (
+        <div className="text-center py-8">
+            <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Seu carrinho está vazio</p>
+        </div>
+    );
+    return (
+        <div className="flex flex-col">
+            <div className="space-y-3 max-h-[40vh] overflow-auto pr-1">
+                {items.map(item => (
+                    <div key={item.cart_id} className="flex items-start gap-3" data-testid={`cart-item-${item.cart_id}`}>
+                        <img src={getImageUrl(item.image_url)} alt={item.product_name} className="h-14 w-14 rounded-xl object-cover flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{item.product_name}</p>
+                            {item.additionals?.length > 0 && (
+                                <p className="text-xs text-accent">+ {item.additionals.map(a => a.name).join(", ")}</p>
+                            )}
+                            {item.observation && <p className="text-xs text-muted-foreground italic">"{item.observation}"</p>}
+                            <p className="text-sm text-muted-foreground">R$ {item.price.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                            <button onClick={() => updateQuantity(item.cart_id, Math.max(1, item.quantity - 1))} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted"><Minus className="h-3 w-3" /></button>
+                            <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                            <button onClick={() => updateQuantity(item.cart_id, item.quantity + 1)} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted"><Plus className="h-3 w-3" /></button>
+                            <button onClick={() => removeItem(item.cart_id)} className="h-7 w-7 rounded-full text-destructive hover:bg-destructive/10 flex items-center justify-center ml-1"><Trash2 className="h-3 w-3" /></button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="border-t pt-4 mt-4">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="font-medium">Total</span>
+                    <span className="text-xl font-bold text-primary">R$ {total.toFixed(2)}</span>
+                </div>
+                <Button onClick={onCheckout} className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-5 font-semibold">
+                    Finalizar Pedido ({itemCount} {itemCount === 1 ? "item" : "itens"})
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 /* ============ LOGIN MODAL ============ */
 function LoginModal({ open, onClose, onLogin }) {
     const [phone, setPhone] = useState("");
     const [name, setName] = useState("");
-    const [step, setStep] = useState("phone"); // phone | name
+    const [step, setStep] = useState("phone");
     const [loading, setLoading] = useState(false);
 
     const formatPhone = (value) => {
@@ -479,54 +546,20 @@ function LoginModal({ open, onClose, onLogin }) {
                     <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                         <User className="h-8 w-8 text-primary" />
                     </div>
-                    <h2 className="text-xl font-bold font-heading mb-2">
-                        {step === "phone" ? "Identifique-se" : "Como podemos te chamar?"}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                        {step === "phone" 
-                            ? "Digite seu telefone para acessar seus favoritos e histórico" 
-                            : "Digite seu nome para personalizar sua experiência"}
-                    </p>
+                    <h2 className="text-xl font-bold font-heading mb-2">{step === "phone" ? "Identifique-se" : "Como podemos te chamar?"}</h2>
+                    <p className="text-sm text-muted-foreground">{step === "phone" ? "Digite seu telefone para acessar seus favoritos e histórico" : "Digite seu nome para personalizar sua experiência"}</p>
                 </div>
-
                 {step === "phone" ? (
                     <form onSubmit={handlePhoneSubmit} className="space-y-4">
-                        <div>
-                            <Input
-                                type="tel"
-                                placeholder="(11) 99999-9999"
-                                value={phone}
-                                onChange={e => setPhone(formatPhone(e.target.value))}
-                                maxLength={15}
-                                className="text-center text-lg"
-                                autoFocus
-                            />
-                        </div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full">
-                            Continuar
-                        </Button>
-                        <Button type="button" variant="ghost" className="w-full" onClick={handleClose}>
-                            Pular por enquanto
-                        </Button>
+                        <Input type="tel" placeholder="(11) 99999-9999" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} maxLength={15} className="text-center text-lg" autoFocus />
+                        <Button type="submit" className="w-full bg-primary text-white rounded-full">Continuar</Button>
+                        <Button type="button" variant="ghost" className="w-full" onClick={handleClose}>Pular por enquanto</Button>
                     </form>
                 ) : (
                     <form onSubmit={handleNameSubmit} className="space-y-4">
-                        <div>
-                            <Input
-                                type="text"
-                                placeholder="Seu nome"
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                className="text-center"
-                                autoFocus
-                            />
-                        </div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full" disabled={loading}>
-                            {loading ? "Entrando..." : "Entrar"}
-                        </Button>
-                        <Button type="button" variant="ghost" className="w-full" onClick={() => setStep("phone")}>
-                            Voltar
-                        </Button>
+                        <Input type="text" placeholder="Seu nome" value={name} onChange={e => setName(e.target.value)} className="text-center" autoFocus />
+                        <Button type="submit" className="w-full bg-primary text-white rounded-full" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</Button>
+                        <Button type="button" variant="ghost" className="w-full" onClick={() => setStep("phone")}>Voltar</Button>
                     </form>
                 )}
             </DialogContent>
@@ -537,7 +570,6 @@ function LoginModal({ open, onClose, onLogin }) {
 /* ============ REORDER SECTION ============ */
 function ReorderSection({ suggestions, onReorder }) {
     if (!suggestions || suggestions.length === 0) return null;
-
     return (
         <div className="mb-8 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl p-5 border border-primary/10">
             <div className="flex items-center gap-2 mb-4">
@@ -547,26 +579,15 @@ function ReorderSection({ suggestions, onReorder }) {
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {suggestions.map(product => (
-                    <button
-                        key={product.product_id}
-                        onClick={() => onReorder(product)}
-                        className="flex-shrink-0 w-36 bg-white rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow text-left"
-                    >
+                    <button key={product.product_id} onClick={() => onReorder(product)}
+                        className="flex-shrink-0 w-36 bg-white rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow text-left">
                         <div className="h-24 bg-muted">
-                            <img 
-                                src={getImageUrl(product.image_url)} 
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                            />
+                            <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover" />
                         </div>
                         <div className="p-3">
                             <p className="font-medium text-sm line-clamp-1">{product.name}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Pedido {product.times_ordered}x
-                            </p>
-                            <p className="font-bold text-primary text-sm mt-1">
-                                R$ {product.price?.toFixed(2)}
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">Pedido {product.times_ordered}x</p>
+                            <p className="font-bold text-primary text-sm mt-1">R$ {product.price?.toFixed(2)}</p>
                         </div>
                     </button>
                 ))}
@@ -575,6 +596,28 @@ function ReorderSection({ suggestions, onReorder }) {
     );
 }
 
+/* ============ STORE STATUS BANNER ============ */
+function StoreStatusBanner({ status }) {
+    if (status.isOpen) {
+        return (
+            <div className={`px-4 py-2 flex items-center justify-center gap-2 text-sm ${status.closingSoon ? "bg-amber-50 text-amber-700 border-b border-amber-200" : "bg-green-50 text-green-700 border-b border-green-200"}`}>
+                <span className={`w-2 h-2 rounded-full ${status.closingSoon ? "bg-amber-500 animate-pulse" : "bg-green-500"}`} />
+                <Store className="h-4 w-4" />
+                <span className="font-medium">{status.message}</span>
+            </div>
+        );
+    }
+    return (
+        <div className="px-4 py-3 bg-red-50 text-red-700 border-b border-red-200 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500" />
+            <Store className="h-4 w-4" />
+            <span className="font-medium">{status.message}</span>
+            {status.nextOpen && <span className="text-sm">· Abre {status.nextOpen}</span>}
+        </div>
+    );
+}
+
+/* ============ MAIN MENU PAGE ============ */
 export default function MenuPage() {
     const [menus, setMenus] = useState([]);
     const [selectedMenu, setSelectedMenu] = useState(null);
@@ -586,10 +629,12 @@ export default function MenuPage() {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const [cartAnimating, setCartAnimating] = useState(false);
     
     const { items, addItem, removeItem, updateQuantity, total, itemCount } = useCart();
     const { favorites } = useFavorites();
     const { customer, isLoggedIn, login, reorderSuggestions } = useCustomer();
+    const { isOpen: storeOpen, ...storeStatus } = useStoreStatus();
     const navigate = useNavigate();
 
     // Load menus on mount
@@ -600,13 +645,9 @@ export default function MenuPage() {
                 const res = await axios.get(`${API}/menus`);
                 const menusData = Array.isArray(res.data) ? res.data : [];
                 setMenus(menusData);
-                
                 const activeMenu = menusData.find(m => m.active) || menusData[0];
-                if (activeMenu) {
-                    setSelectedMenu(activeMenu.id);
-                }
+                if (activeMenu) setSelectedMenu(activeMenu.id);
             } catch (err) {
-                console.error("Error fetching menus:", err);
                 toast.error("Erro ao carregar menus");
             } finally {
                 setLoading(false);
@@ -618,21 +659,13 @@ export default function MenuPage() {
     // Load categories when menu is selected
     useEffect(() => {
         if (!selectedMenu) return;
-        
         const fetchCategories = async () => {
             try {
                 const res = await axios.get(`${API}/menus/${selectedMenu}/categories`);
                 const cats = Array.isArray(res.data) ? res.data : [];
                 setCategories(cats);
-                
-                if (cats.length > 0) {
-                    setSelectedCategory(cats[0].id);
-                } else {
-                    setSelectedCategory(null);
-                    setProducts([]);
-                }
-            } catch (err) {
-                console.error("Error fetching categories:", err);
+                if (cats.length > 0) setSelectedCategory(cats[0].id);
+            } catch {
                 toast.error("Erro ao carregar categorias");
             }
         };
@@ -641,25 +674,26 @@ export default function MenuPage() {
 
     // Load products when category is selected
     useEffect(() => {
-        if (!selectedCategory) {
-            setProducts([]);
-            return;
-        }
-        
+        if (!selectedCategory) { setProducts([]); return; }
         const fetchProducts = async () => {
             try {
                 const res = await axios.get(`${API}/categories/${selectedCategory}/products`);
-                let prods = Array.isArray(res.data) ? res.data : [];
-                setProducts(prods);
-            } catch (err) {
-                console.error("Error fetching products:", err);
+                setProducts(Array.isArray(res.data) ? res.data : []);
+            } catch {
                 toast.error("Erro ao carregar produtos");
             }
         };
         fetchProducts();
     }, [selectedCategory]);
 
-    // Filter products by search
+    // Animate cart when item added
+    useEffect(() => {
+        if (itemCount > 0) {
+            setCartAnimating(true);
+            setTimeout(() => setCartAnimating(false), 300);
+        }
+    }, [itemCount]);
+
     const filteredProducts = useMemo(() => {
         if (!search) return products;
         return products.filter(p => 
@@ -673,29 +707,30 @@ export default function MenuPage() {
         toast.success("Item adicionado ao carrinho!");
     };
 
-    // Get current menu and category names
     const currentMenu = menus.find(m => m.id === selectedMenu);
     const currentCategory = categories.find(c => c.id === selectedCategory);
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <div className="text-center">
-                    <Leaf className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
-                    <p className="text-muted-foreground">Carregando cardapio...</p>
+            <div className="min-h-screen bg-background">
+                <div className="h-16 bg-white border-b" />
+                <div className="max-w-7xl mx-auto px-4 py-6">
+                    <CategorySkeleton />
+                    <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-6">
+                        {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}
+                    </div>
                 </div>
             </div>
         );
     }
 
-    // Mostrar mensagem quando não há menus cadastrados
     if (menus.length === 0) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="text-center max-w-md mx-auto px-4">
                     <Layers className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <h2 className="text-xl font-bold font-heading mb-2">Cardapio em preparação</h2>
-                    <p className="text-muted-foreground mb-4">Nosso cardapio está sendo montado. Volte em breve!</p>
+                    <h2 className="text-xl font-bold font-heading mb-2">Cardápio em preparação</h2>
+                    <p className="text-muted-foreground mb-4">Nosso cardápio está sendo montado. Volte em breve!</p>
                 </div>
             </div>
         );
@@ -703,54 +738,67 @@ export default function MenuPage() {
 
     return (
         <div className="min-h-screen bg-background" data-testid="menu-page">
+            {/* Store Status Banner */}
+            <StoreStatusBanner status={{ isOpen: storeOpen, ...storeStatus }} />
+
             {/* Header */}
             <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">SS</div>
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-bold text-lg shadow-md">SS</div>
                         <div className="hidden sm:block">
                             <h1 className="font-bold text-lg text-foreground font-heading leading-tight">Salada Soul</h1>
                             <p className="text-xs text-muted-foreground">Nutre o corpo, alimenta a alma</p>
                         </div>
                     </div>
+                    
+                    {/* Search with clear button */}
                     <div className="hidden md:flex flex-1 max-w-md mx-4">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
                                 data-testid="search-input" 
-                                placeholder="Buscar produtos..." 
+                                placeholder="Busque por salada, bebida, ingrediente..." 
                                 value={search} 
                                 onChange={e => setSearch(e.target.value)} 
-                                className="pl-10 rounded-full border-border bg-white" 
+                                className="pl-10 pr-10 rounded-full border-border bg-white" 
                             />
+                            {search && (
+                                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20">
+                                    <X className="h-3 w-3" />
+                                </button>
+                            )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        {/* Botão de Login ou Nome do Cliente */}
+
+                    <div className="flex items-center gap-1 sm:gap-2">
                         {isLoggedIn ? (
                             <Button variant="ghost" size="sm" className="text-foreground hidden sm:flex" onClick={() => navigate("/historico")}>
-                                <User className="h-4 w-4 mr-1" />
-                                {customer?.name?.split(" ")[0]}
+                                <User className="h-4 w-4 mr-1" /> {customer?.name?.split(" ")[0]}
                             </Button>
                         ) : (
                             <Button variant="ghost" size="sm" onClick={() => setLoginModalOpen(true)} className="text-foreground hidden sm:flex">
-                                <User className="h-4 w-4 mr-1" />
-                                Entrar
+                                <User className="h-4 w-4 mr-1" /> Entrar
                             </Button>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => navigate("/favoritos")} data-testid="favorites-btn" className="text-foreground hidden sm:flex">
-                            <Heart className="h-4 w-4 mr-1" /> 
-                            Favoritos
-                            {favorites.length > 0 && <Badge className="ml-1 bg-red-500 text-white">{favorites.length}</Badge>}
+                        <Button variant="ghost" size="sm" onClick={() => navigate("/favoritos")} className="text-foreground hidden sm:flex relative">
+                            <Heart className="h-4 w-4 mr-1" /> Favoritos
+                            {favorites.length > 0 && <Badge className="ml-1 bg-red-500 text-white text-xs">{favorites.length}</Badge>}
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => navigate("/historico")} data-testid="history-btn" className="text-foreground hidden sm:flex">
-                            <Clock className="h-4 w-4 mr-1" /> Historico
+                        <Button variant="ghost" size="sm" onClick={() => navigate("/historico")} className="text-foreground hidden sm:flex">
+                            <Clock className="h-4 w-4 mr-1" /> Histórico
                         </Button>
+                        
+                        {/* Cart Button with Animation */}
                         <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                             <SheetTrigger asChild>
-                                <Button className="relative bg-primary text-primary-foreground rounded-full" size="icon" data-testid="mobile-cart-btn">
+                                <Button className={`relative bg-primary text-primary-foreground rounded-full transition-transform ${cartAnimating ? "scale-110" : ""}`} size="icon" data-testid="mobile-cart-btn">
                                     <ShoppingCart className="h-5 w-5" />
-                                    {itemCount > 0 && <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">{itemCount}</span>}
+                                    {itemCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-in zoom-in duration-200">
+                                            {itemCount > 9 ? "9+" : itemCount}
+                                        </span>
+                                    )}
                                 </Button>
                             </SheetTrigger>
                             <SheetContent side="right" className="w-full sm:max-w-md bg-white">
@@ -762,123 +810,102 @@ export default function MenuPage() {
                         </Sheet>
                     </div>
                 </div>
+                
+                {/* Mobile Search */}
                 <div className="md:hidden px-4 pb-3">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
-                            placeholder="Buscar produtos..." 
+                            placeholder="Busque por salada, bebida..." 
                             value={search} 
                             onChange={e => setSearch(e.target.value)} 
-                            className="pl-10 rounded-full" 
+                            className="pl-10 pr-10 rounded-full" 
                             data-testid="mobile-search" 
                         />
+                        {search && (
+                            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted flex items-center justify-center">
+                                <X className="h-3 w-3" />
+                            </button>
+                        )}
                     </div>
                 </div>
             </header>
 
-            {/* Main Content - Hierarquia: Menu → Categoria → Produto */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
                 
-                {/* ===== MENU SELECTOR (visível apenas se houver mais de 1 menu) ===== */}
+                {/* Menu Selector */}
                 {menus.length > 1 && (
                     <div className="mb-6">
                         <h2 className="text-sm font-medium text-muted-foreground mb-3">Selecione o Menu</h2>
                         <div className="flex flex-wrap gap-2">
                             {menus.map(menu => (
-                                <button
-                                    key={menu.id}
-                                    onClick={() => setSelectedMenu(menu.id)}
+                                <button key={menu.id} onClick={() => setSelectedMenu(menu.id)}
                                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                                        selectedMenu === menu.id
-                                            ? "bg-primary text-white shadow-md"
-                                            : "bg-white border border-border text-foreground hover:border-primary/50"
-                                    }`}
-                                >
-                                    {menu.icon && <span>{menu.icon}</span>}
-                                    {menu.name}
+                                        selectedMenu === menu.id ? "bg-primary text-white shadow-md" : "bg-white border border-border text-foreground hover:border-primary/50"
+                                    }`}>
+                                    {menu.icon && <span>{menu.icon}</span>} {menu.name}
                                 </button>
                             ))}
                         </div>
                     </div>
                 )}
 
-                {/* ===== BREADCRUMB / HEADER DO MENU ===== */}
+                {/* Breadcrumb */}
                 {currentMenu && (
                     <div className="mb-6">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                            <span>Cardápio</span>
-                            <ChevronRight className="h-4 w-4" />
-                            <span className="font-medium text-foreground">{currentMenu.name}</span>
+                            <span>Cardápio</span> <ChevronRight className="h-4 w-4" /> <span className="font-medium text-foreground">{currentMenu.name}</span>
                         </div>
-                        {currentMenu.description && (
-                            <p className="text-muted-foreground">{currentMenu.description}</p>
-                        )}
+                        {currentMenu.description && <p className="text-muted-foreground">{currentMenu.description}</p>}
                     </div>
                 )}
 
-                {/* ===== CATEGORY TABS ===== */}
+                {/* Category Tabs */}
                 {categories.length > 0 ? (
                     <div className="mb-8">
                         <div className="border-b border-border mb-6">
                             <div className="flex gap-1 overflow-x-auto pb-0 scrollbar-hide">
                                 {categories.map(category => (
-                                    <button
-                                        key={category.id}
-                                        onClick={() => setSelectedCategory(category.id)}
+                                    <button key={category.id} onClick={() => setSelectedCategory(category.id)}
                                         className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
-                                            selectedCategory === category.id
-                                                ? "border-primary text-primary"
-                                                : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
-                                        }`}
-                                    >
+                                            selectedCategory === category.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                                        }`}>
                                         {category.name}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        {/* ===== REORDER SUGGESTIONS (se logado) ===== */}
+                        {/* Reorder Suggestions */}
                         {isLoggedIn && reorderSuggestions.length > 0 && (
-                            <ReorderSection 
-                                suggestions={reorderSuggestions} 
-                                onReorder={(product) => {
-                                    addItem(product, 1, [], "");
-                                    toast.success(`${product.name} adicionado ao carrinho!`);
-                                }}
-                            />
+                            <ReorderSection suggestions={reorderSuggestions} onReorder={(product) => {
+                                addItem(product, 1, [], "");
+                                toast.success(`${product.name} adicionado!`);
+                            }} />
                         )}
 
-                        {/* ===== CATEGORY HEADER ===== */}
+                        {/* Category Header */}
                         {currentCategory && (
                             <div className="mb-6">
-                                <h2 className="text-2xl font-bold font-heading text-foreground">
-                                    {currentCategory.name}
-                                </h2>
-                                {currentCategory.description && (
-                                    <p className="text-muted-foreground mt-1">{currentCategory.description}</p>
-                                )}
+                                <h2 className="text-2xl font-bold font-heading text-foreground">{currentCategory.name}</h2>
+                                {currentCategory.description && <p className="text-muted-foreground mt-1">{currentCategory.description}</p>}
                             </div>
                         )}
 
-                        {/* ===== PRODUCTS GRID ===== */}
+                        {/* Products Grid with Skeleton */}
                         {filteredProducts.length > 0 ? (
                             <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {filteredProducts.map(product => (
-                                    <ProductCard 
-                                        key={product.id}
-                                        product={product}
-                                        onClick={setSelectedProduct}
-                                        backendUrl={BACKEND_URL}
-                                    />
+                                    <ProductCard key={product.id} product={product} onClick={setSelectedProduct} backendUrl={BACKEND_URL} />
                                 ))}
                             </div>
                         ) : (
                             <div className="text-center py-16 bg-muted/30 rounded-2xl">
                                 <Leaf className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                 <p className="text-lg font-medium">Nenhum produto encontrado</p>
-                                <p className="text-muted-foreground text-sm">
-                                    {search ? "Tente buscar por outro termo" : "Nenhum produto nesta categoria"}
-                                </p>
+                                <p className="text-muted-foreground text-sm">{search ? "Tente buscar por outro termo" : "Nenhum produto nesta categoria"}</p>
+                                {search && <Button variant="outline" className="mt-4 rounded-full" onClick={() => setSearch("")}>Limpar busca</Button>}
                             </div>
                         )}
                     </div>
@@ -891,33 +918,26 @@ export default function MenuPage() {
                 )}
             </div>
 
-            {/* Mobile floating checkout */}
+            {/* Sticky Cart Button (Mobile) */}
             {itemCount > 0 && (
-                <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50">
-                    <Button 
-                        onClick={() => navigate("/checkout")} 
-                        className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-5 text-base font-semibold shadow-lg shadow-accent/30" 
-                        data-testid="mobile-checkout-btn"
-                    >
-                        Ver Carrinho ({itemCount}) - R$ {total.toFixed(2)}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border p-3 shadow-lg">
+                    <Button onClick={() => navigate("/checkout")} 
+                        className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-4 text-base font-semibold flex items-center justify-between px-6"
+                        data-testid="mobile-checkout-btn">
+                        <span className="flex items-center gap-2">
+                            <ShoppingCart className="h-5 w-5" />
+                            Ver Carrinho ({itemCount})
+                        </span>
+                        <span>R$ {total.toFixed(2)}</span>
                     </Button>
                 </div>
             )}
 
-            {/* Product Detail Modal - mostra os OPCIONAIS */}
-            <ProductDetailModal 
-                product={selectedProduct} 
-                open={!!selectedProduct} 
-                onClose={() => setSelectedProduct(null)} 
-                onAdd={handleAddItem} 
-            />
+            {/* Product Detail Modal */}
+            <ProductDetailModal product={selectedProduct} open={!!selectedProduct} onClose={() => setSelectedProduct(null)} onAdd={handleAddItem} storeOpen={storeOpen} />
 
             {/* Login Modal */}
-            <LoginModal 
-                open={loginModalOpen} 
-                onClose={() => setLoginModalOpen(false)} 
-                onLogin={login}
-            />
+            <LoginModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} onLogin={login} />
         </div>
     );
 }
