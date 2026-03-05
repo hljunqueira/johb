@@ -1,5 +1,5 @@
 # Dockerfile unificado para Railway - Backend + Nginx
-# Cache bust: 2026-03-05-api-36
+# Cache bust: 2026-03-05-api-37
 
 FROM python:3.10-slim
 

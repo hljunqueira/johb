@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 # Verificar variáveis de ambiente
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if not DATABASE_URL:
-    logger.error("DATABASE_URL não configurada!")
-    sys.exit(1)
+    logger.error("DATABASE_URL não configurada! API funcionará com funcionalidade limitada.")
+    # Não fazer sys.exit(1) - deixar o servidor iniciar para healthcheck
 
 # For Supabase session pooler, we might need to adjust the connection
 # Try to use direct connection if available, otherwise use session pooler
@@ -83,20 +83,36 @@ async def get_db_pool():
             raise
     return db_pool
 
+async def connect_db_background():
+    """Connect to database in background - don't block server startup"""
+    global db_pool
+    # Wait a bit for server to be ready
+    await asyncio.sleep(1)
+    logger.info("Background database connection starting...")
+    try:
+        pool = await get_db_pool()
+        logger.info("Database connected successfully!")
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+        logger.warning("API will work with limited functionality - retrying in 10s...")
+        # Retry logic
+        await asyncio.sleep(10)
+        try:
+            pool = await get_db_pool()
+            logger.info("Database connected on retry!")
+        except Exception as e2:
+            logger.error(f"Database connection retry failed: {e2}")
+
 @app.on_event("startup")
 async def startup():
     global db_pool
     logger.info("Starting up Salada Soul API")
     logger.info(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
     
-    # Try to connect to database
-    logger.info("Attempting database connection...")
-    try:
-        pool = await get_db_pool()
-        logger.info("Database connected successfully!")
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        logger.warning("Starting without database connection - API will work with limited functionality")
+    # Start database connection in background - don't block!
+    logger.info("Scheduling background database connection...")
+    asyncio.create_task(connect_db_background())
+    logger.info("Server ready to accept requests (DB connecting in background)")
 
 @app.on_event("shutdown")
 async def shutdown():
