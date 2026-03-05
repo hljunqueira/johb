@@ -208,7 +208,7 @@ function MenusTabRefactored({ headers }) {
                 <DialogContent className="rounded-2xl"><DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Menu" : "Novo Menu"}</DialogTitle></DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="menu-name" /></div>
-                        <div><Label>Descricao</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="menu-desc" /></div>
+                        <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="menu-desc" /></div>
                         <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm">Ativo</span></div>
                         <Button type="submit" className="w-full bg-primary text-white rounded-full" data-testid="save-menu-btn">{editing ? "Atualizar" : "Criar"}</Button>
                     </form>
@@ -316,7 +316,7 @@ function CategoriesTab({ headers }) {
                 <DialogContent className="rounded-2xl"><DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Categoria" : "Nova Categoria"}</DialogTitle></DialogHeader>
                     <form onSubmit={save} className="space-y-4">
                         <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="cat-name" /></div>
-                        <div><Label>Descricao</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="cat-desc" /></div>
+                        <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="cat-desc" /></div>
                         <div><Label>Icone (slug)</Label><Input value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="salad, bowl, juice..." className="mt-1 rounded-lg" data-testid="cat-icon" /></div>
                         <div><Label>Menu</Label>
                             <select value={form.menu_id} onChange={e => setForm(f => ({ ...f, menu_id: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm">
@@ -333,29 +333,87 @@ function CategoriesTab({ headers }) {
     );
 }
 
+/* ==================== CONFIRM DIALOG ==================== */
+function ConfirmDialog({ open, title, description, onConfirm, onCancel, confirmLabel = "Excluir", danger = true }) {
+    return (
+        <Dialog open={open} onOpenChange={onCancel}>
+            <DialogContent className="max-w-sm rounded-2xl">
+                <DialogHeader>
+                    <DialogTitle className="font-heading">{title}</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">{description}</p>
+                <div className="flex gap-3 mt-4">
+                    <Button variant="outline" className="flex-1 rounded-full" onClick={onCancel}>Cancelar</Button>
+                    <Button className={`flex-1 rounded-full text-white ${danger ? "bg-destructive hover:bg-destructive/90" : "bg-primary"}`} onClick={onConfirm}>{confirmLabel}</Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+/* ==================== SKELETON ==================== */
+function ProductCardSkeleton() {
+    return (
+        <div className="bg-white dark:bg-card rounded-2xl border border-border overflow-hidden animate-pulse">
+            <div className="h-32 bg-muted w-full" />
+            <div className="p-4 space-y-3">
+                <div className="flex justify-between"><div className="space-y-1.5"><div className="h-4 w-32 bg-muted rounded" /><div className="h-3 w-20 bg-muted rounded" /></div><div className="h-4 w-16 bg-muted rounded" /></div>
+                <div className="flex gap-2"><div className="h-5 w-16 bg-muted rounded-full" /><div className="h-5 w-20 bg-muted rounded-full" /></div>
+                <div className="flex justify-between items-center pt-2 border-t"><div className="h-5 w-12 bg-muted rounded-full" /><div className="flex gap-1"><div className="h-8 w-8 bg-muted rounded-lg" /><div className="h-8 w-8 bg-muted rounded-lg" /><div className="h-8 w-8 bg-muted rounded-lg" /></div></div>
+            </div>
+        </div>
+    );
+}
+
 /* ==================== PRODUCTS TAB ==================== */
 function ProductsTab({ headers }) {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [complements, setComplements] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ 
         name: "", description: "", price: "", category_id: "", image_url: "", stock: -1, tags: [], complement_ids: [], active: true 
     });
     const [newTag, setNewTag] = useState("");
+    const [search, setSearch] = useState("");
+    const [filterCategory, setFilterCategory] = useState("");
+    const [filterStatus, setFilterStatus] = useState("all");
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmTarget, setConfirmTarget] = useState(null);
 
     const fetchAll = async () => {
-        const [p, c, co] = await Promise.all([
-            axios.get(`${API}/admin/products`, { headers }),
-            axios.get(`${API}/admin/categories`, { headers }),
-            axios.get(`${API}/admin/complements`, { headers })
-        ]);
-        setProducts(p.data); 
-        setCategories(c.data);
-        setComplements(co.data);
+        setLoading(true);
+        try {
+            const [p, c, co] = await Promise.all([
+                axios.get(`${API}/admin/products`, { headers }),
+                axios.get(`${API}/admin/categories`, { headers }),
+                axios.get(`${API}/admin/complements`, { headers })
+            ]);
+            setProducts(p.data);
+            setCategories(c.data);
+            setComplements(co.data);
+        } catch { toast.error("Erro ao carregar produtos"); }
+        finally { setLoading(false); }
     };
     useEffect(() => { fetchAll(); }, []); // eslint-disable-line
+
+    const filtered = products.filter(p => {
+        const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
+        const matchCat = !filterCategory || p.category_id === filterCategory;
+        const matchStatus = filterStatus === "all" || (filterStatus === "active" ? p.active : !p.active);
+        return matchSearch && matchCat && matchStatus;
+    });
+
+    const totalActive = products.filter(p => p.active).length;
+    const totalInactive = products.filter(p => !p.active).length;
+
+    const getOptionalsCount = (p) => {
+        if (Array.isArray(p.additionals) && p.additionals.length > 0) return p.additionals.length;
+        if (Array.isArray(p.complement_ids) && p.complement_ids.length > 0) return p.complement_ids.length;
+        return 0;
+    };
 
     const save = async (e) => {
         e.preventDefault();
@@ -376,11 +434,11 @@ function ProductsTab({ headers }) {
         }
     };
 
-    const del = async (id) => { 
-        if (!window.confirm("Excluir?")) return; 
-        await axios.delete(`${API}/admin/products/${id}`, { headers }); 
-        toast.success("Excluido"); 
-        fetchAll(); 
+    const askDelete = (id) => { setConfirmTarget(id); setConfirmOpen(true); };
+    const confirmDelete = async () => {
+        try { await axios.delete(`${API}/admin/products/${confirmTarget}`, { headers }); toast.success("Produto excluído"); fetchAll(); }
+        catch { toast.error("Erro ao excluir"); }
+        finally { setConfirmOpen(false); setConfirmTarget(null); }
     };
     
     const clone = async (id) => { 
@@ -389,9 +447,9 @@ function ProductsTab({ headers }) {
         fetchAll(); 
     };
     
-    const toggle = async (p) => { 
-        await axios.put(`${API}/admin/products/${p.id}`, { active: !p.active }, { headers }); 
-        fetchAll(); 
+    const toggle = async (p) => {
+        try { await axios.put(`${API}/admin/products/${p.id}`, { active: !p.active }, { headers }); fetchAll(); }
+        catch { toast.error("Erro ao alterar status"); }
     };
     
     const edit = (p) => { 
@@ -431,7 +489,7 @@ function ProductsTab({ headers }) {
         try { 
             const fd = new FormData(); 
             fd.append("file", file); 
-            const r = await axios.post(`${API}/upload`, fd, { headers: { ...headers, "Content-Type": "multipart/form-data" } }); 
+            const r = await axios.post(`${API}/admin/upload`, fd, { headers: { ...headers, "Content-Type": "multipart/form-data" } }); 
             setForm(f => ({ ...f, image_url: r.data.url })); 
             toast.success("Imagem enviada"); 
         }
@@ -442,47 +500,89 @@ function ProductsTab({ headers }) {
 
     return (
         <div>
+            {/* Header */}
             <div className="flex justify-between items-center mb-4">
                 <div>
-                    <p className="text-sm text-muted-foreground">Gerencie todos os produtos.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Vincule produtos a categorias para organizar o cardápio.</p>
+                    <p className="text-sm font-medium">{products.length} produtos</p>
+                    <p className="text-xs text-muted-foreground"><span className="text-green-600">{totalActive} ativos</span>{" · "}<span className="text-gray-400">{totalInactive} inativos</span></p>
                 </div>
                 <Button onClick={openNew} className="bg-primary text-white rounded-full" data-testid="add-product-btn"><Plus className="h-4 w-4 mr-1" />Novo Produto</Button>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {products.map(p => (
-                    <div key={p.id} 
-                         className={`bg-white dark:bg-card rounded-2xl border border-border overflow-hidden ${!p.active ? "opacity-50" : ""}`} 
-                         data-testid={`admin-product-${p.id}`}>
-                        {p.image_url && <img src={getImageUrl(p.image_url)} alt={p.name} className="h-32 w-full object-cover" />}
-                        <div className="p-4">
-                            <div className="flex justify-between items-start mb-1">
-                                <div>
-                                    <h3 className="font-semibold font-heading text-sm">{p.name}</h3>
-                                    <p className="text-xs text-muted-foreground">{getCategoryName(p.category_id)}</p>
-                                </div>
-                                <span className="font-bold text-primary text-sm">R$ {p.price?.toFixed(2)}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1 my-2">
-                                {p.tags?.map(t => <Badge key={t} variant="secondary" className="text-xs rounded-full">{t}</Badge>)}
-                                {(p.complement_ids?.length > 0 || p.additionals?.length > 0) && <Badge className="bg-accent/10 text-accent text-xs rounded-full">{p.complement_ids?.length || p.additionals?.length} opcionais</Badge>}
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Switch checked={p.active} onCheckedChange={() => toggle(p)} />
-                                    <span className="text-xs text-muted-foreground">{p.active ? "Ativo" : "Inativo"}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-end gap-0.5 mt-2 pt-2 border-t">
-                                <Button size="icon" variant="ghost" onClick={() => edit(p)}><Pencil className="h-3.5 w-3.5" /></Button>
-                                <Button size="icon" variant="ghost" onClick={() => clone(p.id)}><Copy className="h-3.5 w-3.5" /></Button>
-                                <Button size="icon" variant="ghost" className="text-destructive" onClick={() => del(p.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
+
+            {/* Filtros */}
+            <div className="flex flex-wrap gap-2 mb-5">
+                <div className="relative flex-1 min-w-[180px]">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-input bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="rounded-lg border border-input bg-white px-3 py-2 text-sm min-w-[140px] focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Todas categorias</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <div className="flex rounded-lg border border-input overflow-hidden bg-white text-sm">
+                    {[["all","Todos"],["active","Ativos"],["inactive","Inativos"]].map(([val, label]) => (
+                        <button key={val} type="button" onClick={() => setFilterStatus(val)}
+                            className={`px-3 py-2 transition-colors ${filterStatus === val ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/50"}`}>{label}</button>
+                    ))}
+                </div>
             </div>
-            {products.length === 0 && (
+
+            {/* Grid */}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {loading
+                    ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
+                    : filtered.map(p => {
+                        const optCount = getOptionalsCount(p);
+                        const hasZeroPrice = !p.price || p.price === 0 || parseFloat(p.price) === 0;
+                        return (
+                            <div key={p.id}
+                                className={`bg-white dark:bg-card rounded-2xl border border-border overflow-hidden ${!p.active ? "opacity-50" : ""}`}
+                                data-testid={`admin-product-${p.id}`}>
+                                {p.image_url
+                                    ? <img src={getImageUrl(p.image_url)} alt={p.name} className="h-32 w-full object-cover" />
+                                    : <div className="h-32 w-full bg-muted/40 flex items-center justify-center"><Package className="h-10 w-10 text-muted-foreground/30" /></div>
+                                }
+                                <div className="p-4">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="flex-1 min-w-0 pr-2">
+                                            <h3 className="font-semibold font-heading text-sm truncate">{p.name}</h3>
+                                            <p className="text-xs text-muted-foreground">{getCategoryName(p.category_id)}</p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-0.5">
+                                            <span className={`font-bold text-sm ${hasZeroPrice ? "text-amber-500" : "text-primary"}`}>R$ {p.price?.toFixed(2)}</span>
+                                            {hasZeroPrice && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">sob consulta</span>}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1 my-2">
+                                        {p.tags?.map(t => <Badge key={t} variant="secondary" className="text-xs rounded-full">{t}</Badge>)}
+                                        {optCount > 0 && <Badge className="bg-accent/10 text-accent text-xs rounded-full">{optCount} opcionais</Badge>}
+                                        {p.stock === 0 && <Badge variant="destructive" className="text-xs rounded-full">Sem estoque</Badge>}
+                                    </div>
+                                    <div className="flex items-center justify-between pt-2 border-t">
+                                        <div className="flex items-center gap-2">
+                                            <Switch checked={p.active} onCheckedChange={() => toggle(p)} />
+                                            <span className="text-xs text-muted-foreground">{p.active ? "Ativo" : "Inativo"}</span>
+                                        </div>
+                                        <div className="flex gap-0.5">
+                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => edit(p)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => clone(p.id)} title="Clonar"><Copy className="h-3.5 w-3.5" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => askDelete(p.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                }
+            </div>
+
+            {!loading && filtered.length === 0 && products.length > 0 && (
+                <div className="text-center py-10">
+                    <p className="text-muted-foreground text-sm">Nenhum produto encontrado.</p>
+                    <button type="button" className="text-primary text-sm mt-2 underline" onClick={() => { setSearch(""); setFilterCategory(""); setFilterStatus("all"); }}>Limpar filtros</button>
+                </div>
+            )}
+            {!loading && products.length === 0 && (
                 <div className="text-center py-12 bg-muted/30 rounded-2xl">
                     <Package className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                     <p className="text-muted-foreground">Nenhum produto cadastrado</p>
@@ -490,14 +590,16 @@ function ProductsTab({ headers }) {
                 </div>
             )}
 
+            <ConfirmDialog open={confirmOpen} title="Excluir produto?" description="Esta ação não pode ser desfeita. O produto será removido do cardápio." confirmLabel="Excluir" danger onConfirm={confirmDelete} onCancel={() => { setConfirmOpen(false); setConfirmTarget(null); }} />
+
             <Dialog open={showForm} onOpenChange={setShowForm}>
                 <DialogContent className="max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto" data-testid="product-form">
                     <DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Produto" : "Novo Produto"}</DialogTitle></DialogHeader>
                     <form onSubmit={save} className="space-y-4">
                         <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="product-name" /></div>
-                        <div><Label>Descricao</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-desc" /></div>
+                        <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-desc" /></div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div><Label>Preco (R$)</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-lg" required data-testid="product-price" /></div>
+                            <div><Label>Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-lg" required data-testid="product-price" /></div>
                             <div><Label>Estoque (-1 = ilimitado)</Label><Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-stock" /></div>
                         </div>
                         <div><Label>Categoria</Label>
@@ -540,7 +642,10 @@ function ProductsTab({ headers }) {
                                 {complements.filter(c => c.active).length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Nenhum complemento. Crie na aba "Opcionais".</p>}
                             </div>
                         </div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full" data-testid="save-product-btn">{editing ? "Atualizar" : "Criar"} Produto</Button>
+                        <div className="flex gap-3 pt-2">
+                            <Button type="button" variant="outline" className="flex-1 rounded-full" onClick={() => setShowForm(false)}>Cancelar</Button>
+                            <Button type="submit" className="flex-1 bg-primary text-white rounded-full" data-testid="save-product-btn">{editing ? "Atualizar" : "Criar"} Produto</Button>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>
@@ -635,7 +740,7 @@ function OptionalsTab({ headers }) {
         try {
             const fd = new FormData();
             fd.append("file", file);
-            const r = await axios.post(`${API}/upload`, fd, { 
+            const r = await axios.post(`${API}/admin/upload`, fd, { 
                 headers: { ...headers, "Content-Type": "multipart/form-data" } 
             });
             setForm(f => ({ ...f, image_url: r.data.url }));
@@ -668,7 +773,7 @@ function OptionalsTab({ headers }) {
         try {
             const fd = new FormData();
             fd.append("file", file);
-            const r = await axios.post(`${API}/upload`, fd, { 
+            const r = await axios.post(`${API}/admin/upload`, fd, { 
                 headers: { ...headers, "Content-Type": "multipart/form-data" } 
             });
             setForm(f => ({ ...f, image_url: r.data.url }));
@@ -856,8 +961,8 @@ function OptionalsTab({ headers }) {
                             {/* Coluna Direita - Dados */}
                             <div className="space-y-4">
                                 <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="comp-name" /></div>
-                                <div><Label>Preco (R$)</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-lg" required data-testid="comp-price" /></div>
-                                <div><Label>Descricao</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="comp-desc" /></div>
+                                <div><Label>Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-lg" required data-testid="comp-price" /></div>
+                                <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="comp-desc" /></div>
                                 
                                 <div><Label>Categoria</Label>
                                     <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm">
@@ -1117,7 +1222,7 @@ function BannersTab({ headers }) {
         try {
             const fd = new FormData();
             fd.append("file", file);
-            const r = await axios.post(`${API}/upload`, fd, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+            const r = await axios.post(`${API}/admin/upload`, fd, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
             setForm(f => ({ ...f, image_url: r.data.url }));
             toast.success("Imagem enviada");
         } catch {
@@ -1350,7 +1455,7 @@ function CombosTab({ headers }) {
                     <DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Combo" : "Novo Combo"}</DialogTitle></DialogHeader>
                     <form onSubmit={save} className="space-y-4">
                         <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required /></div>
-                        <div><Label>Descricao</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" /></div>
+                        <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" /></div>
                         <div><Label>Imagem</Label>
                             <div className="mt-1 flex gap-2 items-center">
                                 <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="rounded-lg flex-1" />
