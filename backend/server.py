@@ -47,17 +47,23 @@ app = FastAPI(
 # Para restringir, defina CORS_ORIGINS no Railway com domínios separados por vírgula
 CORS_ORIGINS_ENV = os.environ.get('CORS_ORIGINS', '*')
 if CORS_ORIGINS_ENV == '*':
-    allow_origins = ["*"]
+    # Quando usa *, não pode ter credentials
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 else:
-    allow_origins = CORS_ORIGINS_ENV.split(',')
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allow_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    # Com origins específicas, pode usar credentials
+    allow_origins = [origin.strip() for origin in CORS_ORIGINS_ENV.split(',')]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allow_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Database pool
 db_pool = None
