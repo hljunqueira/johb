@@ -72,20 +72,29 @@ async def get_db_pool():
                 parsed.params, parsed.query, parsed.fragment
             ))
             
-            # Supabase requires SSL
+            # Supabase requires SSL - use sslmode=require
             if 'sslmode' not in dsn:
                 dsn += "?sslmode=require"
             
             logger.info(f"Connecting to database at {ip}...")
+            logger.info(f"DSN (masked): postgresql://{parsed.username}:****@{ip}:{parsed.port}{parsed.path}?sslmode=require")
+            
+            # Try with explicit SSL context
+            import ssl
+            ssl_context = ssl.create_default_context()
+            
             db_pool = await asyncpg.create_pool(
                 dsn, 
                 min_size=1, 
                 max_size=5,
-                command_timeout=60
+                command_timeout=60,
+                ssl=ssl_context
             )
             logger.info("Database pool created successfully")
         except Exception as e:
             logger.error(f"Failed to create database pool: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
     return db_pool
 
