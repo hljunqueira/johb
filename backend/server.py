@@ -58,20 +58,18 @@ async def get_db_pool():
             import urllib.parse
             parsed = urllib.parse.urlparse(DATABASE_URL)
             
-            # Supabase requires SSL - use sslmode=require
-            dsn = DATABASE_URL
-            if 'sslmode' not in dsn:
-                dsn += "?sslmode=require"
-            
-            logger.info(f"Connecting to database at {parsed.hostname}...")
+            logger.info(f"Connecting to database...")
             
             # Use IP directly instead of hostname to bypass DNS
             import socket
             ip = socket.gethostbyname(parsed.hostname)
             
+            # URL-encode password to handle special characters like @
+            encoded_password = urllib.parse.quote(parsed.password, safe='')
+            
             # Rebuild DSN with IP instead of hostname
             # postgresql://user:pass@IP:port/db?sslmode=require
-            dsn = f"postgresql://{parsed.username}:{parsed.password}@{ip}:{parsed.port}{parsed.path}?sslmode=require"
+            dsn = f"postgresql://{parsed.username}:{encoded_password}@{ip}:{parsed.port}{parsed.path}?sslmode=require"
             
             logger.info(f"Using IP {ip} directly to bypass DNS")
             
@@ -95,30 +93,6 @@ async def startup():
     logger.info("Starting up Salada Soul API")
     logger.info(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
     
-    # Test DNS resolution first
-    import urllib.parse
-    import socket
-    parsed = urllib.parse.urlparse(DATABASE_URL)
-    logger.info(f"Testing DNS for: {parsed.hostname}")
-    logger.info(f"Full URL (masked): postgresql://{parsed.username}:****@{parsed.hostname}:{parsed.port}{parsed.path}")
-    
-    # Try multiple DNS resolution methods
-    try:
-        ip = socket.gethostbyname(parsed.hostname)
-        logger.info(f"DNS OK (gethostbyname): {parsed.hostname} -> {ip}")
-    except socket.gaierror as e:
-        logger.error(f"DNS FAILED (gethostbyname): {e}")
-        
-        # Try with getaddrinfo
-        try:
-            result = socket.getaddrinfo(parsed.hostname, None)
-            logger.info(f"DNS OK (getaddrinfo): {result}")
-        except socket.gaierror as e2:
-            logger.error(f"DNS FAILED (getaddrinfo): {e2}")
-            logger.warning("Starting without database - DNS resolution failed")
-            db_pool = None
-            return
-    
     # Try to connect to database
     logger.info("Attempting database connection...")
     try:
@@ -126,7 +100,7 @@ async def startup():
         logger.info("Database connected successfully!")
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
-        logger.warning("Starting without database connection")
+        logger.warning("Starting without database connection - API will work with limited functionality")
 
 @app.on_event("shutdown")
 async def shutdown():
