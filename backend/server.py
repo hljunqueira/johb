@@ -985,6 +985,98 @@ async def admin_delete_complement(complement_id: str, user=Depends(get_current_u
 
 
 # ============================================
+# ADMIN - COMPLEMENT CATEGORIES
+# ============================================
+
+@app.get("/api/admin/complement-categories")
+async def admin_get_complement_categories(user=Depends(get_current_user)):
+    """Listar todas as categorias de complemento"""
+    if not db_pool:
+        return []
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT * FROM complement_categories ORDER BY order_index, name")
+        return [dict(r) for r in rows]
+
+
+@app.post("/api/admin/complement-categories")
+async def admin_create_complement_category(
+    key: str = Form(...),
+    name: str = Form(...),
+    icon: str = Form(""),
+    order_index: int = Form(0),
+    required: bool = Form(False),
+    min_select: int = Form(0),
+    max_select: int = Form(1),
+    user=Depends(get_current_user)
+):
+    """Criar categoria de complemento"""
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    async with db_pool.acquire() as conn:
+        # Verificar se key já existe
+        existing = await conn.fetchrow("SELECT id FROM complement_categories WHERE key = $1", key)
+        if existing:
+            raise HTTPException(status_code=400, detail="Já existe uma categoria com este código")
+        
+        row = await conn.fetchrow(
+            """INSERT INTO complement_categories 
+               (key, name, icon, order_index, required, min_select, max_select) 
+               VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *""",
+            key, name, icon, order_index, required, min_select, max_select
+        )
+        return dict(row)
+
+
+@app.put("/api/admin/complement-categories/{category_id}")
+async def admin_update_complement_category(
+    category_id: str,
+    key: str = Form(...),
+    name: str = Form(...),
+    icon: str = Form(""),
+    order_index: int = Form(0),
+    required: bool = Form(False),
+    min_select: int = Form(0),
+    max_select: int = Form(1),
+    user=Depends(get_current_user)
+):
+    """Atualizar categoria de complemento"""
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """UPDATE complement_categories 
+               SET name = $1, icon = $2, order_index = $3, required = $4, min_select = $5, max_select = $6 
+               WHERE id = $7 RETURNING *""",
+            name, icon, order_index, required, min_select, max_select, category_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Categoria não encontrada")
+        return dict(row)
+
+
+@app.delete("/api/admin/complement-categories/{category_id}")
+async def admin_delete_complement_category(category_id: str, user=Depends(get_current_user)):
+    """Excluir categoria de complemento"""
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    async with db_pool.acquire() as conn:
+        # Verificar se há complementos usando esta categoria
+        comps = await conn.fetch("SELECT id FROM complements WHERE category = (SELECT key FROM complement_categories WHERE id = $1)", category_id)
+        if comps:
+            # Atualizar complementos para categoria 'extras' antes de excluir
+            await conn.execute(
+                "UPDATE complements SET category = 'extras' WHERE category = (SELECT key FROM complement_categories WHERE id = $1)",
+                category_id
+            )
+        
+        await conn.execute("DELETE FROM complement_categories WHERE id = $1", category_id)
+        return {"success": True}
+
+
+# ============================================
 # ADMIN - BANNERS
 # ============================================
 
