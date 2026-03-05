@@ -374,9 +374,10 @@ function ProductsTab({ headers }) {
     const [compCategories, setCompCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [showLinkCategoriesModal, setShowLinkCategoriesModal] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ 
-        name: "", description: "", price: "", category_id: "", image_url: "", stock: -1, tags: [], complement_ids: [], complement_rules: {}, active: true 
+        name: "", description: "", price: "", category_id: "", image_url: "", stock: -1, tags: [], complement_ids: [], complement_rules: {}, linked_categories: [], active: true 
     });
     const [newTag, setNewTag] = useState("");
     const [search, setSearch] = useState("");
@@ -491,12 +492,16 @@ function ProductsTab({ headers }) {
                 };
             }
         });
+        // Extrair categorias vinculadas a partir dos additionals
+        const linkedCats = [...new Set(existingAdditionals.map(add => add.category || "extras"))];
+        
         setForm({ 
             name: p.name, description: p.description, price: p.price, 
             category_id: p.category_id || "", image_url: p.image_url, stock: p.stock, 
             tags: p.tags || [], 
             complement_ids: matchedIds.length > 0 ? matchedIds : (p.complement_ids || []),
             complement_rules: rules,
+            linked_categories: linkedCats.length > 0 ? linkedCats : (p.linked_categories || []),
             active: p.active 
         }); 
         setShowForm(true); 
@@ -506,7 +511,7 @@ function ProductsTab({ headers }) {
         setEditing(null); 
         setForm({ 
             name: "", description: "", price: "", category_id: "", 
-            image_url: "", stock: -1, tags: [], complement_ids: [], complement_rules: {}, active: true 
+            image_url: "", stock: -1, tags: [], complement_ids: [], complement_rules: {}, linked_categories: [], active: true 
         }); 
         setShowForm(true); 
     };
@@ -529,6 +534,26 @@ function ProductsTab({ headers }) {
             ...f.complement_rules,
             [catKey]: { ...(f.complement_rules[catKey] || { required: false, min_select: 0, max_select: 1 }), [field]: value }
         }
+    }));
+    
+    const linkCategory = (catKey) => setForm(f => ({
+        ...f,
+        linked_categories: f.linked_categories.includes(catKey) 
+            ? f.linked_categories.filter(k => k !== catKey)
+            : [...f.linked_categories, catKey]
+    }));
+    
+    const unlinkCategory = (catKey) => setForm(f => ({
+        ...f,
+        linked_categories: f.linked_categories.filter(k => k !== catKey),
+        // Remover complementos desta categoria e regras
+        complement_ids: f.complement_ids.filter(id => {
+            const comp = complements.find(c => c.id === id);
+            return comp && comp.category !== catKey;
+        }),
+        complement_rules: Object.fromEntries(
+            Object.entries(f.complement_rules).filter(([k]) => k !== catKey)
+        )
     }));
 
     const handleUpload = async (e) => {
@@ -752,143 +777,169 @@ function ProductsTab({ headers }) {
                             </div>
                         </div>
 
-                        {/* Opcionais */}
+                        {/* Opcionais / Complementos */}
                         <div>
                             <div className="flex items-center justify-between mb-1">
                                 <Label className="text-sm font-medium">Opcionais / Complementos</Label>
-                                {form.complement_ids.length > 0 && (
-                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{form.complement_ids.length} selecionado{form.complement_ids.length > 1 ? "s" : ""}</span>
+                                {form.linked_categories?.length > 0 && (
+                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{form.linked_categories.length} categoria{form.linked_categories.length > 1 ? "s" : ""}</span>
                                 )}
                             </div>
-                            <p className="text-xs text-muted-foreground mb-3">Selecione os complementos e configure as regras por categoria</p>
+                            <p className="text-xs text-muted-foreground mb-3">Vincule categorias de complemento a este produto</p>
 
                             {complements.filter(c => c.active).length === 0 ? (
                                 <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
                                     <p className="text-xs text-muted-foreground">Nenhum complemento cadastrado.</p>
                                     <p className="text-xs text-muted-foreground">Crie na aba <strong>Opcionais</strong>.</p>
                                 </div>
-                            ) : (() => {
-                                // Usar categorias dinâmicas do banco
-                                const grouped = {};
-                                complements.filter(c => c.active).forEach(c => {
-                                    const k = c.category || "extras";
-                                    if (!grouped[k]) grouped[k] = [];
-                                    grouped[k].push(c);
-                                });
-                                // Ordenar categorias pelo order_index
-                                const sortedCats = compCategories
-                                    .filter(cat => grouped[cat.key])
-                                    .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
-                                    .map(cat => cat.key);
-                                return (
-                                    <div className="space-y-4">
-                                        {sortedCats.map(catKey => {
-                                            const catInfo = compCategories.find(c => c.key === catKey);
-                                            const info = catInfo ? { label: catInfo.name, icon: catInfo.icon || "➕" } : { label: catKey, icon: "➕" };
-                                            const items = grouped[catKey];
-                                            const rule = form.complement_rules[catKey] || { required: false, min_select: 0, max_select: 1 };
-                                            const selectedInCat = items.filter(c => form.complement_ids.includes(c.id)).length;
-                                            const hasSomeSelected = selectedInCat > 0;
-                                            return (
-                                                <div key={catKey} className={`rounded-xl border-2 overflow-hidden transition-all ${
-                                                    hasSomeSelected ? "border-primary/40" : "border-border"
-                                                }`}>
-                                                    {/* Cabeçalho da categoria */}
-                                                    <div className={`flex items-center justify-between px-3 py-2 ${
-                                                        hasSomeSelected ? "bg-primary/5" : "bg-muted/30"
+                            ) : (
+                                <>
+                                    {/* Botão para vincular categorias */}
+                                    {(!form.linked_categories || form.linked_categories.length === 0) ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowLinkCategoriesModal(true)}
+                                            className="w-full py-4 border-2 border-dashed border-primary/30 rounded-xl text-primary hover:bg-primary/5 transition-colors flex flex-col items-center gap-2"
+                                        >
+                                            <Plus className="h-5 w-5" />
+                                            <span className="text-sm font-medium">Vincular Categorias</span>
+                                            <span className="text-xs text-muted-foreground">Adicione categorias de complemento a este produto</span>
+                                        </button>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {/* Categorias vinculadas */}
+                                            {form.linked_categories.map(catKey => {
+                                                const catInfo = compCategories.find(c => c.key === catKey);
+                                                if (!catInfo) return null;
+                                                
+                                                // Agrupar complementos desta categoria
+                                                const items = complements.filter(c => c.active && c.category === catKey);
+                                                const rule = form.complement_rules[catKey] || { required: false, min_select: 0, max_select: 1 };
+                                                const selectedInCat = items.filter(c => form.complement_ids.includes(c.id)).length;
+                                                const hasSomeSelected = selectedInCat > 0;
+                                                
+                                                return (
+                                                    <div key={catKey} className={`rounded-xl border-2 overflow-hidden transition-all ${
+                                                        hasSomeSelected ? "border-primary/40" : "border-border"
                                                     }`}>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-base">{info.icon}</span>
-                                                            <span className="text-sm font-semibold">{info.label}</span>
-                                                            {hasSomeSelected && (
-                                                                <span className="text-xs bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">{selectedInCat} item{selectedInCat > 1 ? "ns" : ""}</span>
+                                                        {/* Cabeçalho da categoria */}
+                                                        <div className={`flex items-center justify-between px-3 py-2 ${
+                                                            hasSomeSelected ? "bg-primary/5" : "bg-muted/30"
+                                                        }`}>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-base">{catInfo.icon || "➕"}</span>
+                                                                <span className="text-sm font-semibold">{catInfo.name}</span>
+                                                                {hasSomeSelected && (
+                                                                    <span className="text-xs bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">{selectedInCat} item{selectedInCat > 1 ? "ns" : ""}</span>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => unlinkCategory(catKey)}
+                                                                className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                                                            >
+                                                                Remover
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Itens da categoria */}
+                                                        <div className="p-2 space-y-1.5 max-h-48 overflow-y-auto">
+                                                            {items.length === 0 ? (
+                                                                <p className="text-xs text-muted-foreground text-center py-2">Nenhum item nesta categoria</p>
+                                                            ) : (
+                                                                items.map(c => (
+                                                                    <button key={c.id} type="button" onClick={() => toggleComp(c.id)}
+                                                                        className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-sm transition-all ${
+                                                                            form.complement_ids.includes(c.id)
+                                                                                ? "border-primary bg-primary/5 shadow-sm"
+                                                                                : "border-border hover:border-primary/30 bg-white"
+                                                                        }`} data-testid={`comp-select-${c.id}`}>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className={`h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center ${
+                                                                                form.complement_ids.includes(c.id) ? "bg-primary border-primary" : "border-gray-300"
+                                                                            }`}>
+                                                                                {form.complement_ids.includes(c.id) && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                            </div>
+                                                                            <span className="font-medium">{c.name}</span>
+                                                                        </div>
+                                                                        <span className="text-primary font-semibold">R$ {parseFloat(c.price).toFixed(2)}</span>
+                                                                    </button>
+                                                                ))
                                                             )}
                                                         </div>
-                                                    </div>
 
-                                                    {/* Itens da categoria */}
-                                                    <div className="p-2 space-y-1.5">
-                                                        {items.map(c => (
-                                                            <button key={c.id} type="button" onClick={() => toggleComp(c.id)}
-                                                                className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-sm transition-all ${
-                                                                    form.complement_ids.includes(c.id)
-                                                                        ? "border-primary bg-primary/5 shadow-sm"
-                                                                        : "border-border hover:border-primary/30 bg-white"
-                                                                }`} data-testid={`comp-select-${c.id}`}>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={`h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center ${
-                                                                        form.complement_ids.includes(c.id) ? "bg-primary border-primary" : "border-gray-300"
-                                                                    }`}>
-                                                                        {form.complement_ids.includes(c.id) && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                                                                    </div>
-                                                                    <span className="font-medium">{c.name}</span>
+                                                        {/* Regras da categoria — só aparece se tem algum selecionado */}
+                                                        {hasSomeSelected && (
+                                                            <div className="border-t border-primary/20 bg-primary/3 px-3 py-2.5 space-y-2">
+                                                                <p className="text-xs font-semibold text-primary/80">Regras para "{catInfo.name}"</p>
+                                                                <div className="flex flex-wrap items-center gap-3">
+                                                                    {/* Obrigatório */}
+                                                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                        <div
+                                                                            role="checkbox"
+                                                                            aria-checked={rule.required}
+                                                                            onClick={() => updateCatRule(catKey, "required", !rule.required)}
+                                                                            className={`h-4 w-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${
+                                                                                rule.required ? "bg-amber-500 border-amber-500" : "border-gray-300 bg-white"
+                                                                            }`}>
+                                                                            {rule.required && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                        </div>
+                                                                        <span className="text-xs font-medium text-gray-700">
+                                                                            Seleção obrigatória
+                                                                            {rule.required && <span className="ml-1 text-xs text-amber-600">(cliente deve escolher)</span>}
+                                                                        </span>
+                                                                    </label>
                                                                 </div>
-                                                                <span className="text-primary font-semibold">R$ {parseFloat(c.price).toFixed(2)}</span>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-
-                                                    {/* Regras da categoria — só aparece se tem algum selecionado */}
-                                                    {hasSomeSelected && (
-                                                        <div className="border-t border-primary/20 bg-primary/3 px-3 py-2.5 space-y-2">
-                                                            <p className="text-xs font-semibold text-primary/80">Regras para "{info.label}"</p>
-                                                            <div className="flex flex-wrap items-center gap-3">
-                                                                {/* Obrigatório */}
-                                                                <label className="flex items-center gap-2 cursor-pointer select-none">
-                                                                    <div
-                                                                        role="checkbox"
-                                                                        aria-checked={rule.required}
-                                                                        onClick={() => updateCatRule(catKey, "required", !rule.required)}
-                                                                        className={`h-4 w-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${
-                                                                            rule.required ? "bg-amber-500 border-amber-500" : "border-gray-300 bg-white"
-                                                                        }`}>
-                                                                        {rule.required && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                <div className="flex items-center gap-4">
+                                                                    {/* Mínimo */}
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-xs text-gray-600 whitespace-nowrap">Mín:</span>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <button type="button"
+                                                                                onClick={() => updateCatRule(catKey, "min_select", Math.max(0, (rule.min_select || 0) - 1))}
+                                                                                className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">−</button>
+                                                                            <span className="w-6 text-center text-sm font-semibold">{rule.min_select || 0}</span>
+                                                                            <button type="button"
+                                                                                onClick={() => updateCatRule(catKey, "min_select", Math.min(rule.max_select || 1, (rule.min_select || 0) + 1))}
+                                                                                className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">+</button>
+                                                                        </div>
                                                                     </div>
-                                                                    <span className="text-xs font-medium text-gray-700">
-                                                                        Seleção obrigatória
-                                                                        {rule.required && <span className="ml-1 text-xs text-amber-600">(cliente deve escolher)</span>}
+                                                                    {/* Máximo */}
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-xs text-gray-600 whitespace-nowrap">Máx:</span>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <button type="button"
+                                                                                onClick={() => updateCatRule(catKey, "max_select", Math.max(rule.min_select || 0, Math.max(1, (rule.max_select || 1) - 1)))}
+                                                                                className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">−</button>
+                                                                            <span className="w-6 text-center text-sm font-semibold">{rule.max_select || 1}</span>
+                                                                            <button type="button"
+                                                                                onClick={() => updateCatRule(catKey, "max_select", (rule.max_select || 1) + 1)}
+                                                                                className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">+</button>
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        {rule.max_select > 1 ? `cliente pode escolher até ${rule.max_select}` : "apenas 1 escolha"}
                                                                     </span>
-                                                                </label>
-                                                            </div>
-                                                            <div className="flex items-center gap-4">
-                                                                {/* Mínimo */}
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs text-gray-600 whitespace-nowrap">Mín:</span>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <button type="button"
-                                                                            onClick={() => updateCatRule(catKey, "min_select", Math.max(0, (rule.min_select || 0) - 1))}
-                                                                            className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">−</button>
-                                                                        <span className="w-6 text-center text-sm font-semibold">{rule.min_select || 0}</span>
-                                                                        <button type="button"
-                                                                            onClick={() => updateCatRule(catKey, "min_select", Math.min(rule.max_select || 1, (rule.min_select || 0) + 1))}
-                                                                            className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">+</button>
-                                                                    </div>
                                                                 </div>
-                                                                {/* Máximo */}
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs text-gray-600 whitespace-nowrap">Máx:</span>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <button type="button"
-                                                                            onClick={() => updateCatRule(catKey, "max_select", Math.max(rule.min_select || 0, Math.max(1, (rule.max_select || 1) - 1)))}
-                                                                            className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">−</button>
-                                                                        <span className="w-6 text-center text-sm font-semibold">{rule.max_select || 1}</span>
-                                                                        <button type="button"
-                                                                            onClick={() => updateCatRule(catKey, "max_select", (rule.max_select || 1) + 1)}
-                                                                            className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">+</button>
-                                                                    </div>
-                                                                </div>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {rule.max_select > 1 ? `cliente pode escolher até ${rule.max_select}` : "apenas 1 escolha"}
-                                                                </span>
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                );
-                            })()}
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                            
+                                            {/* Botão para adicionar mais categorias */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowLinkCategoriesModal(true)}
+                                                className="w-full py-3 border border-dashed border-border rounded-xl text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                <span className="text-sm">Vincular mais categorias</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
 
                         {/* Ações */}
@@ -897,6 +948,57 @@ function ProductsTab({ headers }) {
                             <Button type="submit" className="flex-1 bg-primary text-white rounded-full" data-testid="save-product-btn">{editing ? "Salvar alterações" : "Criar Produto"}</Button>
                         </div>
                     </form>
+                </DialogContent>
+            </Dialog>
+            
+            {/* Modal para vincular categorias */}
+            <Dialog open={showLinkCategoriesModal} onOpenChange={setShowLinkCategoriesModal}>
+                <DialogContent className="rounded-2xl max-w-lg max-h-[80vh] overflow-hidden">
+                    <DialogHeader>
+                        <DialogTitle className="font-heading">Vincular Categorias</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <p className="text-sm text-muted-foreground mb-4">Selecione as categorias de complemento que este produto terá:</p>
+                        <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                            {compCategories
+                                .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+                                .map(cat => {
+                                    const isLinked = form.linked_categories.includes(cat.key);
+                                    const count = complements.filter(c => c.category === cat.key && c.active).length;
+                                    return (
+                                        <button
+                                            key={cat.key}
+                                            type="button"
+                                            onClick={() => linkCategory(cat.key)}
+                                            className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all ${
+                                                isLinked 
+                                                    ? "border-primary bg-primary/5" 
+                                                    : "border-border hover:border-primary/30 bg-white"
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">{cat.icon || "📦"}</span>
+                                                <div className="text-left">
+                                                    <p className="font-medium text-sm">{cat.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</p>
+                                                </div>
+                                            </div>
+                                            <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
+                                                isLinked ? "bg-primary border-primary" : "border-gray-300"
+                                            }`}>
+                                                {isLinked && <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                        </div>
+                    </div>
+                    <div className="flex gap-3 pt-2 border-t">
+                        <Button type="button" variant="outline" className="flex-1 rounded-full" onClick={() => setShowLinkCategoriesModal(false)}>Cancelar</Button>
+                        <Button type="button" className="flex-1 bg-primary text-white rounded-full" onClick={() => setShowLinkCategoriesModal(false)}>
+                            Confirmar ({form.linked_categories.length} categoria{form.linked_categories.length !== 1 ? "s" : ""})
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
