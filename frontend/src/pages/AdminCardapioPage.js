@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Copy, Upload, Package, Layers, Tag, Grid3X3, X, Image, Gift } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, Upload, Package, Layers, Tag, Grid3X3, X, Image, Gift, Search } from "lucide-react";
 import { useMenus } from "@/hooks/useCardapioData";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
@@ -913,11 +913,13 @@ function OptionalsTab({ headers }) {
     const [complements, setComplements] = useState([]);
     const [compCategories, setCompCategories] = useState([]);
     const [showForm, setShowForm] = useState(false);
+    const [showCategoryManager, setShowCategoryManager] = useState(false);
     const [showCategoryForm, setShowCategoryForm] = useState(false);
     const [editing, setEditing] = useState(null);
     const [editingCategory, setEditingCategory] = useState(null);
     const [form, setForm] = useState({ name: "", price: "", description: "", category: "extras", active: true });
     const [categoryForm, setCategoryForm] = useState({ key: "", name: "", icon: "", order_index: 0, required: false, min_select: 1, max_select: 1 });
+    const [search, setSearch] = useState("");
 
     const fetch = async () => { 
         const res = await axios.get(`${API}/admin/complements`, { headers });
@@ -986,7 +988,6 @@ function OptionalsTab({ headers }) {
         const file = e.target.files?.[0];
         if (!file) return;
         
-        // Validar tamanho (max 2MB)
         if (file.size > 2 * 1024 * 1024) {
             toast.error("Imagem muito grande. Máximo 2MB.");
             return;
@@ -1013,13 +1014,11 @@ function OptionalsTab({ headers }) {
         const file = e.dataTransfer.files?.[0];
         if (!file) return;
         
-        // Validar tipo
         if (!file.type.startsWith("image/")) {
             toast.error("Apenas imagens são permitidas");
             return;
         }
         
-        // Validar tamanho (max 2MB)
         if (file.size > 2 * 1024 * 1024) {
             toast.error("Imagem muito grande. Máximo 2MB.");
             return;
@@ -1038,15 +1037,22 @@ function OptionalsTab({ headers }) {
         }
     };
 
-    // Categorias dinâmicas do banco
-    const complementCategories = compCategories.reduce((acc, cat) => {
+    // Categorias ordenadas
+    const sortedCategories = [...compCategories].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+    // Mapear categorias para dropdown
+    const complementCategories = sortedCategories.reduce((acc, cat) => {
         acc[cat.key] = cat.name;
         return acc;
     }, {});
 
     // Agrupar complementos por categoria
     const groupedComplements = {};
-    complements.filter(c => c.active).forEach(c => {
+    const filteredComplements = search 
+        ? complements.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
+        : complements;
+    
+    filteredComplements.forEach(c => {
         const cat = c.category || "extras";
         if (!groupedComplements[cat]) groupedComplements[cat] = [];
         groupedComplements[cat].push(c);
@@ -1056,20 +1062,21 @@ function OptionalsTab({ headers }) {
     const saveCategory = async (e) => {
         e.preventDefault();
         try {
-            const fd = new FormData();
-            fd.append("key", categoryForm.key);
-            fd.append("name", categoryForm.name);
-            fd.append("icon", categoryForm.icon);
-            fd.append("order_index", categoryForm.order_index);
-            fd.append("required", categoryForm.required);
-            fd.append("min_select", categoryForm.required ? categoryForm.min_select : 0);
-            fd.append("max_select", categoryForm.max_select);
+            const data = {
+                key: categoryForm.key,
+                name: categoryForm.name,
+                icon: categoryForm.icon,
+                order_index: parseInt(categoryForm.order_index) || 0,
+                required: categoryForm.required,
+                min_select: categoryForm.required ? (parseInt(categoryForm.min_select) || 1) : 0,
+                max_select: parseInt(categoryForm.max_select) || 1
+            };
             
             if (editingCategory) {
-                await axios.put(`${API}/admin/complement-categories/${editingCategory}`, fd, { headers });
+                await axios.put(`${API}/admin/complement-categories/${editingCategory}`, data, { headers });
                 toast.success("Categoria atualizada");
             } else {
-                await axios.post(`${API}/admin/complement-categories`, fd, { headers });
+                await axios.post(`${API}/admin/complement-categories`, data, { headers });
                 toast.success("Categoria criada");
             }
             setShowCategoryForm(false);
@@ -1096,7 +1103,7 @@ function OptionalsTab({ headers }) {
     };
     
     const delCategory = async (id) => {
-        if (!window.confirm("Excluir categoria?")) return;
+        if (!window.confirm("Excluir categoria?\n\nOs complementos desta categoria ficarão sem categoria.")) return;
         try {
             await axios.delete(`${API}/admin/complement-categories/${id}`, { headers });
             toast.success("Categoria excluida");
@@ -1106,48 +1113,140 @@ function OptionalsTab({ headers }) {
         }
     };
 
+    const openNewCategory = () => {
+        setEditingCategory(null);
+        setCategoryForm({ key: "", name: "", icon: "", order_index: compCategories.length, required: false, min_select: 1, max_select: 1 });
+        setShowCategoryForm(true);
+    };
+
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
+            {/* Header com ações */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
-                    <p className="text-sm text-muted-foreground">Gerencie todos os complementos/opcionais.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Os complementos podem ser vinculados aos produtos na aba Produtos.</p>
+                    <h2 className="text-lg font-semibold font-heading">Complementos & Opcionais</h2>
+                    <p className="text-sm text-muted-foreground">Gerencie os itens que os clientes podem adicionar aos produtos</p>
                 </div>
-                <div className="flex gap-2">
-                    <Button onClick={() => { setEditingCategory(null); setCategoryForm({ key: "", name: "", icon: "", order_index: 0, required: false, min_select: 1, max_select: 1 }); setShowCategoryForm(true); }} variant="outline" className="rounded-full">
-                        <Layers className="h-4 w-4 mr-1" />Gerenciar Categorias
+                <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => setShowCategoryManager(true)} variant="outline" className="rounded-full">
+                        <Layers className="h-4 w-4 mr-1.5" />Gerenciar Categorias
                     </Button>
-                    <Button onClick={() => { setEditing(null); setForm({ name: "", price: "", description: "", image_url: "", category: compCategories[0]?.key || "extras", required: false, min_select: 0, max_select: 1, active: true }); setShowForm(true); }} className="bg-primary text-white rounded-full" data-testid="add-complement-btn"><Plus className="h-4 w-4 mr-1" />Novo Complemento</Button>
+                    <Button onClick={() => { setEditing(null); setForm({ name: "", price: "", description: "", image_url: "", category: sortedCategories[0]?.key || "extras", required: false, min_select: 0, max_select: 1, active: true }); setShowForm(true); }} className="bg-primary text-white rounded-full" data-testid="add-complement-btn">
+                        <Plus className="h-4 w-4 mr-1.5" />Novo Complemento
+                    </Button>
                 </div>
             </div>
 
-            {/* Lista de complementos agrupados por categoria */}
-            <div className="space-y-6">
-                {Object.entries(groupedComplements).map(([cat, comps]) => (
-                    <div key={cat}>
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                            {complementCategories[cat] || cat}
-                        </h4>
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            {comps.map(c => (
-                                <div key={c.id} 
-                                     className="bg-white dark:bg-card rounded-2xl border border-border p-4 flex items-center justify-between"
-                                     data-testid={`complement-${c.id}`}>
-                                    <div>
-                                        <h3 className="font-semibold font-heading text-sm">{c.name}</h3>
-                                        {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
-                                        <span className="text-sm font-bold text-primary">R$ {c.price?.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Switch checked={c.active} onCheckedChange={() => toggle(c)} />
-                                        <Button size="icon" variant="ghost" onClick={() => edit(c)}><Pencil className="h-4 w-4" /></Button>
-                                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => del(c.id)}><Trash2 className="h-4 w-4" /></Button>
-                                    </div>
-                                </div>
-                            ))}
+            {/* Cards de Categorias */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 mb-6">
+                {sortedCategories.map(cat => {
+                    const count = complements.filter(c => c.category === cat.key).length;
+                    const isActive = count > 0;
+                    return (
+                        <div key={cat.id} className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${isActive ? "bg-white border-primary/20 hover:border-primary/40" : "bg-muted/30 border-border hover:border-muted-foreground/30"}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-2xl">{cat.icon || "📦"}</span>
+                                {cat.required && (
+                                    <span className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full" title="Obrigatório" />
+                                )}
+                            </div>
+                            <p className="font-medium text-sm truncate">{cat.name}</p>
+                            <p className="text-xs text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</p>
+                            <div className="mt-2 flex gap-1">
+                                <button onClick={() => editCategory(cat)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Editar">
+                                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                </button>
+                                <button onClick={() => delCategory(cat.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Excluir">
+                                    <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                                </button>
+                            </div>
                         </div>
+                    );
+                })}
+                
+                {/* Card para adicionar nova categoria */}
+                <button onClick={openNewCategory} className="p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 min-h-[120px]">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Plus className="h-5 w-5 text-primary" />
                     </div>
-                ))}
+                    <span className="text-sm font-medium text-primary">Nova Categoria</span>
+                </button>
+            </div>
+
+            {/* Barra de busca */}
+            <div className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Buscar complementos..." 
+                    value={search} 
+                    onChange={e => setSearch(e.target.value)} 
+                    className="pl-10 rounded-full max-w-md"
+                />
+                {search && (
+                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20">
+                        <X className="h-3 w-3" />
+                    </button>
+                )}
+            </div>
+
+            {/* Lista de complementos agrupados por categoria */}
+            <div className="space-y-8">
+                {sortedCategories.map(cat => {
+                    const comps = groupedComplements[cat.key] || [];
+                    if (comps.length === 0 && search) return null;
+                    
+                    return (
+                        <div key={cat.id}>
+                            <div className="flex items-center gap-3 mb-4">
+                                <span className="text-xl">{cat.icon || "📦"}</span>
+                                <div>
+                                    <h4 className="font-semibold text-foreground">{cat.name}</h4>
+                                    <p className="text-xs text-muted-foreground">{comps.length} item{comps.length !== 1 ? "s" : ""}</p>
+                                </div>
+                                {cat.required && (
+                                    <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100">Obrigatório</Badge>
+                                )}
+                            </div>
+                            
+                            {comps.length > 0 ? (
+                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                    {comps.map(c => (
+                                        <div key={c.id} 
+                                            className="bg-white rounded-2xl border border-border p-4 flex items-center justify-between hover:shadow-md transition-shadow"
+                                            data-testid={`complement-${c.id}`}>
+                                            <div className="flex items-center gap-3">
+                                                {c.image_url ? (
+                                                    <img src={getImageUrl(c.image_url)} alt={c.name} className="h-12 w-12 rounded-xl object-cover" />
+                                                ) : (
+                                                    <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
+                                                        <Tag className="h-5 w-5 text-muted-foreground" />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <h3 className="font-semibold font-heading text-sm">{c.name}</h3>
+                                                    {c.description && <p className="text-xs text-muted-foreground line-clamp-1">{c.description}</p>}
+                                                    <span className="text-sm font-bold text-primary">R$ {c.price?.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Switch checked={c.active} onCheckedChange={() => toggle(c)} />
+                                                <Button size="icon" variant="ghost" onClick={() => edit(c)} className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => del(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-muted/30 rounded-xl border-2 border-dashed border-border">
+                                    <p className="text-sm text-muted-foreground">Nenhum complemento nesta categoria</p>
+                                    <Button variant="link" onClick={() => { setEditing(null); setForm({ ...form, category: cat.key }); setShowForm(true); }} className="text-primary">
+                                        Adicionar primeiro item
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
             
             {complements.length === 0 && (
@@ -1158,15 +1257,14 @@ function OptionalsTab({ headers }) {
                 </div>
             )}
 
+            {/* Modal de Complemento */}
             <Dialog open={showForm} onOpenChange={setShowForm}>
                 <DialogContent className="rounded-2xl max-w-3xl">
                     <DialogHeader>
                         <DialogTitle className="font-heading">{editing ? "Editar Complemento" : "Novo Complemento"}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={save} className="space-y-4">
-                        {/* Layout em duas colunas */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Coluna Esquerda - Upload de Imagem */}
                             <div className="space-y-4">
                                 <Label>Foto do Complemento</Label>
                                 <div 
@@ -1178,16 +1276,8 @@ function OptionalsTab({ headers }) {
                                 >
                                     {form.image_url ? (
                                         <div className="relative">
-                                            <img 
-                                                src={form.image_url.startsWith("http") ? form.image_url : `${BACKEND_URL}${form.image_url}`} 
-                                                alt="Preview" 
-                                                className="w-full h-48 object-cover rounded-lg"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, image_url: "" })); }}
-                                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                            >
+                                            <img src={form.image_url.startsWith("http") ? form.image_url : `${BACKEND_URL}${form.image_url}`} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, image_url: "" })); }} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
                                                 <X className="h-4 w-4" />
                                             </button>
                                         </div>
@@ -1200,36 +1290,26 @@ function OptionalsTab({ headers }) {
                                             <p className="text-xs text-gray-400">ou clique para selecionar</p>
                                         </div>
                                     )}
-                                    <input 
-                                        id="comp-image-upload"
-                                        type="file" 
-                                        accept="image/*" 
-                                        className="hidden" 
-                                        onChange={handleImageUpload}
-                                    />
+                                    <input id="comp-image-upload" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                                 </div>
-                                <div className="text-xs text-muted-foreground text-center">
-                                    Formatos: JPG, PNG, WEBP (max 2MB)
-                                </div>
+                                <div className="text-xs text-muted-foreground text-center">Formatos: JPG, PNG, WEBP (max 2MB)</div>
                             </div>
                             
-                            {/* Coluna Direita - Dados */}
                             <div className="space-y-4">
-                                <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="comp-name" /></div>
+                                <div><Label>Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="comp-name" /></div>
                                 <div><Label>Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-lg" required data-testid="comp-price" /></div>
                                 <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="comp-desc" /></div>
                                 
                                 <div><Label>Categoria</Label>
                                     <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm">
-                                        {Object.entries(complementCategories).map(([key, label]) => (
-                                            <option key={key} value={key}>{label}</option>
+                                        {sortedCategories.map(cat => (
+                                            <option key={cat.key} value={cat.key}>{cat.icon} {cat.name}</option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
                         </div>
                         
-                        {/* Obrigatoriedade */}
                         <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
                             <Switch checked={form.required} onCheckedChange={v => setForm(f => ({ ...f, required: v }))} />
                             <div className="flex flex-col">
@@ -1238,117 +1318,124 @@ function OptionalsTab({ headers }) {
                             </div>
                         </div>
                         
-                        {/* Min/Max seleção */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label className="text-sm">Mínimo para selecionar</Label>
-                                <Input 
-                                    type="number" 
-                                    min="0" 
-                                    value={form.min_select || 0} 
-                                    onChange={e => setForm(f => ({ ...f, min_select: parseInt(e.target.value) || 0 }))} 
-                                    className="mt-1 rounded-lg" 
-                                />
+                                <Input type="number" min="0" value={form.min_select || 0} onChange={e => setForm(f => ({ ...f, min_select: parseInt(e.target.value) || 0 }))} className="mt-1 rounded-lg" />
                             </div>
                             <div>
                                 <Label className="text-sm">Máximo permitido</Label>
-                                <Input 
-                                    type="number" 
-                                    min="1" 
-                                    value={form.max_select || 1} 
-                                    onChange={e => setForm(f => ({ ...f, max_select: parseInt(e.target.value) || 1 }))} 
-                                    className="mt-1 rounded-lg" 
-                                />
+                                <Input type="number" min="1" value={form.max_select || 1} onChange={e => setForm(f => ({ ...f, max_select: parseInt(e.target.value) || 1 }))} className="mt-1 rounded-lg" />
                             </div>
                         </div>
                         
                         <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm">Ativo</span></div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full" data-testid="save-comp-btn">{editing ? "Atualizar" : "Criar"}</Button>
+                        <div className="flex gap-3 pt-2">
+                            <Button type="button" variant="outline" className="flex-1 rounded-full" onClick={() => setShowForm(false)}>Cancelar</Button>
+                            <Button type="submit" className="flex-1 bg-primary text-white rounded-full" data-testid="save-comp-btn">{editing ? "Atualizar" : "Criar"}</Button>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>
             
-            {/* Modal de Gerenciar Categorias */}
-            <Dialog open={showCategoryForm} onOpenChange={setShowCategoryForm}>
-                <DialogContent className="rounded-2xl max-w-2xl">
+            {/* Modal de Gerenciamento de Categorias */}
+            <Dialog open={showCategoryManager} onOpenChange={setShowCategoryManager}>
+                <DialogContent className="rounded-2xl max-w-2xl max-h-[80vh] overflow-hidden">
                     <DialogHeader>
-                        <DialogTitle className="font-heading">Gerenciar Categorias de Complemento</DialogTitle>
+                        <DialogTitle className="font-heading flex items-center gap-2">
+                            <Layers className="h-5 w-5" /> Gerenciar Categorias
+                        </DialogTitle>
                     </DialogHeader>
                     
-                    {/* Lista de categorias existentes */}
-                    <div className="space-y-2 mb-6 max-h-60 overflow-auto">
-                        {compCategories.map(cat => (
-                            <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xl">{cat.icon}</span>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-medium">{cat.name}</p>
-                                            {cat.required && (
-                                                <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Obrigatório</span>
-                                            )}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            key: {cat.key} | ordem: {cat.order_index}
-                                            {cat.required && ` | min: ${cat.min_select} | max: ${cat.max_select}`}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <Button size="icon" variant="ghost" onClick={() => editCategory(cat)}><Pencil className="h-4 w-4" /></Button>
-                                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => delCategory(cat.id)}><Trash2 className="h-4 w-4" /></Button>
-                                </div>
+                    <div className="space-y-3 max-h-[50vh] overflow-auto pr-2">
+                        {sortedCategories.length === 0 ? (
+                            <div className="text-center py-8">
+                                <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                                <p className="text-muted-foreground">Nenhuma categoria cadastrada</p>
                             </div>
-                        ))}
-                        {compCategories.length === 0 && (
-                            <p className="text-center text-muted-foreground py-4">Nenhuma categoria cadastrada</p>
+                        ) : (
+                            sortedCategories.map((cat, index) => {
+                                const count = complements.filter(c => c.category === cat.key).length;
+                                return (
+                                    <div key={cat.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-border">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <button onClick={() => { /* reorder up */ }} disabled={index === 0} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
+                                                    ↑
+                                                </button>
+                                                <span className="text-xs font-medium text-muted-foreground">{cat.order_index}</span>
+                                                <button onClick={() => { /* reorder down */ }} disabled={index === sortedCategories.length - 1} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
+                                                    ↓
+                                                </button>
+                                            </div>
+                                            <span className="text-2xl bg-white w-12 h-12 rounded-xl flex items-center justify-center border border-border">{cat.icon || "📦"}</span>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-medium">{cat.name}</p>
+                                                    {cat.required && (
+                                                        <Badge variant="secondary" className="bg-amber-100 text-amber-700">Obrigatório</Badge>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    ID: {cat.key} · {count} item{count !== 1 ? "s" : ""}
+                                                    {cat.required && ` · min: ${cat.min_select} · max: ${cat.max_select}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button size="icon" variant="ghost" onClick={() => { setShowCategoryManager(false); editCategory(cat); }} className="h-9 w-9">
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => delCategory(cat.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                     
-                    {/* Formulário de nova/editar categoria */}
-                    <form onSubmit={saveCategory} className="border-t pt-4 space-y-4">
-                        <h4 className="font-medium">{editingCategory ? "Editar Categoria" : "Nova Categoria"}</h4>
-                        <div className="grid grid-cols-2 gap-3">
+                    <div className="border-t pt-4 flex justify-end">
+                        <Button onClick={() => { setShowCategoryManager(false); openNewCategory(); }} className="bg-primary text-white rounded-full">
+                            <Plus className="h-4 w-4 mr-1.5" />Nova Categoria
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            
+            {/* Modal de Categoria (Nova/Editar) */}
+            <Dialog open={showCategoryForm} onOpenChange={setShowCategoryForm}>
+                <DialogContent className="rounded-2xl max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="font-heading">{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
+                    </DialogHeader>
+                    
+                    <form onSubmit={saveCategory} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label className="text-xs">Código da categoria*</Label>
-                                <Input 
-                                    value={categoryForm.key} 
-                                    onChange={e => setCategoryForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} 
-                                    className="mt-1 rounded-lg" 
-                                    placeholder="ex: frutas_frescas"
-                                    required
-                                    disabled={!!editingCategory}
-                                />
+                                <Input value={categoryForm.key} onChange={e => setCategoryForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} className="mt-1 rounded-lg" placeholder="ex: frutas_frescas" required disabled={!!editingCategory} />
                                 <p className="text-[10px] text-muted-foreground mt-1">Usado internamente, não pode ter espaços</p>
                             </div>
                             <div>
                                 <Label className="text-xs">Nome da categoria*</Label>
-                                <Input 
-                                    value={categoryForm.name} 
-                                    onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))} 
-                                    className="mt-1 rounded-lg" 
-                                    placeholder="ex: Frutas Frescas"
-                                    required
-                                />
+                                <Input value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" placeholder="ex: Frutas Frescas" required />
                                 <p className="text-[10px] text-muted-foreground mt-1">Nome exibido no cardápio</p>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label className="text-xs">Ícone (emoji)</Label>
-                                <Input 
-                                    value={categoryForm.icon} 
-                                    onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value }))} 
-                                    className="mt-1 rounded-lg" 
-                                    placeholder="🍓"
-                                    maxLength={2}
-                                />
+                                <Input value={categoryForm.icon} onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value }))} className="mt-1 rounded-lg text-lg" placeholder="🍓" maxLength={2} />
                                 <p className="text-[10px] text-muted-foreground mt-1">Emoji que aparece antes do nome</p>
                             </div>
                             <div>
                                 <Label className="text-xs">Posição na lista</Label>
                                 <Input 
                                     type="number"
+                                    min="0"
                                     value={categoryForm.order_index} 
                                     onChange={e => setCategoryForm(f => ({ ...f, order_index: parseInt(e.target.value) || 0 }))} 
                                     className="mt-1 rounded-lg" 
