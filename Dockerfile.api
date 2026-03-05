@@ -1,5 +1,5 @@
 # Dockerfile unificado para Railway - Backend + Nginx
-# Cache bust: 2026-03-05-api-26
+# Cache bust: 2026-03-05-api-27
 
 FROM python:3.10-slim
 
@@ -22,44 +22,8 @@ COPY backend/ .
 # Create uploads directory
 RUN mkdir -p uploads
 
-# Create nginx config script that uses $PORT
-RUN echo '#!/bin/bash\n\
-cat > /etc/nginx/sites-available/default << NGINXCONF\nserver {\n\
-    listen ${PORT:-8000};\n\
-    location / {\n\
-        proxy_pass http://127.0.0.1:8001;\n\
-        proxy_set_header Host \$host;\n\
-        proxy_set_header X-Real-IP \$remote_addr;\n\
-    }\n\
-}\n\
-NGINXCONF\n\
-rm -f /etc/nginx/sites-enabled/default\n\
-ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/\n\
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf' > /start.sh && chmod +x /start.sh
-
-# Create supervisor config file
-COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
-[supervisord]
-nodaemon=true
-user=root
-
-[program:backend]
-command=uvicorn server:app --host 127.0.0.1 --port 8001 --proxy-headers
-autostart=true
-autorestart=true
-startsecs=3
-priority=1
-
-[program:nginx]
-command=nginx -g "daemon off;"
-autostart=true
-autorestart=true
-startsecs=2
-priority=2
-EOF
-
 # Expose port (Railway will override with $PORT)
 EXPOSE 8000
 
-# Start script that configures nginx and starts supervisor
-CMD ["/start.sh"]
+# Run uvicorn directly on $PORT
+CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers
