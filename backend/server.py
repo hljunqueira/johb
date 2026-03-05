@@ -328,6 +328,40 @@ async def get_menus():
         return [dict(r) for r in rows]
 
 
+@app.get("/api/menus/{menu_id}/categories")
+async def get_menu_categories(menu_id: str):
+    """Lista categorias de um menu"""
+    if not db_pool:
+        return []
+    try:
+        uuid.UUID(menu_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Menu not found")
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch(
+            'SELECT * FROM categories WHERE menu_id = $1 AND active = TRUE ORDER BY "order"',
+            uuid.UUID(menu_id)
+        )
+        return [dict(r) for r in rows]
+
+
+@app.get("/api/categories/{category_id}/products")
+async def get_category_products(category_id: str):
+    """Lista produtos de uma categoria"""
+    if not db_pool:
+        return []
+    try:
+        uuid.UUID(category_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Category not found")
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch(
+            'SELECT * FROM products WHERE category_id = $1 AND active = TRUE ORDER BY "order"',
+            uuid.UUID(category_id)
+        )
+        return [dict(r) for r in rows]
+
+
 @app.get("/api/complements")
 async def get_complements():
     """Lista complementos ativos"""
