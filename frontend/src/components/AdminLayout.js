@@ -3,14 +3,14 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ClipboardList, Package, Users, BarChart3, Truck, LogOut, Menu, Moon, Sun } from "lucide-react";
+import { ClipboardList, Package, Users, BarChart3, Settings, LogOut, Menu, Moon, Sun } from "lucide-react";
 
 const navItems = [
     { to: "/admin/pedidos", icon: ClipboardList, label: "Pedidos" },
-    { to: "/admin/produtos", icon: Package, label: "Cardapio" },
+    { to: "/admin/produtos", icon: Package, label: "Cardápio" },
     { to: "/admin/clientes", icon: Users, label: "Clientes" },
-    { to: "/admin/relatorios", icon: BarChart3, label: "Relatorios" },
-    { to: "/admin/entrega", icon: Truck, label: "Entrega" },
+    { to: "/admin/relatorios", icon: BarChart3, label: "Relatórios" },
+    { to: "/admin/entrega", icon: Settings, label: "Configurações" },
 ];
 
 export default function AdminLayout() {

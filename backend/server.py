@@ -1121,14 +1121,22 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
         raise HTTPException(status_code=500, detail="Database not available")
 
     async with db_pool.acquire() as conn:
+        # Verificar se coluna business_hours existe, adicionar se não existir
+        try:
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS business_hours JSONB DEFAULT '{}'"
+            )
+        except Exception:
+            pass
         row = await conn.fetchrow(
             """UPDATE delivery_settings SET 
-               areas = $1, delivery_fee = $2, min_free_delivery = $3, active = $4
+               areas = $1, delivery_fee = $2, min_free_delivery = $3, active = $4, business_hours = $5
                WHERE id = 1 RETURNING *""",
             json.dumps(request.get('areas', [])),
             request.get('delivery_fee', 5.0),
             request.get('min_free_delivery', 50.0),
-            request.get('active', True)
+            request.get('active', True),
+            json.dumps(request.get('business_hours', {}))
         )
         return dict(row) if row else None
 
@@ -1150,9 +1158,19 @@ async def admin_update_pix_settings(request: dict, user=Depends(get_current_user
         raise HTTPException(status_code=500, detail="Database not available")
 
     async with db_pool.acquire() as conn:
+        # Garantir que coluna pix_key_type existe
+        try:
+            await conn.execute(
+                "ALTER TABLE pix_settings ADD COLUMN IF NOT EXISTS pix_key_type VARCHAR(50) DEFAULT 'cpf'"
+            )
+        except Exception:
+            pass
         row = await conn.fetchrow(
-            "UPDATE pix_settings SET pix_key = $1, pix_name = $2, qr_code_url = $3 WHERE id = 1 RETURNING *",
-            request.get('pix_key', ''), request.get('pix_name', 'Salada Soul'), request.get('qr_code_url', '')
+            "UPDATE pix_settings SET pix_key = $1, pix_name = $2, qr_code_url = $3, pix_key_type = $4 WHERE id = 1 RETURNING *",
+            request.get('pix_key', ''),
+            request.get('pix_name', 'Salada Soul'),
+            request.get('qr_code_url', ''),
+            request.get('pix_key_type', 'cpf')
         )
         return dict(row) if row else None
 
