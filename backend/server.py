@@ -799,6 +799,20 @@ async def get_reorder_suggestions(phone: str):
         return [dict(p) for p in products]
 
 
+@app.get("/api/customers/{phone}")
+async def get_customer(phone: str):
+    """Buscar cliente por telefone"""
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    phone = phone.replace("\\D", "")
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM customers WHERE phone = $1", phone)
+        if not row:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        return dict(row)
+
+
 @app.put("/api/customers/{phone}")
 async def update_customer(phone: str, request: CustomerUpdate):
     """Atualizar dados do cliente"""

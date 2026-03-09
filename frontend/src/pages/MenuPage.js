@@ -565,6 +565,7 @@ function LoginModal({ open, onClose, onLogin }) {
     return (
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-md bg-white">
+                <DialogTitle className="sr-only">{step === "phone" ? "Identifique-se" : "Como podemos te chamar?"}</DialogTitle>
                 <div className="text-center py-4">
                     <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                         <User className="h-8 w-8 text-primary" />
