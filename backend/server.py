@@ -491,13 +491,17 @@ async def calculate_delivery_fee(address: str):
     if not db_pool:
         raise HTTPException(status_code=500, detail="Database not available")
     
+    logger.info(f"Calculando taxa de entrega para endereço: {address}")
+    
     async with db_pool.acquire() as conn:
         # Buscar configurações do restaurante
         settings = await conn.fetchrow("SELECT * FROM delivery_settings WHERE id = 1")
         if not settings:
+            logger.error("Configurações de entrega não encontradas no banco de dados")
             raise HTTPException(status_code=500, detail="Configurações de entrega não encontradas")
         
         settings_dict = dict(settings)
+        logger.info(f"Configurações carregadas: restaurant_address={settings_dict.get('restaurant_address')}, lat={settings_dict.get('restaurant_lat')}, lng={settings_dict.get('restaurant_lng')}")
         
         # Verificar se temos as coordenadas do restaurante
         restaurant_lat = settings_dict.get("restaurant_lat")
@@ -507,14 +511,18 @@ async def calculate_delivery_fee(address: str):
         # Se não temos coordenadas, tentar geocodificar o endereço do restaurante
         if restaurant_lat is None or restaurant_lng is None:
             if not restaurant_address:
-                raise HTTPException(status_code=500, detail="Endereço do restaurante não configurado")
+                logger.error("Endereço do restaurante não configurado nas configurações de entrega")
+                raise HTTPException(status_code=500, detail="Endereço do restaurante não configurado. Por favor, configure o endereço no painel administrativo em Configurações > Entrega.")
             
+            logger.info(f"Geocodificando endereço do restaurante: {restaurant_address}")
             restaurant_geo = await geocode_address(restaurant_address)
             if not restaurant_geo:
-                raise HTTPException(status_code=400, detail="Não foi possível localizar o endereço do restaurante")
+                logger.error(f"Não foi possível geocodificar o endereço do restaurante: {restaurant_address}")
+                raise HTTPException(status_code=400, detail=f"Não foi possível localizar o endereço do restaurante configurado: '{restaurant_address}'. Verifique o endereço nas configurações.")
             
             restaurant_lat = restaurant_geo["lat"]
             restaurant_lng = restaurant_geo["lng"]
+            logger.info(f"Coordenadas do restaurante obtidas: lat={restaurant_lat}, lng={restaurant_lng}")
             
             # Salvar coordenadas para uso futuro
             await conn.execute(
@@ -523,9 +531,11 @@ async def calculate_delivery_fee(address: str):
             )
         
         # Geocodificar o endereço do cliente
+        logger.info(f"Geocodificando endereço do cliente: {address}")
         customer_geo = await geocode_address(address)
         if not customer_geo:
-            raise HTTPException(status_code=400, detail="Não foi possível localizar o endereço informado. Verifique o endereço e tente novamente.")
+            logger.error(f"Não foi possível geocodificar o endereço do cliente: {address}")
+            raise HTTPException(status_code=400, detail="Não foi possível localizar o endereço informado. Verifique se o endereço está completo e correto (rua, número, bairro, cidade).")
         
         # Calcular distância
         distance_km = calculate_distance_km(
