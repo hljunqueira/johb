@@ -9,11 +9,11 @@ CartProvider.propTypes = {
 
 export function CartProvider({ children }) {
     const [items, setItems] = useState(() => {
-        try { const s = localStorage.getItem("salada-soul-cart"); return s ? JSON.parse(s) : []; }
+        try { const s = sessionStorage.getItem("salada-soul-cart"); return s ? JSON.parse(s) : []; }
         catch { return []; }
     });
 
-    useEffect(() => { localStorage.setItem("salada-soul-cart", JSON.stringify(items)); }, [items]);
+    useEffect(() => { sessionStorage.setItem("salada-soul-cart", JSON.stringify(items)); }, [items]);
 
     const addItem = (product, quantity = 1, selectedAdditionals = [], observation = "") => {
         const addNames = selectedAdditionals.map(a => a.name).sort().join(",");
