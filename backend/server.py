@@ -438,9 +438,16 @@ async def get_pix_settings():
 # DELIVERY DISTANCE CALCULATION
 # ============================================
 
-def calculate_distance_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    """Calcula a distância em km entre duas coordenadas usando a fórmula de Haversine"""
+def calculate_distance_km(lat1, lng1, lat2, lng2) -> float:
+    """Calcula a distância em km entre duas coordenadas usando a fórmula de Haversine.
+    Converte Decimal para float automaticamente."""
     R = 6371  # Raio da Terra em km
+    
+    # Converter para float (lida com Decimal do banco de dados)
+    lat1 = float(lat1)
+    lng1 = float(lng1)
+    lat2 = float(lat2)
+    lng2 = float(lng2)
     
     lat1_rad = math.radians(lat1)
     lat2_rad = math.radians(lat2)
