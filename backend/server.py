@@ -537,96 +537,102 @@ async def calculate_delivery_fee(address: str):
     Calcula a taxa de entrega baseada na distância do endereço até o restaurante.
     Usa geocodificação via OpenStreetMap (Nominatim).
     """
-    if not db_pool:
-        raise HTTPException(status_code=500, detail="Database not available")
-    
-    logger.info(f"Calculando taxa de entrega para endereço: {address}")
-    
-    async with db_pool.acquire() as conn:
-        # Buscar configurações do restaurante
-        settings = await conn.fetchrow("SELECT * FROM delivery_settings WHERE id = 1")
-        if not settings:
-            logger.error("Configurações de entrega não encontradas no banco de dados")
-            raise HTTPException(status_code=500, detail="Configurações de entrega não encontradas")
+    try:
+        if not db_pool:
+            raise HTTPException(status_code=500, detail="Database not available")
         
-        settings_dict = dict(settings)
-        logger.info(f"Configurações carregadas: restaurant_address={settings_dict.get('restaurant_address')}, lat={settings_dict.get('restaurant_lat')}, lng={settings_dict.get('restaurant_lng')}")
+        logger.info(f"Calculando taxa de entrega para endereço: {address}")
         
-        # Verificar se temos as coordenadas do restaurante
-        restaurant_lat = settings_dict.get("restaurant_lat")
-        restaurant_lng = settings_dict.get("restaurant_lng")
-        restaurant_address = settings_dict.get("restaurant_address", "")
-        
-        # Se não temos coordenadas, tentar geocodificar o endereço do restaurante
-        if restaurant_lat is None or restaurant_lng is None:
-            if not restaurant_address:
-                logger.error("Endereço do restaurante não configurado nas configurações de entrega")
-                raise HTTPException(status_code=500, detail="Endereço do restaurante não configurado. Por favor, configure o endereço no painel administrativo em Configurações > Entrega.")
+        async with db_pool.acquire() as conn:
+            # Buscar configurações do restaurante
+            settings = await conn.fetchrow("SELECT * FROM delivery_settings WHERE id = 1")
+            if not settings:
+                logger.error("Configurações de entrega não encontradas no banco de dados")
+                raise HTTPException(status_code=500, detail="Configurações de entrega não encontradas")
             
-            logger.info(f"Geocodificando endereço do restaurante: {restaurant_address}")
-            restaurant_geo = await geocode_address(restaurant_address)
-            if not restaurant_geo:
-                logger.error(f"Não foi possível geocodificar o endereço do restaurante: {restaurant_address}")
-                raise HTTPException(status_code=400, detail=f"Não foi possível localizar o endereço do restaurante configurado: '{restaurant_address}'. Verifique o endereço nas configurações.")
+            settings_dict = dict(settings)
+            logger.info(f"Configurações carregadas: restaurant_address={settings_dict.get('restaurant_address')}, lat={settings_dict.get('restaurant_lat')}, lng={settings_dict.get('restaurant_lng')}")
             
-            restaurant_lat = restaurant_geo["lat"]
-            restaurant_lng = restaurant_geo["lng"]
-            logger.info(f"Coordenadas do restaurante obtidas: lat={restaurant_lat}, lng={restaurant_lng}")
+            # Verificar se temos as coordenadas do restaurante
+            restaurant_lat = settings_dict.get("restaurant_lat")
+            restaurant_lng = settings_dict.get("restaurant_lng")
+            restaurant_address = settings_dict.get("restaurant_address", "")
             
-            # Salvar coordenadas para uso futuro
-            await conn.execute(
-                "UPDATE delivery_settings SET restaurant_lat = $1, restaurant_lng = $2 WHERE id = 1",
-                restaurant_lat, restaurant_lng
+            # Se não temos coordenadas, tentar geocodificar o endereço do restaurante
+            if restaurant_lat is None or restaurant_lng is None:
+                if not restaurant_address:
+                    logger.error("Endereço do restaurante não configurado nas configurações de entrega")
+                    raise HTTPException(status_code=500, detail="Endereço do restaurante não configurado. Por favor, configure o endereço no painel administrativo em Configurações > Entrega.")
+                
+                logger.info(f"Geocodificando endereço do restaurante: {restaurant_address}")
+                restaurant_geo = await geocode_address(restaurant_address)
+                if not restaurant_geo:
+                    logger.error(f"Não foi possível geocodificar o endereço do restaurante: {restaurant_address}")
+                    raise HTTPException(status_code=400, detail=f"Não foi possível localizar o endereço do restaurante configurado: '{restaurant_address}'. Verifique o endereço nas configurações.")
+                
+                restaurant_lat = restaurant_geo["lat"]
+                restaurant_lng = restaurant_geo["lng"]
+                logger.info(f"Coordenadas do restaurante obtidas: lat={restaurant_lat}, lng={restaurant_lng}")
+                
+                # Salvar coordenadas para uso futuro
+                await conn.execute(
+                    "UPDATE delivery_settings SET restaurant_lat = $1, restaurant_lng = $2 WHERE id = 1",
+                    restaurant_lat, restaurant_lng
+                )
+            
+            # Geocodificar o endereço do cliente
+            logger.info(f"Geocodificando endereço do cliente: {address}")
+            customer_geo = await geocode_address(address)
+            if not customer_geo:
+                logger.error(f"Não foi possível geocodificar o endereço do cliente: {address}")
+                raise HTTPException(status_code=400, detail="Não foi possível localizar o endereço informado. Verifique se o endereço está completo e correto (rua, número, bairro, cidade).")
+            
+            # Calcular distância
+            distance_km = calculate_distance_km(
+                restaurant_lat, restaurant_lng,
+                customer_geo["lat"], customer_geo["lng"]
             )
-        
-        # Geocodificar o endereço do cliente
-        logger.info(f"Geocodificando endereço do cliente: {address}")
-        customer_geo = await geocode_address(address)
-        if not customer_geo:
-            logger.error(f"Não foi possível geocodificar o endereço do cliente: {address}")
-            raise HTTPException(status_code=400, detail="Não foi possível localizar o endereço informado. Verifique se o endereço está completo e correto (rua, número, bairro, cidade).")
-        
-        # Calcular distância
-        distance_km = calculate_distance_km(
-            restaurant_lat, restaurant_lng,
-            customer_geo["lat"], customer_geo["lng"]
-        )
-        
-        # Verificar distância máxima
-        max_distance = settings_dict.get("max_delivery_distance", 10.0)
-        if distance_km > max_distance:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Distância excede o limite de entrega ({max_distance} km). Distância calculada: {distance_km:.1f} km"
-            )
-        
-        # Calcular taxa baseada na tabela de taxas
-        distance_rates = settings_dict.get("distance_rates", [])
-        delivery_fee = settings_dict.get("delivery_fee", 5.0)  # Taxa padrão
-        
-        if distance_rates and len(distance_rates) > 0:
-            # Ordenar por max_distance
-            sorted_rates = sorted(distance_rates, key=lambda x: x.get("max_distance", float("inf")))
             
-            # Encontrar a taxa adequada
-            for rate in sorted_rates:
-                if distance_km <= rate.get("max_distance", float("inf")):
-                    delivery_fee = rate.get("fee", delivery_fee)
-                    break
-        
-        return {
-            "distance_km": round(distance_km, 2),
-            "delivery_fee": delivery_fee,
-            "customer_location": {
-                "lat": customer_geo["lat"],
-                "lng": customer_geo["lng"],
-                "display_name": customer_geo["display_name"]
-            },
-            "restaurant_location": {
-                "lat": restaurant_lat,
-                "lng": restaurant_lng
+            # Verificar distância máxima
+            max_distance = settings_dict.get("max_delivery_distance", 10.0)
+            if distance_km > max_distance:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Distância excede o limite de entrega ({max_distance} km). Distância calculada: {distance_km:.1f} km"
+                )
+            
+            # Calcular taxa baseada na tabela de taxas
+            distance_rates = settings_dict.get("distance_rates", [])
+            delivery_fee = settings_dict.get("delivery_fee", 5.0)  # Taxa padrão
+            
+            if distance_rates and len(distance_rates) > 0:
+                # Ordenar por max_distance
+                sorted_rates = sorted(distance_rates, key=lambda x: x.get("max_distance", float("inf")))
+                
+                # Encontrar a taxa adequada
+                for rate in sorted_rates:
+                    if distance_km <= rate.get("max_distance", float("inf")):
+                        delivery_fee = rate.get("fee", delivery_fee)
+                        break
+            
+            return {
+                "distance_km": round(distance_km, 2),
+                "delivery_fee": delivery_fee,
+                "customer_location": {
+                    "lat": customer_geo["lat"],
+                    "lng": customer_geo["lng"],
+                    "display_name": customer_geo["display_name"]
+                },
+                "restaurant_location": {
+                    "lat": restaurant_lat,
+                    "lng": restaurant_lng
+                }
             }
-        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro inesperado ao calcular taxa de entrega: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno ao calcular taxa de entrega: {str(e)}")
 
 
 # ============================================
