@@ -78,13 +78,19 @@ export default function CheckoutPage() {
         return () => clearTimeout(timeoutId);
     }, [address, neighborhood, deliveryType, calculateDeliveryFee]);
 
+    // Verificar se tem frete grátis por valor do pedido
+    const hasFreeDeliveryByValue = total >= (deliverySettings?.min_free_delivery || 60);
+    
     const deliveryFee = (() => {
         if (deliveryType !== "entrega" || !deliverySettings) return 0;
-        if (!address || address.length < 10) return 0; // Só calcula se tiver endereço válido
-        if (total >= (deliverySettings.min_free_delivery || 60)) return 0;
+        // Frete grátis por valor do pedido (independente de endereço)
+        if (hasFreeDeliveryByValue) return 0;
+        // Sem endereço válido, ainda não calcula
+        if (!address || address.length < 10) return null; // null = ainda não calculado
+        // Tem endereço calculado
         if (deliveryFeeData) return deliveryFeeData.delivery_fee;
-        // Sem endereço calculado ainda, não mostra taxa
-        return 0;
+        // Endereço inserido mas ainda calculando ou erro
+        return null;
     })();
     const grandTotal = total + deliveryFee;
 
@@ -281,6 +287,35 @@ export default function CheckoutPage() {
                         </div>
                         {deliveryType === "entrega" && (
                             <div className="space-y-3 pt-2">
+                                {/* Status do frete - mostra imediatamente */}
+                                <div className={`rounded-xl p-4 border-2 ${hasFreeDeliveryByValue ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-full ${hasFreeDeliveryByValue ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                            <Truck className="h-5 w-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            {hasFreeDeliveryByValue ? (
+                                                <>
+                                                    <p className="font-semibold text-green-700">Frete Grátis!</p>
+                                                    <p className="text-sm text-green-600">
+                                                        Seu pedido atingiu R$ {deliverySettings?.min_free_delivery?.toFixed(2) || '60,00'}
+                                                    </p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p className="font-semibold text-amber-700">Frete calculado por distância</p>
+                                                    <p className="text-sm text-amber-600">
+                                                        Frete grátis acima de R$ {deliverySettings?.min_free_delivery?.toFixed(2) || '60,00'}
+                                                    </p>
+                                                    <p className="text-xs text-amber-500 mt-1">
+                                                        Faltam R$ {(deliverySettings?.min_free_delivery || 60) - total} para frete grátis
+                                                    </p>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <Label>Endereço completo</Label>
                                     <Textarea 
@@ -297,37 +332,46 @@ export default function CheckoutPage() {
                                 {address && address.length > 10 && (
                                     <>
                                         {calculatingFee && (
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                 <span>Calculando distância...</span>
                                             </div>
                                         )}
                                         
                                         {calculatedDistance !== null && !calculatingFee && (
-                                            <div className="bg-primary/5 rounded-lg p-3 space-y-1">
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <MapPin className="h-4 w-4 text-primary" />
-                                                    <span className="font-medium">Distância calculada:</span>
-                                                    <span className="text-primary font-semibold">{calculatedDistance.toFixed(1)} km</span>
+                                            <div className="bg-primary/5 rounded-lg p-4 space-y-2 border border-primary/10">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <MapPin className="h-4 w-4 text-primary" />
+                                                        <span className="text-muted-foreground">Distância:</span>
+                                                    </div>
+                                                    <span className="font-semibold text-primary">{calculatedDistance.toFixed(1)} km</span>
                                                 </div>
-                                                {deliveryFeeData && (
+                                                
+                                                <div className="flex items-center justify-between pt-2 border-t border-primary/10">
                                                     <div className="flex items-center gap-2 text-sm">
                                                         <Truck className="h-4 w-4 text-primary" />
-                                                        <span className="font-medium">Taxa de entrega:</span>
-                                                        <span className="text-primary font-semibold">
-                                                            {total >= (deliverySettings?.min_free_delivery || 60) 
-                                                                ? "Grátis" 
-                                                                : `R$ ${deliveryFeeData.delivery_fee.toFixed(2)}`}
-                                                        </span>
+                                                        <span className="text-muted-foreground">Taxa de entrega:</span>
                                                     </div>
+                                                    <span className={`font-bold text-lg ${hasFreeDeliveryByValue ? 'text-green-600' : 'text-primary'}`}>
+                                                        {hasFreeDeliveryByValue 
+                                                            ? "GRÁTIS" 
+                                                            : `R$ ${deliveryFeeData?.delivery_fee?.toFixed(2) || '0,00'}`}
+                                                    </span>
+                                                </div>
+                                                
+                                                {hasFreeDeliveryByValue && (
+                                                    <p className="text-xs text-green-600 text-center bg-green-100 rounded-full py-1">
+                                                        Frete grátis pelo valor do pedido
+                                                    </p>
                                                 )}
                                             </div>
                                         )}
                                     </>
                                 )}
                                 
-                                {!address && (
-                                    <p className="text-sm text-muted-foreground italic">
+                                {!address && !hasFreeDeliveryByValue && (
+                                    <p className="text-sm text-muted-foreground italic bg-muted/30 rounded-lg p-3">
                                         Digite seu endereço completo para calcular a taxa de entrega
                                     </p>
                                 )}
@@ -342,11 +386,6 @@ export default function CheckoutPage() {
                                     />
                                     <span className="text-sm text-muted-foreground">Salvar endereço para próximas compras</span>
                                 </label>
-                                {deliverySettings?.min_free_delivery && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Frete grátis para pedidos acima de R$ {deliverySettings.min_free_delivery.toFixed(2)}
-                                    </p>
-                                )}
                             </div>
                         )}
                     </div>
@@ -354,9 +393,23 @@ export default function CheckoutPage() {
                     {/* Totals */}
                     <div className="bg-white rounded-2xl border border-border p-5 space-y-2">
                         <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>R$ {total.toFixed(2)}</span></div>
-                        {deliveryType === "entrega" && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Taxa de entrega</span><span>{deliveryFee > 0 ? `R$ ${deliveryFee.toFixed(2)}` : "Gratis"}</span></div>}
+                        {deliveryType === "entrega" && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Taxa de entrega</span>
+                                <span className={hasFreeDeliveryByValue ? "text-green-600 font-medium" : ""}>
+                                    {hasFreeDeliveryByValue 
+                                        ? "Grátis" 
+                                        : deliveryFee === null 
+                                            ? "A calcular" 
+                                            : `R$ ${deliveryFee.toFixed(2)}`}
+                                </span>
+                            </div>
+                        )}
                         <Separator />
-                        <div className="flex justify-between text-xl font-bold font-heading"><span>Total</span><span className="text-primary">R$ {grandTotal.toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xl font-bold font-heading">
+                            <span>Total</span>
+                            <span className="text-primary">R$ {grandTotal.toFixed(2)}</span>
+                        </div>
                     </div>
 
                     <Button type="submit" disabled={loading} className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-5 text-lg font-semibold" data-testid="submit-order-btn">
