@@ -683,9 +683,9 @@ export default function MenuPage() {
     const [cartAnimating, setCartAnimating] = useState(false);
     const [pendingAddItem, setPendingAddItem] = useState(null);
     
-    const { items, addItem, removeItem, updateQuantity, total, itemCount } = useCart();
-    const { favorites } = useFavorites();
-    const { customer, isLoggedIn, login, reorderSuggestions } = useCustomer();
+    const { items, addItem, removeItem, updateQuantity, total, itemCount, clearCart } = useCart();
+    const { favorites, clearFavorites } = useFavorites();
+    const { customer, isLoggedIn, login, logout, reorderSuggestions } = useCustomer();
     const { isOpen: storeOpen, ...storeStatus } = useStoreStatus();
     const navigate = useNavigate();
 
@@ -775,6 +775,14 @@ export default function MenuPage() {
         }
     };
 
+    // Logout do usuário
+    const handleLogout = () => {
+        logout();
+        clearCart();
+        clearFavorites();
+        toast.success("Você saiu da conta");
+    };
+
     const currentMenu = menus.find(m => m.id === selectedMenu);
     const currentCategory = categories.find(c => c.id === selectedCategory);
 
@@ -841,9 +849,14 @@ export default function MenuPage() {
 
                     <div className="flex items-center gap-1 sm:gap-2">
                         {isLoggedIn ? (
-                            <Button variant="ghost" size="sm" className="text-foreground hidden sm:flex" onClick={() => navigate("/historico")}>
-                                <User className="h-4 w-4 mr-1" /> {customer?.name?.split(" ")[0]}
-                            </Button>
+                            <div className="hidden sm:flex items-center gap-1">
+                                <Button variant="ghost" size="sm" className="text-foreground" onClick={() => navigate("/historico")}>
+                                    <User className="h-4 w-4 mr-1" /> {customer?.name?.split(" ")[0]}
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" onClick={handleLogout} title="Sair">
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                </Button>
+                            </div>
                         ) : (
                             <Button variant="ghost" size="sm" onClick={() => setLoginModalOpen(true)} className="text-foreground hidden sm:flex">
                                 <User className="h-4 w-4 mr-1" /> Entrar
