@@ -65,7 +65,9 @@ export default function AdminDeliveryPage() {
         business_hours: DEFAULT_HOURS,
         restaurant_address: "",
         distance_rates: DEFAULT_DISTANCE_RATES,
-        max_delivery_distance: 10.5
+        max_delivery_distance: 10.5,
+        always_open: false,
+        temporarily_closed: false
     });
     const [pixSettings, setPixSettings] = useState({ pix_key: "", pix_key_type: "cpf", pix_name: "Salada Soul", qr_code_url: "" });
     const [newArea, setNewArea] = useState({ name: "", fee: 0 });
@@ -101,7 +103,9 @@ export default function AdminDeliveryPage() {
                     : DEFAULT_HOURS,
                 distance_rates: parseDistanceRates(data.distance_rates),
                 max_delivery_distance: data.max_delivery_distance || 10.5,
-                restaurant_address: data.restaurant_address || ""
+                restaurant_address: data.restaurant_address || "",
+                always_open: data.always_open || false,
+                temporarily_closed: data.temporarily_closed || false
             }));
         }).catch(() => {});
         axios.get(`${API}/admin/pix-settings`, { headers }).then(r => {
@@ -452,6 +456,61 @@ export default function AdminDeliveryPage() {
                         <p className="text-xs text-muted-foreground">Defina os horários em que o restaurante aceita pedidos</p>
                     </div>
                 </div>
+
+                {/* Opções especiais de horário */}
+                <div className="space-y-3 mb-6 p-4 bg-muted/30 rounded-xl">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Opções especiais</p>
+                    
+                    {/* Sempre aberto */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${settings.always_open ? "bg-green-100 text-green-600" : "bg-muted text-muted-foreground"}`}>
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium">Aberto 24 horas</p>
+                                <p className="text-xs text-muted-foreground">Ignorar horários de funcionamento</p>
+                            </div>
+                        </div>
+                        <Switch 
+                            checked={settings.always_open} 
+                            onCheckedChange={v => setSettings(s => ({ ...s, always_open: v, temporarily_closed: v ? false : s.temporarily_closed }))}
+                        />
+                    </div>
+
+                    <Separator className="my-2" />
+
+                    {/* Fechamento temporário */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${settings.temporarily_closed ? "bg-red-100 text-red-600" : "bg-muted text-muted-foreground"}`}>
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium">Fechado temporariamente</p>
+                                <p className="text-xs text-muted-foreground">Loja fechada sem alterar horários</p>
+                            </div>
+                        </div>
+                        <Switch 
+                            checked={settings.temporarily_closed} 
+                            onCheckedChange={v => setSettings(s => ({ ...s, temporarily_closed: v, always_open: v ? false : s.always_open }))}
+                        />
+                    </div>
+                </div>
+
+                {/* Aviso quando uma opção especial está ativa */}
+                {(settings.always_open || settings.temporarily_closed) && (
+                    <div className={`mb-4 p-3 rounded-lg text-sm ${settings.always_open ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                        {settings.always_open 
+                            ? "A loja está configurada como 'Aberto 24 horas'. Os horários abaixo serão ignorados."
+                            : "A loja está 'Fechada temporariamente'. Os horários abaixo não serão aplicados até que você desative esta opção."
+                        }
+                    </div>
+                )}
 
                 <div className="space-y-3">
                     {DAYS.map(({ key, label }) => {

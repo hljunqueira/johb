@@ -50,15 +50,38 @@ function useStoreStatus() {
     useEffect(() => {
         axios.get(`${API}/delivery-settings`).then(r => {
             setDeliverySettings(r.data);
-            checkStatus(r.data.business_hours);
+            checkStatus(r.data);
         }).catch(() => {});
     }, []);
 
-    const checkStatus = (businessHours) => {
+    const checkStatus = (settings) => {
+        // Verificar flags especiais primeiro
+        if (settings?.always_open) {
+            setStatus({ 
+                isOpen: true, 
+                message: "Aberto 24 horas", 
+                nextOpen: null,
+                alwaysOpen: true 
+            });
+            return;
+        }
+
+        if (settings?.temporarily_closed) {
+            setStatus({ 
+                isOpen: false, 
+                message: "Fechado temporariamente", 
+                nextOpen: null,
+                temporarilyClosed: true 
+            });
+            return;
+        }
+
+        const businessHours = settings?.business_hours;
         if (!businessHours) {
             setStatus({ isOpen: true, message: "Aberto agora", nextOpen: null });
             return;
         }
+
         const now = new Date();
         const dayMap = { 0: "dom", 1: "seg", 2: "ter", 3: "qua", 4: "qui", 5: "sex", 6: "sab" };
         const todayKey = dayMap[now.getDay()];
@@ -598,6 +621,33 @@ function ReorderSection({ suggestions, onReorder }) {
 
 /* ============ STORE STATUS BANNER ============ */
 function StoreStatusBanner({ status }) {
+    // Loja sempre aberta (24 horas)
+    if (status.alwaysOpen) {
+        return (
+            <div className="px-4 py-2 flex items-center justify-center gap-2 text-sm bg-blue-50 text-blue-700 border-b border-blue-200">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium">{status.message}</span>
+            </div>
+        );
+    }
+
+    // Loja fechada temporariamente
+    if (status.temporarilyClosed) {
+        return (
+            <div className="px-4 py-3 bg-red-50 text-red-700 border-b border-red-200 flex items-center justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span className="font-medium">{status.message}</span>
+                <span className="text-sm">· Voltamos em breve</span>
+            </div>
+        );
+    }
+
     if (status.isOpen) {
         return (
             <div className={`px-4 py-2 flex items-center justify-center gap-2 text-sm ${status.closingSoon ? "bg-amber-50 text-amber-700 border-b border-amber-200" : "bg-green-50 text-green-700 border-b border-green-200"}`}>

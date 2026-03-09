@@ -1377,6 +1377,12 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
             await conn.execute(
                 "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS max_delivery_distance NUMERIC(10,2) DEFAULT 10.0"
             )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS always_open BOOLEAN DEFAULT FALSE"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS temporarily_closed BOOLEAN DEFAULT FALSE"
+            )
         except Exception:
             pass
         
@@ -1394,7 +1400,8 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
         row = await conn.fetchrow(
             """UPDATE delivery_settings SET 
                areas = $1, delivery_fee = $2, min_free_delivery = $3, active = $4, business_hours = $5,
-               restaurant_address = $6, distance_rates = $7, max_delivery_distance = $8
+               restaurant_address = $6, distance_rates = $7, max_delivery_distance = $8,
+               always_open = $9, temporarily_closed = $10
                WHERE id = 1 RETURNING *""",
             json.dumps(request.get('areas', [])),
             request.get('delivery_fee', 5.0),
@@ -1403,7 +1410,9 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
             json.dumps(request.get('business_hours', {})),
             new_address,
             json.dumps(request.get('distance_rates', [])),
-            request.get('max_delivery_distance', 10.0)
+            request.get('max_delivery_distance', 10.0),
+            request.get('always_open', False),
+            request.get('temporarily_closed', False)
         )
         return dict(row) if row else None
 
