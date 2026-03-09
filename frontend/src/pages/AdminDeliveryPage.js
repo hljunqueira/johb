@@ -75,6 +75,21 @@ export default function AdminDeliveryPage() {
     const { token } = useAuth();
     const headers = { Authorization: `Bearer ${token}` };
 
+    // Helper para garantir que distance_rates seja sempre um array
+    const parseDistanceRates = (rates) => {
+        if (!rates) return DEFAULT_DISTANCE_RATES;
+        if (Array.isArray(rates)) return rates;
+        if (typeof rates === 'string') {
+            try {
+                const parsed = JSON.parse(rates);
+                return Array.isArray(parsed) ? parsed : DEFAULT_DISTANCE_RATES;
+            } catch {
+                return DEFAULT_DISTANCE_RATES;
+            }
+        }
+        return DEFAULT_DISTANCE_RATES;
+    };
+
     useEffect(() => {
         axios.get(`${API}/admin/delivery-settings`, { headers }).then(r => {
             const data = r.data;
@@ -84,9 +99,7 @@ export default function AdminDeliveryPage() {
                 business_hours: (data.business_hours && Object.keys(data.business_hours).length > 0)
                     ? data.business_hours
                     : DEFAULT_HOURS,
-                distance_rates: (data.distance_rates && data.distance_rates.length > 0)
-                    ? data.distance_rates
-                    : DEFAULT_DISTANCE_RATES,
+                distance_rates: parseDistanceRates(data.distance_rates),
                 max_delivery_distance: data.max_delivery_distance || 10.5,
                 restaurant_address: data.restaurant_address || ""
             }));
