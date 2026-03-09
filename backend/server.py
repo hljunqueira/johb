@@ -10,6 +10,7 @@ import math
 import httpx
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
+import re
 
 # Configurar logging
 logging.basicConfig(
@@ -456,35 +457,52 @@ async def geocode_address(address: str) -> Optional[dict]:
     """Geocodifica um endereço usando a API Nominatim (OpenStreetMap).
     Tenta múltiplas variações do endereço se a primeira falhar."""
     
+    if not address or len(address.strip()) < 5:
+        logger.warning(f"Endereço muito curto ou vazio: '{address}'")
+        return None
+    
+    address = address.strip()
+    
     # Lista de variações do endereço para tentar (do mais específico ao mais genérico)
-    variations = [
-        address,  # Endereço original
-        address.replace("Jardim Santa Clara I", "Jardim Santa Clara"),  # Remover "I" do bairro
-        address.replace("Jose", "José").replace("jose", "josé"),  # Com acento
-        ' '.join(address.split()[:6]),  # Apenas rua, número e bairro (primeiras 6 palavras)
-    ]
+    variations = [address]  # Endereço original
     
-    # Extrair componentes principais para tentativa mais genérica
-    import re
-    # Tentar extrair rua, número e cidade
-    street_match = re.search(r'^(Rua|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Al\.?)\s+([^,\d]+)', address, re.IGNORECASE)
-    number_match = re.search(r'(\d+)', address)
-    city_match = re.search(r'(Rondon[óo]polis)', address, re.IGNORECASE)
+    # Remover "I" do bairro se existir
+    if "Jardim Santa Clara I" in address:
+        variations.append(address.replace("Jardim Santa Clara I", "Jardim Santa Clara"))
     
-    if street_match and city_match:
-        street = street_match.group(0)
-        city = city_match.group(1)
-        variations.append(f"{street} {city} MT")
+    # Tentar com acento
+    if "Jose" in address or "jose" in address:
+        variations.append(address.replace("Jose", "José").replace("jose", "josé"))
     
-    tried = []
+    # Versão simplificada (primeiras 6 palavras)
+    words = address.split()
+    if len(words) > 6:
+        variations.append(' '.join(words[:6]))
+    
+    # Tentar extrair rua e cidade para uma busca mais genérica
+    try:
+        street_match = re.search(r'^(Rua|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Al\.?)\s+([^,\d]+)', address, re.IGNORECASE)
+        city_match = re.search(r'(Rondon[óo]polis)', address, re.IGNORECASE)
+        
+        if street_match and city_match:
+            street = street_match.group(0)
+            city = city_match.group(1)
+            variations.append(f"{street} {city} MT")
+    except Exception as e:
+        logger.warning(f"Erro ao extrair componentes do endereço: {e}")
+    
+    # Remover duplicatas mantendo a ordem
+    seen = set()
+    unique_variations = []
+    for addr in variations:
+        if addr not in seen:
+            seen.add(addr)
+            unique_variations.append(addr)
+    
     async with httpx.AsyncClient() as client:
-        for i, addr in enumerate(variations):
-            if addr in tried:
-                continue
-            tried.append(addr)
-            
+        for i, addr in enumerate(unique_variations):
             try:
-                logger.info(f"Tentativa {i+1} de geocodificação: {addr[:80]}...")
+                logger.info(f"Tentativa {i+1}/{len(unique_variations)} de geocodificação: {addr[:80]}...")
                 response = await client.get(
                     "https://nominatim.openstreetmap.org/search",
                     params={
@@ -509,7 +527,7 @@ async def geocode_address(address: str) -> Optional[dict]:
             except Exception as e:
                 logger.warning(f"Erro na tentativa {i+1}: {e}")
     
-    logger.error(f"Todas as {len(tried)} tentativas de geocodificação falharam para: {address[:80]}")
+    logger.error(f"Todas as {len(unique_variations)} tentativas de geocodificação falharam para: {address[:80]}")
     return None
 
 
