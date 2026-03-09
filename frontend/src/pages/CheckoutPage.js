@@ -22,8 +22,16 @@ export default function CheckoutPage() {
     const navigate = useNavigate();
     
     // Dados do cliente vêm do localStorage (login feito no MenuPage)
-    const name = localStorage.getItem("salada-soul-name") || "";
-    const phone = localStorage.getItem("salada-soul-phone") || "";
+    const customerData = (() => {
+        try {
+            const saved = localStorage.getItem("salada-soul-customer");
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    })();
+    const name = customerData?.name || localStorage.getItem("salada-soul-name") || "";
+    const phone = customerData?.phone || localStorage.getItem("salada-soul-phone") || "";
     
     const [deliveryType, setDeliveryType] = useState("retirada");
     const [address, setAddress] = useState(() => localStorage.getItem("salada-soul-address") || "");
