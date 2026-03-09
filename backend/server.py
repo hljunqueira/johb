@@ -612,13 +612,21 @@ async def calculate_delivery_fee(address: str):
             distance_rates = settings_dict.get("distance_rates", [])
             delivery_fee = settings_dict.get("delivery_fee", 5.0)  # Taxa padrão
             
+            # Converter distance_rates de string JSON para lista se necessário
+            if isinstance(distance_rates, str):
+                try:
+                    import json
+                    distance_rates = json.loads(distance_rates)
+                except json.JSONDecodeError:
+                    distance_rates = []
+            
             if distance_rates and len(distance_rates) > 0:
                 # Ordenar por max_distance
-                sorted_rates = sorted(distance_rates, key=lambda x: x.get("max_distance", float("inf")))
+                sorted_rates = sorted(distance_rates, key=lambda x: x.get("max_distance", float("inf")) if isinstance(x, dict) else float("inf"))
                 
                 # Encontrar a taxa adequada
                 for rate in sorted_rates:
-                    if distance_km <= rate.get("max_distance", float("inf")):
+                    if isinstance(rate, dict) and distance_km <= rate.get("max_distance", float("inf")):
                         delivery_fee = rate.get("fee", delivery_fee)
                         break
             
