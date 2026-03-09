@@ -453,32 +453,63 @@ def calculate_distance_km(lat1: float, lng1: float, lat2: float, lng2: float) ->
 
 
 async def geocode_address(address: str) -> Optional[dict]:
-    """Geocodifica um endereço usando a API Nominatim (OpenStreetMap)"""
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://nominatim.openstreetmap.org/search",
-                params={
-                    "q": address,
-                    "format": "json",
-                    "limit": 1,
-                    "countrycodes": "br"
-                },
-                headers={"User-Agent": "SaladaSoul/1.0"},
-                timeout=10.0
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            if data and len(data) > 0:
-                return {
-                    "lat": float(data[0]["lat"]),
-                    "lng": float(data[0]["lon"]),
-                    "display_name": data[0]["display_name"]
-                }
-    except Exception as e:
-        logger.error(f"Erro ao geocodificar endereço: {e}")
+    """Geocodifica um endereço usando a API Nominatim (OpenStreetMap).
+    Tenta múltiplas variações do endereço se a primeira falhar."""
     
+    # Lista de variações do endereço para tentar (do mais específico ao mais genérico)
+    variations = [
+        address,  # Endereço original
+        address.replace("Jardim Santa Clara I", "Jardim Santa Clara"),  # Remover "I" do bairro
+        address.replace("Jose", "José").replace("jose", "josé"),  # Com acento
+        ' '.join(address.split()[:6]),  # Apenas rua, número e bairro (primeiras 6 palavras)
+    ]
+    
+    # Extrair componentes principais para tentativa mais genérica
+    import re
+    # Tentar extrair rua, número e cidade
+    street_match = re.search(r'^(Rua|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Al\.?)\s+([^,\d]+)', address, re.IGNORECASE)
+    number_match = re.search(r'(\d+)', address)
+    city_match = re.search(r'(Rondon[óo]polis)', address, re.IGNORECASE)
+    
+    if street_match and city_match:
+        street = street_match.group(0)
+        city = city_match.group(1)
+        variations.append(f"{street} {city} MT")
+    
+    tried = []
+    async with httpx.AsyncClient() as client:
+        for i, addr in enumerate(variations):
+            if addr in tried:
+                continue
+            tried.append(addr)
+            
+            try:
+                logger.info(f"Tentativa {i+1} de geocodificação: {addr[:80]}...")
+                response = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={
+                        "q": addr,
+                        "format": "json",
+                        "limit": 1,
+                        "countrycodes": "br"
+                    },
+                    headers={"User-Agent": "SaladaSoul/1.0"},
+                    timeout=10.0
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                if data and len(data) > 0:
+                    logger.info(f"Geocodificação bem-sucedida na tentativa {i+1}")
+                    return {
+                        "lat": float(data[0]["lat"]),
+                        "lng": float(data[0]["lon"]),
+                        "display_name": data[0]["display_name"]
+                    }
+            except Exception as e:
+                logger.warning(f"Erro na tentativa {i+1}: {e}")
+    
+    logger.error(f"Todas as {len(tried)} tentativas de geocodificação falharam para: {address[:80]}")
     return None
 
 
