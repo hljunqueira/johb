@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Clock, Leaf, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2 } from "lucide-react";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
