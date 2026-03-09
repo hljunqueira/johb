@@ -680,6 +680,7 @@ export default function MenuPage() {
     const [loading, setLoading] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [cartAnimating, setCartAnimating] = useState(false);
+    const [pendingAddItem, setPendingAddItem] = useState(null);
     
     const { items, addItem, removeItem, updateQuantity, total, itemCount } = useCart();
     const { favorites } = useFavorites();
@@ -753,8 +754,24 @@ export default function MenuPage() {
     }, [products, search]);
 
     const handleAddItem = (product, quantity, additionals, observation) => {
+        // Verifica se está logado antes de adicionar ao carrinho
+        if (!isLoggedIn) {
+            setPendingAddItem({ product, quantity, additionals, observation });
+            setLoginModalOpen(true);
+            return;
+        }
         addItem(product, quantity, additionals, observation);
         toast.success("Item adicionado ao carrinho!");
+    };
+
+    // Callback após login bem-sucedido para adicionar item pendente
+    const handleLoginSuccess = () => {
+        if (pendingAddItem) {
+            const { product, quantity, additionals, observation } = pendingAddItem;
+            addItem(product, quantity, additionals, observation);
+            toast.success("Item adicionado ao carrinho!");
+            setPendingAddItem(null);
+        }
     };
 
     const currentMenu = menus.find(m => m.id === selectedMenu);
@@ -987,7 +1004,13 @@ export default function MenuPage() {
             <ProductDetailModal product={selectedProduct} open={!!selectedProduct} onClose={() => setSelectedProduct(null)} onAdd={handleAddItem} storeOpen={storeOpen} />
 
             {/* Login Modal */}
-            <LoginModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} onLogin={login} />
+            <LoginModal open={loginModalOpen} onClose={() => { setLoginModalOpen(false); setPendingAddItem(null); }} onLogin={async (phone, name) => {
+                const result = await login(phone, name);
+                if (result.success) {
+                    handleLoginSuccess();
+                }
+                return result;
+            }} />
         </div>
     );
 }

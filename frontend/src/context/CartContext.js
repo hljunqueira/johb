@@ -7,13 +7,34 @@ CartProvider.propTypes = {
     children: PropTypes.node.isRequired,
 };
 
+// Função para obter a chave do carrinho baseada no telefone do cliente
+const getCartKey = () => {
+    const phone = localStorage.getItem("salada-soul-phone");
+    return phone ? `salada-soul-cart-${phone}` : "salada-soul-cart-guest";
+};
+
 export function CartProvider({ children }) {
     const [items, setItems] = useState(() => {
-        try { const s = sessionStorage.getItem("salada-soul-cart"); return s ? JSON.parse(s) : []; }
+        try { const s = sessionStorage.getItem(getCartKey()); return s ? JSON.parse(s) : []; }
         catch { return []; }
     });
 
-    useEffect(() => { sessionStorage.setItem("salada-soul-cart", JSON.stringify(items)); }, [items]);
+    // Atualiza o carrinho quando a chave muda (cliente loga/desloga)
+    useEffect(() => {
+        const handleStorageChange = () => {
+            try { 
+                const s = sessionStorage.getItem(getCartKey()); 
+                setItems(s ? JSON.parse(s) : []); 
+            }
+            catch { setItems([]); }
+        };
+        
+        // Escuta mudanças no localStorage (quando cliente loga)
+        window.addEventListener("storage", handleStorageChange);
+        return () => window.removeEventListener("storage", handleStorageChange);
+    }, []);
+
+    useEffect(() => { sessionStorage.setItem(getCartKey(), JSON.stringify(items)); }, [items]);
 
     const addItem = (product, quantity = 1, selectedAdditionals = [], observation = "") => {
         const addNames = selectedAdditionals.map(a => a.name).sort().join(",");

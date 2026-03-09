@@ -20,8 +20,11 @@ export default function CheckoutPage() {
     const [editingItem, setEditingItem] = useState(null);
     const [editObservation, setEditObservation] = useState("");
     const navigate = useNavigate();
-    const [name, setName] = useState(() => localStorage.getItem("salada-soul-name") || "");
-    const [phone, setPhone] = useState(() => localStorage.getItem("salada-soul-phone") || "");
+    
+    // Dados do cliente vêm do localStorage (login feito no MenuPage)
+    const name = localStorage.getItem("salada-soul-name") || "";
+    const phone = localStorage.getItem("salada-soul-phone") || "";
+    
     const [deliveryType, setDeliveryType] = useState("retirada");
     const [address, setAddress] = useState(() => localStorage.getItem("salada-soul-address") || "");
     const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("salada-soul-neighborhood") || "");
@@ -37,6 +40,12 @@ export default function CheckoutPage() {
     const [deliveryFeeData, setDeliveryFeeData] = useState(null);
 
     useEffect(() => {
+        // Redireciona para home se não estiver logado
+        if (!phone) {
+            toast.error("Por favor, identifique-se antes de finalizar o pedido");
+            navigate("/");
+            return;
+        }
         if (items.length === 0) navigate("/");
         axios.get(`${API}/delivery-settings`).then(r => setDeliverySettings(r.data));
         axios.get(`${API}/pix-settings`).then(r => setPixSettings(r.data));
@@ -91,7 +100,6 @@ export default function CheckoutPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!name || !phone) { toast.error("Preencha nome e telefone"); return; }
         if (deliveryType === "entrega" && (!address || !neighborhood)) { toast.error("Preencha endereco e bairro"); return; }
         setLoading(true);
         try {
@@ -107,8 +115,6 @@ export default function CheckoutPage() {
                     return { product_id: i.product_id, product_name: i.product_name, quantity: i.quantity, price: i.price, observation: obs };
                 })
             });
-            localStorage.setItem("salada-soul-phone", phone);
-            localStorage.setItem("salada-soul-name", name);
             if (saveAddress && deliveryType === "entrega") {
                 localStorage.setItem("salada-soul-address", address);
                 localStorage.setItem("salada-soul-neighborhood", neighborhood);
@@ -263,8 +269,15 @@ export default function CheckoutPage() {
                     {/* Customer Info */}
                     <div className="bg-white rounded-2xl border border-border p-5 space-y-4">
                         <h2 className="font-semibold font-heading">Seus Dados</h2>
-                        <div><Label htmlFor="name">Nome</Label><Input id="name" data-testid="checkout-name" value={name} onChange={e => setName(e.target.value)} placeholder="Seu nome" className="mt-1 rounded-lg" required /></div>
-                        <div><Label htmlFor="phone">Telefone</Label><Input id="phone" data-testid="checkout-phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(11) 99999-9999" className="mt-1 rounded-lg" required /></div>
+                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-primary font-semibold">{name.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div>
+                                <p className="font-medium">{name}</p>
+                                <p className="text-sm text-muted-foreground">{phone}</p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Delivery */}
