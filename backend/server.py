@@ -6,6 +6,8 @@ import logging
 import asyncio
 import json
 import uuid
+import math
+import httpx
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
@@ -429,6 +431,143 @@ async def get_pix_settings():
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM pix_settings WHERE id = 1")
         return dict(row) if row else {}
+
+
+# ============================================
+# DELIVERY DISTANCE CALCULATION
+# ============================================
+
+def calculate_distance_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Calcula a distância em km entre duas coordenadas usando a fórmula de Haversine"""
+    R = 6371  # Raio da Terra em km
+    
+    lat1_rad = math.radians(lat1)
+    lat2_rad = math.radians(lat2)
+    delta_lat = math.radians(lat2 - lat1)
+    delta_lng = math.radians(lng2 - lng1)
+    
+    a = math.sin(delta_lat / 2) ** 2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lng / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    return R * c
+
+
+async def geocode_address(address: str) -> Optional[dict]:
+    """Geocodifica um endereço usando a API Nominatim (OpenStreetMap)"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={
+                    "q": address,
+                    "format": "json",
+                    "limit": 1,
+                    "countrycodes": "br"
+                },
+                headers={"User-Agent": "SaladaSoul/1.0"},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            if data and len(data) > 0:
+                return {
+                    "lat": float(data[0]["lat"]),
+                    "lng": float(data[0]["lon"]),
+                    "display_name": data[0]["display_name"]
+                }
+    except Exception as e:
+        logger.error(f"Erro ao geocodificar endereço: {e}")
+    
+    return None
+
+
+@app.get("/api/calculate-delivery-fee")
+async def calculate_delivery_fee(address: str):
+    """
+    Calcula a taxa de entrega baseada na distância do endereço até o restaurante.
+    Usa geocodificação via OpenStreetMap (Nominatim).
+    """
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    async with db_pool.acquire() as conn:
+        # Buscar configurações do restaurante
+        settings = await conn.fetchrow("SELECT * FROM delivery_settings WHERE id = 1")
+        if not settings:
+            raise HTTPException(status_code=500, detail="Configurações de entrega não encontradas")
+        
+        settings_dict = dict(settings)
+        
+        # Verificar se temos as coordenadas do restaurante
+        restaurant_lat = settings_dict.get("restaurant_lat")
+        restaurant_lng = settings_dict.get("restaurant_lng")
+        restaurant_address = settings_dict.get("restaurant_address", "")
+        
+        # Se não temos coordenadas, tentar geocodificar o endereço do restaurante
+        if restaurant_lat is None or restaurant_lng is None:
+            if not restaurant_address:
+                raise HTTPException(status_code=500, detail="Endereço do restaurante não configurado")
+            
+            restaurant_geo = await geocode_address(restaurant_address)
+            if not restaurant_geo:
+                raise HTTPException(status_code=400, detail="Não foi possível localizar o endereço do restaurante")
+            
+            restaurant_lat = restaurant_geo["lat"]
+            restaurant_lng = restaurant_geo["lng"]
+            
+            # Salvar coordenadas para uso futuro
+            await conn.execute(
+                "UPDATE delivery_settings SET restaurant_lat = $1, restaurant_lng = $2 WHERE id = 1",
+                restaurant_lat, restaurant_lng
+            )
+        
+        # Geocodificar o endereço do cliente
+        customer_geo = await geocode_address(address)
+        if not customer_geo:
+            raise HTTPException(status_code=400, detail="Não foi possível localizar o endereço informado. Verifique o endereço e tente novamente.")
+        
+        # Calcular distância
+        distance_km = calculate_distance_km(
+            restaurant_lat, restaurant_lng,
+            customer_geo["lat"], customer_geo["lng"]
+        )
+        
+        # Verificar distância máxima
+        max_distance = settings_dict.get("max_delivery_distance", 10.0)
+        if distance_km > max_distance:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Distância excede o limite de entrega ({max_distance} km). Distância calculada: {distance_km:.1f} km"
+            )
+        
+        # Calcular taxa baseada na tabela de taxas
+        distance_rates = settings_dict.get("distance_rates", [])
+        delivery_fee = settings_dict.get("delivery_fee", 5.0)  # Taxa padrão
+        
+        if distance_rates and len(distance_rates) > 0:
+            # Ordenar por max_distance
+            sorted_rates = sorted(distance_rates, key=lambda x: x.get("max_distance", float("inf")))
+            
+            # Encontrar a taxa adequada
+            for rate in sorted_rates:
+                if distance_km <= rate.get("max_distance", float("inf")):
+                    delivery_fee = rate.get("fee", delivery_fee)
+                    break
+        
+        return {
+            "distance_km": round(distance_km, 2),
+            "delivery_fee": delivery_fee,
+            "customer_location": {
+                "lat": customer_geo["lat"],
+                "lng": customer_geo["lng"],
+                "display_name": customer_geo["display_name"]
+            },
+            "restaurant_location": {
+                "lat": restaurant_lat,
+                "lng": restaurant_lng
+            }
+        }
 
 
 # ============================================
@@ -1218,22 +1357,53 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
         raise HTTPException(status_code=500, detail="Database not available")
 
     async with db_pool.acquire() as conn:
-        # Verificar se coluna business_hours existe, adicionar se não existir
+        # Verificar se colunas existem, adicionar se não existirem
         try:
             await conn.execute(
                 "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS business_hours JSONB DEFAULT '{}'"
             )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS restaurant_address TEXT DEFAULT ''"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS restaurant_lat NUMERIC(10,8) DEFAULT NULL"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS restaurant_lng NUMERIC(11,8) DEFAULT NULL"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS distance_rates JSONB DEFAULT '[]'"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS max_delivery_distance NUMERIC(10,2) DEFAULT 10.0"
+            )
         except Exception:
             pass
+        
+        # Se o endereço do restaurante mudou, limpar as coordenadas para recalcular
+        current_settings = await conn.fetchrow("SELECT restaurant_address FROM delivery_settings WHERE id = 1")
+        current_address = current_settings["restaurant_address"] if current_settings else ""
+        new_address = request.get("restaurant_address", "")
+        
+        if new_address != current_address:
+            # Endereço mudou, limpar coordenadas para forçar recálculo
+            await conn.execute(
+                "UPDATE delivery_settings SET restaurant_lat = NULL, restaurant_lng = NULL WHERE id = 1"
+            )
+        
         row = await conn.fetchrow(
             """UPDATE delivery_settings SET 
-               areas = $1, delivery_fee = $2, min_free_delivery = $3, active = $4, business_hours = $5
+               areas = $1, delivery_fee = $2, min_free_delivery = $3, active = $4, business_hours = $5,
+               restaurant_address = $6, distance_rates = $7, max_delivery_distance = $8
                WHERE id = 1 RETURNING *""",
             json.dumps(request.get('areas', [])),
             request.get('delivery_fee', 5.0),
             request.get('min_free_delivery', 50.0),
             request.get('active', True),
-            json.dumps(request.get('business_hours', {}))
+            json.dumps(request.get('business_hours', {})),
+            new_address,
+            json.dumps(request.get('distance_rates', [])),
+            request.get('max_delivery_distance', 10.0)
         )
         return dict(row) if row else None
 

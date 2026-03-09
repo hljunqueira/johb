@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "@/context/CartContext";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { ArrowLeft, Truck, Store, Copy, Check, Loader2, Edit2, X, Plus, Minus } from "lucide-react";
+import { ArrowLeft, Truck, Store, Copy, Check, Loader2, Edit2, X, Plus, Minus, MapPin } from "lucide-react";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -30,8 +30,11 @@ export default function CheckoutPage() {
     const [showPix, setShowPix] = useState(false);
     const [pixCopied, setPixCopied] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [calculatingFee, setCalculatingFee] = useState(false);
     const [orderId, setOrderId] = useState(null);
     const [saveAddress, setSaveAddress] = useState(true);
+    const [calculatedDistance, setCalculatedDistance] = useState(null);
+    const [deliveryFeeData, setDeliveryFeeData] = useState(null);
 
     useEffect(() => {
         if (items.length === 0) navigate("/");
@@ -39,12 +42,48 @@ export default function CheckoutPage() {
         axios.get(`${API}/pix-settings`).then(r => setPixSettings(r.data));
     }, []); // eslint-disable-line
 
+    // Calcular taxa de entrega baseada na distância
+    const calculateDeliveryFee = useCallback(async () => {
+        if (deliveryType !== "entrega" || !address || !deliverySettings) {
+            setDeliveryFeeData(null);
+            setCalculatedDistance(null);
+            return;
+        }
+        
+        setCalculatingFee(true);
+        try {
+            const response = await axios.get(`${API}/calculate-delivery-fee`, {
+                params: { address: `${address}, ${neighborhood}` }
+            });
+            setDeliveryFeeData(response.data);
+            setCalculatedDistance(response.data.distance_km);
+        } catch (error) {
+            console.error("Erro ao calcular taxa de entrega:", error);
+            toast.error(error.response?.data?.detail || "Não foi possível calcular a taxa de entrega");
+            setDeliveryFeeData(null);
+            setCalculatedDistance(null);
+        } finally {
+            setCalculatingFee(false);
+        }
+    }, [deliveryType, address, neighborhood, deliverySettings]);
+
+    // Calcular taxa quando o endereço mudar (com debounce)
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            if (deliveryType === "entrega" && address && address.length > 10) {
+                calculateDeliveryFee();
+            }
+        }, 1000); // Aguarda 1 segundo após o usuário parar de digitar
+        
+        return () => clearTimeout(timeoutId);
+    }, [address, neighborhood, deliveryType, calculateDeliveryFee]);
+
     const deliveryFee = (() => {
         if (deliveryType !== "entrega" || !deliverySettings) return 0;
         if (total >= (deliverySettings.min_free_delivery || 60)) return 0;
-        const areas = Array.isArray(deliverySettings?.areas) ? deliverySettings.areas : [];
-        const area = areas.find(a => a?.name === neighborhood);
-        return area ? area.fee : deliverySettings?.delivery_fee || 5;
+        if (deliveryFeeData) return deliveryFeeData.delivery_fee;
+        // Fallback para taxa padrão
+        return deliverySettings?.delivery_fee || 5;
     })();
     const grandTotal = total + deliveryFee;
 
@@ -242,14 +281,56 @@ export default function CheckoutPage() {
                         {deliveryType === "entrega" && (
                             <div className="space-y-3 pt-2">
                                 <div>
-                                    <Label>Bairro</Label>
-                                    <select data-testid="checkout-neighborhood" value={neighborhood} onChange={e => setNeighborhood(e.target.value)}
-                                        className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm" required>
-                                        <option value="">Selecione o bairro</option>
-                                        {Array.isArray(deliverySettings?.areas) && deliverySettings.areas.map(a => a?.name && <option key={a.name} value={a.name}>{a.name} {a.fee > 0 ? `(R$ ${a.fee.toFixed(2)})` : "(Gratis)"}</option>)}
-                                    </select>
+                                    <Label>Endereço completo</Label>
+                                    <Textarea 
+                                        data-testid="checkout-address" 
+                                        value={address} 
+                                        onChange={e => setAddress(e.target.value)} 
+                                        placeholder="Rua, número, bairro, cidade..."
+                                        className="mt-1 rounded-lg" 
+                                        required 
+                                    />
                                 </div>
-                                <div><Label>Endereco completo</Label><Textarea data-testid="checkout-address" value={address} onChange={e => setAddress(e.target.value)} placeholder="Rua, numero, complemento..." className="mt-1 rounded-lg" required /></div>
+                                <div>
+                                    <Label>Bairro (opcional)</Label>
+                                    <Input 
+                                        data-testid="checkout-neighborhood" 
+                                        value={neighborhood} 
+                                        onChange={e => setNeighborhood(e.target.value)}
+                                        placeholder="Nome do bairro"
+                                        className="mt-1 rounded-lg"
+                                    />
+                                </div>
+                                
+                                {/* Indicador de distância e taxa */}
+                                {calculatingFee && (
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span>Calculando distância...</span>
+                                    </div>
+                                )}
+                                
+                                {calculatedDistance !== null && !calculatingFee && (
+                                    <div className="bg-primary/5 rounded-lg p-3 space-y-1">
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <MapPin className="h-4 w-4 text-primary" />
+                                            <span className="font-medium">Distância calculada:</span>
+                                            <span className="text-primary font-semibold">{calculatedDistance.toFixed(1)} km</span>
+                                        </div>
+                                        {deliveryFeeData && (
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <Truck className="h-4 w-4 text-primary" />
+                                                <span className="font-medium">Taxa de entrega:</span>
+                                                <span className="text-primary font-semibold">
+                                                    {total >= (deliverySettings?.min_free_delivery || 60) 
+                                                        ? "Grátis" 
+                                                        : `R$ ${deliveryFeeData.delivery_fee.toFixed(2)}`}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                
                                 {/* Checkbox para salvar endereço */}
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input 
@@ -260,7 +341,11 @@ export default function CheckoutPage() {
                                     />
                                     <span className="text-sm text-muted-foreground">Salvar endereço para próximas compras</span>
                                 </label>
-                                {deliverySettings?.min_free_delivery && <p className="text-xs text-muted-foreground">Frete gratis para pedidos acima de R$ {deliverySettings.min_free_delivery.toFixed(2)}</p>}
+                                {deliverySettings?.min_free_delivery && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Frete grátis para pedidos acima de R$ {deliverySettings.min_free_delivery.toFixed(2)}
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
