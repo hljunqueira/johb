@@ -80,10 +80,11 @@ export default function CheckoutPage() {
 
     const deliveryFee = (() => {
         if (deliveryType !== "entrega" || !deliverySettings) return 0;
+        if (!address || address.length < 10) return 0; // Só calcula se tiver endereço válido
         if (total >= (deliverySettings.min_free_delivery || 60)) return 0;
         if (deliveryFeeData) return deliveryFeeData.delivery_fee;
-        // Fallback para taxa padrão
-        return deliverySettings?.delivery_fee || 5;
+        // Sem endereço calculado ainda, não mostra taxa
+        return 0;
     })();
     const grandTotal = total + deliveryFee;
 
@@ -291,44 +292,44 @@ export default function CheckoutPage() {
                                         required 
                                     />
                                 </div>
-                                <div>
-                                    <Label>Bairro (opcional)</Label>
-                                    <Input 
-                                        data-testid="checkout-neighborhood" 
-                                        value={neighborhood} 
-                                        onChange={e => setNeighborhood(e.target.value)}
-                                        placeholder="Nome do bairro"
-                                        className="mt-1 rounded-lg"
-                                    />
-                                </div>
                                 
                                 {/* Indicador de distância e taxa */}
-                                {calculatingFee && (
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        <span>Calculando distância...</span>
-                                    </div>
-                                )}
-                                
-                                {calculatedDistance !== null && !calculatingFee && (
-                                    <div className="bg-primary/5 rounded-lg p-3 space-y-1">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <MapPin className="h-4 w-4 text-primary" />
-                                            <span className="font-medium">Distância calculada:</span>
-                                            <span className="text-primary font-semibold">{calculatedDistance.toFixed(1)} km</span>
-                                        </div>
-                                        {deliveryFeeData && (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Truck className="h-4 w-4 text-primary" />
-                                                <span className="font-medium">Taxa de entrega:</span>
-                                                <span className="text-primary font-semibold">
-                                                    {total >= (deliverySettings?.min_free_delivery || 60) 
-                                                        ? "Grátis" 
-                                                        : `R$ ${deliveryFeeData.delivery_fee.toFixed(2)}`}
-                                                </span>
+                                {address && address.length > 10 && (
+                                    <>
+                                        {calculatingFee && (
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <span>Calculando distância...</span>
                                             </div>
                                         )}
-                                    </div>
+                                        
+                                        {calculatedDistance !== null && !calculatingFee && (
+                                            <div className="bg-primary/5 rounded-lg p-3 space-y-1">
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <MapPin className="h-4 w-4 text-primary" />
+                                                    <span className="font-medium">Distância calculada:</span>
+                                                    <span className="text-primary font-semibold">{calculatedDistance.toFixed(1)} km</span>
+                                                </div>
+                                                {deliveryFeeData && (
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <Truck className="h-4 w-4 text-primary" />
+                                                        <span className="font-medium">Taxa de entrega:</span>
+                                                        <span className="text-primary font-semibold">
+                                                            {total >= (deliverySettings?.min_free_delivery || 60) 
+                                                                ? "Grátis" 
+                                                                : `R$ ${deliveryFeeData.delivery_fee.toFixed(2)}`}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                                
+                                {!address && (
+                                    <p className="text-sm text-muted-foreground italic">
+                                        Digite seu endereço completo para calcular a taxa de entrega
+                                    </p>
                                 )}
                                 
                                 {/* Checkbox para salvar endereço */}
