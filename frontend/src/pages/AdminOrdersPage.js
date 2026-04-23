@@ -114,15 +114,6 @@ export default function AdminOrdersPage() {
                             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                         </Button>
                         
-                        <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => setFilter("")}
-                            className={`rounded-xl px-4 py-2 h-10 text-sm font-medium transition-all ${filter === "" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"}`}
-                        >
-                            Todos ({orders.length})
-                        </Button>
-
                         {Object.entries(statusConfig).map(([key, config]) => {
                             const Icon = config.icon;
                             const isActive = filter === key;
@@ -143,6 +134,15 @@ export default function AdminOrdersPage() {
                                 </button>
                             );
                         })}
+
+                        <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => setFilter("")}
+                            className={`rounded-xl px-4 py-2 h-10 text-sm font-medium transition-all ${filter === "" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"}`}
+                        >
+                            Todos ({orders.length})
+                        </Button>
                     </div>
                 </div>
 
@@ -152,15 +152,7 @@ export default function AdminOrdersPage() {
                         <p className="text-slate-500 animate-pulse">Buscando novos pedidos...</p>
                     </div>
                 ) : orders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in duration-500">
-                        <div className="relative mb-6">
-                            <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
-                            <img 
-                                src="/salada_soul_mascot_empty_state_1776952664626.png" 
-                                alt="Tudo limpo por aqui" 
-                                className="w-48 h-48 relative object-contain"
-                            />
-                        </div>
+                    <div className="flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in duration-500 text-center">
                         <h3 className="text-2xl font-bold font-heading text-slate-800">Tudo limpo por aqui!</h3>
                         <p className="text-slate-500 mt-2">Aguardando os novos pedidos.</p>
                         <Button 
