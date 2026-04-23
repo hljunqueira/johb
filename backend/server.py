@@ -61,7 +61,6 @@ app = FastAPI(
 )
 
 # CORS - Origens permitidas
-# Inclui domínios do Vercel e Railway por padrão
 DEFAULT_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
@@ -78,7 +77,11 @@ DEFAULT_ORIGINS = [
 CORS_ORIGINS_ENV = os.environ.get('CORS_ORIGINS', '')
 if CORS_ORIGINS_ENV:
     env_origins = [origin.strip() for origin in CORS_ORIGINS_ENV.split(',') if origin.strip()]
-    DEFAULT_ORIGINS.extend(env_origins)
+    for o in env_origins:
+        if o not in DEFAULT_ORIGINS:
+            DEFAULT_ORIGINS.append(o)
+
+logger.info(f"CORS Allowed Origins: {DEFAULT_ORIGINS}")
 
 app.add_middleware(
     CORSMiddleware,
