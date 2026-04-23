@@ -62,6 +62,7 @@ export default function AdminOrdersPage() {
     const [activeTab, setActiveTab] = useState("all");
     const [loading, setLoading] = useState(true);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, orderId: null });
     const { token } = useAuth();
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -75,7 +76,6 @@ export default function AdminOrdersPage() {
                 return acc;
             }, {});
             
-            // Adiciona cancelados em uma aba separada se necessário, mas no Kanban focamos no fluxo ativo
             setColumns(grouped);
         } catch { toast.error("Erro ao carregar pedidos"); }
         finally { setLoading(false); }
@@ -94,6 +94,16 @@ export default function AdminOrdersPage() {
     const markPaid = async (orderId) => {
         try { await axios.put(`${API}/admin/orders/${orderId}/payment`, {}, { headers }); toast.success("Pagamento confirmado"); fetchOrders(); }
         catch { toast.error("Erro ao marcar pagamento"); }
+    };
+
+    const handleDeleteOrder = async (orderId) => {
+        try {
+            await axios.delete(`${API}/admin/orders/${orderId}`, { headers });
+            toast.success("Pedido excluído com sucesso");
+            fetchOrders();
+        } catch {
+            toast.error("Erro ao excluir pedido");
+        }
     };
 
     const onDragEnd = (result) => {
@@ -235,6 +245,12 @@ export default function AdminOrdersPage() {
                                                                                 >
                                                                                     <XCircle className="h-4 w-4" /> Recusar Pedido
                                                                                 </DropdownMenuItem>
+                                                                                <DropdownMenuItem 
+                                                                                    onClick={() => setDeleteConfirm({ isOpen: true, orderId: order.id })}
+                                                                                    className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold focus:bg-red-100 text-red-700 cursor-pointer"
+                                                                                >
+                                                                                    <Package className="h-4 w-4" /> Excluir Pedido
+                                                                                </DropdownMenuItem>
                                                                             </DropdownMenuContent>
                                                                         </DropdownMenu>
                                                                     </div>
@@ -291,6 +307,19 @@ export default function AdminOrdersPage() {
                 title="Recusar Pedido"
                 description="Deseja realmente recusar este pedido? O estorno será processado automaticamente."
                 confirmText="Recusar Pedido"
+                variant="destructive"
+            />
+
+            <ConfirmModal 
+                isOpen={deleteConfirm.isOpen} 
+                onClose={() => setDeleteConfirm({ isOpen: false, orderId: null })}
+                onConfirm={() => {
+                    handleDeleteOrder(deleteConfirm.orderId);
+                    setDeleteConfirm({ isOpen: false, orderId: null });
+                }}
+                title="Excluir Pedido"
+                description="Deseja realmente excluir este pedido permanentemente? Esta ação não pode ser desfeita."
+                confirmText="Excluir Permanentemente"
                 variant="destructive"
             />
         </div>

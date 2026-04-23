@@ -1017,6 +1017,20 @@ async def admin_mark_paid(order_id: str, user=Depends(get_current_user)):
         return {"success": True}
 
 
+@app.delete("/api/admin/orders/{order_id}")
+async def admin_delete_order(order_id: str, user=Depends(get_current_user)):
+    """Excluir pedido"""
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    async with db_pool.acquire() as conn:
+        # Tenta excluir o pedido (o banco deve estar configurado com CASCADE para os itens)
+        result = await conn.execute("DELETE FROM orders WHERE id = $1", order_id)
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        return {"success": True}
+
+
 # ============================================
 # ADMIN - PRODUCTS
 # ============================================
