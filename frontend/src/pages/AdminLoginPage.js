@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
                 </div>
 
                 <p className="text-center mt-8">
-                    <button onClick={() => navigate("/")} className="text-white/70 hover:text-white transition-colors flex items-center gap-2 mx-auto font-medium">
+                    <button onClick={() => window.location.href = "https://www.saladasoul.com"} className="text-white/70 hover:text-white transition-colors flex items-center gap-2 mx-auto font-medium">
                         ← Voltar ao cardápio
                     </button>
                 </p>
