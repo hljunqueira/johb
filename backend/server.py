@@ -71,6 +71,7 @@ DEFAULT_ORIGINS = [
     "https://www.saladasoul.shop",
     "https://salada-soul-admin.vercel.app",
     "https://salada-soul.vercel.app",
+    "https://admin.saladasoul.com",
 ]
 
 # Adicionar origens da variável de ambiente se existir
