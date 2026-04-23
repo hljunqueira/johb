@@ -978,6 +978,20 @@ async def admin_get_orders(status: Optional[str] = None, user=Depends(get_curren
         return [serialize_order(r) for r in rows]
 
 
+@app.delete("/api/admin/orders/{order_id}")
+async def admin_delete_order(order_id: str, user=Depends(get_current_user)):
+    """Excluir pedido"""
+    logger.info(f"Tentativa de exclusão do pedido: {order_id}")
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    async with db_pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM orders WHERE id = $1", order_id)
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        return {"success": True}
+
+
 @app.put("/api/admin/orders/{order_id}/status")
 async def admin_update_order_status(order_id: str, request: UpdateOrderStatusRequest, user=Depends(get_current_user)):
     """Atualizar status do pedido"""
@@ -1014,20 +1028,6 @@ async def admin_mark_paid(order_id: str, user=Depends(get_current_user)):
             "UPDATE orders SET payment_status = 'pago' WHERE id = $1",
             order_id
         )
-        return {"success": True}
-
-
-@app.delete("/api/admin/orders/{order_id}")
-async def admin_delete_order(order_id: str, user=Depends(get_current_user)):
-    """Excluir pedido"""
-    if not db_pool:
-        raise HTTPException(status_code=500, detail="Database not available")
-
-    async with db_pool.acquire() as conn:
-        # Tenta excluir o pedido (o banco deve estar configurado com CASCADE para os itens)
-        result = await conn.execute("DELETE FROM orders WHERE id = $1", order_id)
-        if result == "DELETE 0":
-            raise HTTPException(status_code=404, detail="Pedido não encontrado")
         return {"success": True}
 
 
