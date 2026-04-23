@@ -59,7 +59,7 @@ const KANBAN_COLUMNS = ['aguardando', 'confirmado', 'preparando', 'saiu_entrega'
 
 export default function AdminOrdersPage() {
     const [columns, setColumns] = useState({});
-    const [activeTab, setActiveTab] = useState("all");
+    const [activeTab, setActiveTab] = useState("aguardando");
     const [loading, setLoading] = useState(true);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, orderId: null });
@@ -140,16 +140,17 @@ export default function AdminOrdersPage() {
         <div data-testid="admin-orders-page" className="h-[calc(100vh-64px)] bg-white flex flex-col overflow-hidden">
             {/* Header Estilo Print */}
             <div className="p-6 md:px-10 md:py-8 border-b border-slate-50">
-                <h1 className="text-3xl font-black font-heading text-slate-900 tracking-tight">Pedidos</h1>
-                <p className="text-slate-400 text-sm font-medium mt-1">Gerencie e acompanhe os pedidos em tempo real.</p>
-                
-                <div className="flex flex-wrap gap-2 mt-6">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h1 className="text-3xl font-black font-heading text-slate-900 tracking-tight">Pedidos</h1>
+                        <p className="text-slate-400 text-sm font-medium mt-1">Gerencie e acompanhe os pedidos em tempo real.</p>
+                    </div>
                     <Button variant="outline" size="sm" onClick={fetchOrders} className="rounded-xl h-10 w-10 p-0 bg-white">
                         <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                     </Button>
-                    <Button variant={activeTab === "all" ? "default" : "outline"} onClick={() => setActiveTab("all")} className="rounded-2xl px-6 h-10 font-bold text-xs gap-2">
-                        Todos ({Object.values(columns).flat().length})
-                    </Button>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mt-6">
                     {KANBAN_COLUMNS.map(colId => {
                         const StatusIcon = statusConfig[colId].icon;
                         return (
@@ -164,6 +165,9 @@ export default function AdminOrdersPage() {
                             </Button>
                         );
                     })}
+                    <Button variant={activeTab === "all" ? "default" : "outline"} onClick={() => setActiveTab("all")} className="rounded-2xl px-6 h-10 font-bold text-xs gap-2">
+                        Todos ({Object.values(columns).flat().length})
+                    </Button>
                 </div>
             </div>
 
