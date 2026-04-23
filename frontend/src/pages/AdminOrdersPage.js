@@ -224,9 +224,9 @@ export default function AdminOrdersPage() {
                                                                 <div className="flex justify-between items-center pt-2.5 border-t border-slate-50">
                                                                     <span className="text-sm font-black text-primary font-heading leading-none">R$ {order.total?.toFixed(2)}</span>
                                                                     <Badge className={`px-1.5 py-0 rounded text-[8px] font-black uppercase tracking-widest border-none ${
-                                                                        order.payment_status === "pago" ? "bg-emerald-500 text-white" : "bg-amber-400 text-white"
+                                                                        order.payment_status === "pago" ? "bg-emerald-500 text-white" : "bg-amber-400 text-white shadow-sm shadow-amber-100"
                                                                     }`}>
-                                                                        {order.payment_status === "pago" ? "PAGO" : "PENDENTE"}
+                                                                        {order.payment_status === "pago" ? "PGTO PAGO" : "PGTO PENDENTE"}
                                                                     </Badge>
                                                                 </div>
                                                             </div>
