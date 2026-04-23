@@ -57,6 +57,92 @@ const statusConfig = {
 
 const KANBAN_COLUMNS = ['aguardando', 'confirmado', 'preparando', 'saiu_entrega', 'entregue', 'cancelado'];
 
+const isDelayed = (order) => {
+    if (order.status === "entregue" || order.status === "cancelado") return false;
+    const created = new Date(order.created_at);
+    const now = new Date();
+    return (now - created) > (order.estimated_time || 30) * 60 * 1000;
+};
+
+const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm }) => (
+    <Draggable key={order.id} draggableId={order.id} index={index}>
+        {(provided, snapshot) => (
+            <div
+                ref={provided.innerRef}
+                {...provided.draggableProps}
+                {...provided.dragHandleProps}
+                className={`bg-white rounded-[1.8rem] border-2 p-5 shadow-sm transition-all h-full flex flex-col ${
+                    snapshot.isDragging ? "shadow-2xl ring-4 ring-primary/20 border-primary scale-105 rotate-1" : "hover:border-slate-300"
+                } ${isDelayed(order) ? "border-red-100 bg-red-50/20" : "border-slate-50"}`}
+            >
+                <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                        <GripVertical className="h-4 w-4 text-slate-200" />
+                        <span className="text-lg font-black font-heading text-slate-900 leading-none">#{order.order_number}</span>
+                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-slate-50">
+                                <MoreVertical className="h-4 w-4 text-slate-400" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-2xl border-slate-100">
+                            <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-3 py-2">Ações</DropdownMenuLabel>
+                            <DropdownMenuItem 
+                                disabled={order.payment_status === "pago"}
+                                onClick={() => markPaid(order.id)}
+                                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold focus:bg-emerald-50 text-emerald-600 cursor-pointer"
+                            >
+                                <DollarSign className="h-4 w-4" /> Marcar como Pago
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="my-1 mx-2 bg-slate-50" />
+                            <DropdownMenuItem 
+                                onClick={() => setConfirmModal({ isOpen: true, orderId: order.id })}
+                                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold focus:bg-red-50 text-red-600 cursor-pointer"
+                            >
+                                <XCircle className="h-4 w-4" /> Recusar Pedido
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                                onClick={() => setDeleteConfirm({ isOpen: true, orderId: order.id })}
+                                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold focus:bg-red-100 text-red-700 cursor-pointer"
+                            >
+                                <Package className="h-4 w-4" /> Excluir Pedido
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                <div className="mb-4">
+                    <p className="font-black text-slate-800 text-sm truncate uppercase tracking-tight">{order.customer_name}</p>
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 mt-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                </div>
+
+                <div className="space-y-1.5 mb-4 flex-1 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                    {(Array.isArray(order.items) ? order.items : []).map((item, i) => (
+                        <div key={i} className="text-[10px] flex justify-between leading-tight">
+                            <span className="text-slate-500 font-bold">
+                                <span className="text-primary mr-1">{item.quantity}x</span> {item.product_name}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
+                    <span className="text-lg font-black text-primary font-heading tracking-tighter">R$ {order.total?.toFixed(2)}</span>
+                    <Badge className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border-none ${
+                        order.payment_status === "pago" ? "bg-emerald-500 text-white" : "bg-amber-400 text-white shadow-sm shadow-amber-100"
+                    }`}>
+                        {order.payment_status === "pago" ? "PGTO PAGO" : "PGTO PENDENTE"}
+                    </Badge>
+                </div>
+            </div>
+        )}
+    </Draggable>
+);
+
 export default function AdminOrdersPage() {
     const [columns, setColumns] = useState({});
     const [activeTab, setActiveTab] = useState("aguardando");
@@ -127,13 +213,6 @@ export default function AdminOrdersPage() {
         });
 
         updateStatus(orderId, newStatus);
-    };
-
-    const isDelayed = (order) => {
-        if (order.status === "entregue" || order.status === "cancelado") return false;
-        const created = new Date(order.created_at);
-        const now = new Date();
-        return (now - created) > (order.estimated_time || 30) * 60 * 1000;
     };
 
     return (
