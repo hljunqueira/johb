@@ -1,9 +1,0 @@
-[build]
-dockerfilePath = "Dockerfile.api"
-
-[deploy]
-# CMD from Dockerfile will be used
-healthcheckPath = "/health"
-healthcheckTimeout = 300
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 10

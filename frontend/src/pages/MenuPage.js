@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "@/context/CartContext";
@@ -414,57 +414,47 @@ function ProductCard({ product, onClick, backendUrl }) {
     return (
         <div 
             onClick={() => onClick(product)}
-            className="bg-white rounded-2xl border border-border overflow-hidden cursor-pointer hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 group"
+            className="bg-white rounded-xl border border-border/60 p-3 sm:p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-200 flex flex-row gap-3 sm:gap-4 group items-center"
             data-testid={`product-${product.id}`}
         >
-            <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+            <div className="flex-1 flex flex-col justify-between min-w-0 py-1">
+                <div>
+                    <h3 className="font-semibold font-heading text-foreground text-[15px] sm:text-base leading-snug mb-1 line-clamp-2 pr-2">{product.name}</h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-3">{product.description}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-foreground">
+                        {product.price > 0 ? `R$ ${product.price.toFixed(2)}` : minPrice > 0 ? `A partir de R$ ${minPrice.toFixed(2)}` : "Monte seu preço"}
+                    </span>
+                    {hasOpcionais && (
+                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide">Personalizável</span>
+                    )}
+                </div>
+            </div>
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 bg-muted rounded-lg overflow-hidden shadow-sm">
                 <img 
                     src={getImageUrl(product.image_url)} 
                     alt={product.name} 
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                 />
                 {product.tags?.includes("mais_pedido") && (
-                    <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                        <Flame className="h-3 w-3" /> Popular
+                    <div className="absolute top-1 right-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
+                        <Flame className="h-2 w-2" /> Pop
                     </div>
                 )}
                 {product.tags?.includes("novo") && (
-                    <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                    <div className="absolute top-1 right-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg">
                         Novo
-                    </div>
-                )}
-                {hasOpcionais && (
-                    <div className="absolute bottom-2 right-2 bg-primary/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-                        Personalizável
                     </div>
                 )}
                 <button
                     onClick={handleFavoriteClick}
-                    className={`absolute top-2 right-2 p-2 rounded-full transition-all shadow-md ${
-                        favorite ? "bg-red-500 text-white" : "bg-white/90 text-muted-foreground hover:bg-white hover:text-red-500"
+                    className={`absolute bottom-1 right-1 p-1.5 rounded-full backdrop-blur-md transition-all shadow-md ${
+                        favorite ? "bg-red-500 text-white" : "bg-white/80 text-muted-foreground hover:bg-white hover:text-red-500"
                     }`}
                 >
-                    <Heart className={`h-4 w-4 ${favorite ? "fill-current" : ""}`} />
+                    <Heart className={`h-3.5 w-3.5 ${favorite ? "fill-current" : ""}`} />
                 </button>
-            </div>
-            <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold font-heading text-foreground line-clamp-1">{product.name}</h3>
-                    <span className="font-bold text-primary whitespace-nowrap ml-2">
-                        {product.price > 0 ? `R$ ${product.price.toFixed(2)}` : minPrice > 0 ? `A partir de R$ ${minPrice.toFixed(2)}` : "Monte seu preço"}
-                    </span>
-                </div>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{product.description}</p>
-                <div className="flex flex-wrap gap-1">
-                    {product.tags?.slice(0, 3).map(tag => {
-                        const style = getTagStyle(tag);
-                        return (
-                            <span key={tag} className={`px-2 py-0.5 rounded-full text-xs ${style.color}`}>
-                                {style.label}
-                            </span>
-                        );
-                    })}
-                </div>
             </div>
         </div>
     );
@@ -682,6 +672,10 @@ export default function MenuPage() {
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [cartAnimating, setCartAnimating] = useState(false);
     const [pendingAddItem, setPendingAddItem] = useState(null);
+    const [isProductLoading, setProductLoading] = useState(false);
+
+    const categoriesCache = useRef({});
+    const productsCache = useRef({});
     
     const { items, addItem, removeItem, updateQuantity, total, itemCount, clearCart } = useCart();
     const { favorites, clearFavorites } = useFavorites();
@@ -711,10 +705,19 @@ export default function MenuPage() {
     // Load categories when menu is selected
     useEffect(() => {
         if (!selectedMenu) return;
+        if (categoriesCache.current[selectedMenu]) {
+            setCategories(categoriesCache.current[selectedMenu]);
+            if (categoriesCache.current[selectedMenu].length > 0) {
+                setSelectedCategory(categoriesCache.current[selectedMenu][0].id);
+            }
+            return;
+        }
+
         const fetchCategories = async () => {
             try {
                 const res = await axios.get(`${API}/menus/${selectedMenu}/categories`);
                 const cats = Array.isArray(res.data) ? res.data : [];
+                categoriesCache.current[selectedMenu] = cats;
                 setCategories(cats);
                 if (cats.length > 0) setSelectedCategory(cats[0].id);
             } catch {
@@ -727,12 +730,22 @@ export default function MenuPage() {
     // Load products when category is selected
     useEffect(() => {
         if (!selectedCategory) { setProducts([]); return; }
+        if (productsCache.current[selectedCategory]) {
+            setProducts(productsCache.current[selectedCategory]);
+            return;
+        }
+
         const fetchProducts = async () => {
             try {
+                setProductLoading(true);
                 const res = await axios.get(`${API}/categories/${selectedCategory}/products`);
-                setProducts(Array.isArray(res.data) ? res.data : []);
+                const prods = Array.isArray(res.data) ? res.data : [];
+                productsCache.current[selectedCategory] = prods;
+                setProducts(prods);
             } catch {
                 toast.error("Erro ao carregar produtos");
+            } finally {
+                setProductLoading(false);
             }
         };
         fetchProducts();
@@ -818,112 +831,109 @@ export default function MenuPage() {
             <StoreStatusBanner status={{ isOpen: storeOpen, ...storeStatus }} />
 
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-border">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-bold text-lg shadow-md">SS</div>
-                        <div className="hidden sm:block">
-                            <h1 className="font-bold text-lg text-foreground font-heading leading-tight">Salada Soul</h1>
-                            <p className="text-xs text-muted-foreground">Nutre o corpo, alimenta a alma</p>
+            <header className="relative z-40 bg-primary shadow-md border-b-0 pb-2">
+                <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+                    <img src="/banner-saladasoul.jpeg" className="w-full h-full object-cover" alt="" />
+                </div>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 relative z-10 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-background bg-white shadow-xl overflow-hidden translate-y-6 shrink-0 z-20">
+                            <img src="/Logo-saladasoul.jpeg" alt="Logo Salada Soul" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="pt-2 text-white">
+                            <h1 className="font-bold text-2xl font-heading leading-tight text-secondary drop-shadow-sm">Salada Soul</h1>
+                            <p className="text-xs sm:text-sm text-primary-foreground/90 font-medium tracking-wide">Nutre o corpo, alimenta a alma</p>
                         </div>
                     </div>
                     
-                    {/* Search with clear button */}
+                    {/* Search Desktop */}
                     <div className="hidden md:flex flex-1 max-w-md mx-4">
-                        <div className="relative w-full">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <div className="relative w-full shadow-md rounded-full bg-white border border-border overflow-hidden">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
                             <Input 
-                                data-testid="search-input" 
-                                placeholder="Busque por salada, bebida, ingrediente..." 
+                                placeholder="Busque por produtos..." 
                                 value={search} 
                                 onChange={e => setSearch(e.target.value)} 
-                                className="pl-10 pr-10 rounded-full border-border bg-white" 
+                                className="pl-10 pr-10 rounded-full border-0 bg-transparent text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary h-10 w-full"
                             />
                             {search && (
-                                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20">
+                                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground">
                                     <X className="h-3 w-3" />
                                 </button>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-2">
+                    {/* Desktop/Tablet User Actions */}
+                    <div className="flex items-center gap-1 sm:gap-2 text-primary-foreground">
                         {isLoggedIn ? (
                             <div className="hidden sm:flex items-center gap-1">
-                                <Button variant="ghost" size="sm" className="text-foreground" onClick={() => navigate("/historico")}>
+                                <Button variant="ghost" size="sm" className="hover:bg-primary/30 hover:text-secondary text-primary-foreground font-medium" onClick={() => navigate("/historico")}>
                                     <User className="h-4 w-4 mr-1" /> {customer?.name?.split(" ")[0]}
                                 </Button>
-                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" onClick={handleLogout} title="Sair">
+                                <Button variant="ghost" size="icon" className="hover:bg-primary/30 hover:text-secondary text-primary-foreground" onClick={handleLogout} title="Sair">
                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                                 </Button>
                             </div>
                         ) : (
-                            <Button variant="ghost" size="sm" onClick={() => setLoginModalOpen(true)} className="text-foreground hidden sm:flex">
+                            <Button variant="ghost" size="sm" onClick={() => setLoginModalOpen(true)} className="hidden sm:flex hover:bg-primary/30 hover:text-secondary text-primary-foreground font-medium">
                                 <User className="h-4 w-4 mr-1" /> Entrar
                             </Button>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => navigate("/favoritos")} className="text-foreground hidden sm:flex relative">
-                            <Heart className="h-4 w-4 mr-1" /> Favoritos
-                            {favorites.length > 0 && <Badge className="ml-1 bg-red-500 text-white text-xs">{favorites.length}</Badge>}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => navigate("/historico")} className="text-foreground hidden sm:flex">
-                            <Clock className="h-4 w-4 mr-1" /> Histórico
-                        </Button>
                         
-                        {/* Cart Button with Animation */}
+                        {/* Mobile Cart Sheet Trigger - Hidden on lg screens because of sidebar */}
                         <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                             <SheetTrigger asChild>
-                                <Button className={`relative bg-primary text-primary-foreground rounded-full transition-transform ${cartAnimating ? "scale-110" : ""}`} size="icon" data-testid="mobile-cart-btn">
+                                <Button className={`lg:hidden relative bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full shadow-md transition-transform ${cartAnimating ? "scale-110" : ""}`} size="icon">
                                     <ShoppingCart className="h-5 w-5" />
                                     {itemCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-in zoom-in duration-200">
-                                            {itemCount > 9 ? "9+" : itemCount}
+                                        <span className="absolute -top-1 -right-1 bg-accent text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
+                                            {itemCount}
                                         </span>
                                     )}
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="right" className="w-full sm:max-w-md bg-white">
-                                <SheetHeader><SheetTitle className="font-heading">Seu Pedido</SheetTitle></SheetHeader>
-                                <div className="mt-4">
+                            <SheetContent side="right" className="w-full sm:max-w-md bg-white p-0 flex flex-col">
+                                <div className="p-4 border-b"><SheetTitle className="font-heading text-xl">Seu Pedido</SheetTitle></div>
+                                <div className="p-4 flex-1 overflow-auto">
                                     <CartContent items={items} removeItem={removeItem} updateQuantity={updateQuantity} total={total} itemCount={itemCount} onCheckout={() => { setCartOpen(false); navigate("/checkout"); }} />
                                 </div>
                             </SheetContent>
                         </Sheet>
                     </div>
                 </div>
-                
-                {/* Mobile Search */}
-                <div className="md:hidden px-4 pb-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder="Busque por salada, bebida..." 
-                            value={search} 
-                            onChange={e => setSearch(e.target.value)} 
-                            className="pl-10 pr-10 rounded-full" 
-                            data-testid="mobile-search" 
-                        />
-                        {search && (
-                            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted flex items-center justify-center">
-                                <X className="h-3 w-3" />
-                            </button>
-                        )}
-                    </div>
-                </div>
             </header>
 
-            {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
+            {/* Mobile Search Input Below Header */}
+            <div className="md:hidden px-4 pt-10 pb-2">
+                <div className="relative shadow-sm rounded-full overflow-hidden border border-border bg-white">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="O que vai pedir hoje?" 
+                        value={search} 
+                        onChange={e => setSearch(e.target.value)} 
+                        className="pl-10 pr-10 border-0 h-10"
+                    />
+                    {search && (
+                        <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
+                            <X className="h-3 w-3" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Main Content Layout */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 flex flex-col lg:flex-row gap-8">
+                <main className="flex-1 min-w-0">
                 
                 {/* Menu Selector */}
                 {menus.length > 1 && (
-                    <div className="mb-6">
-                        <h2 className="text-sm font-medium text-muted-foreground mb-3">Selecione o Menu</h2>
-                        <div className="flex flex-wrap gap-2">
+                    <div className="mb-3">
+                        <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
                             {menus.map(menu => (
                                 <button key={menu.id} onClick={() => setSelectedMenu(menu.id)}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                                        selectedMenu === menu.id ? "bg-primary text-white shadow-md" : "bg-white border border-border text-foreground hover:border-primary/50"
+                                    className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                                        selectedMenu === menu.id ? "bg-primary text-white shadow-md ring-2 ring-primary/20 ring-offset-2" : "bg-white border border-border text-foreground hover:border-primary/50"
                                     }`}>
                                     {menu.icon && <span>{menu.icon}</span>} {menu.name}
                                 </button>
@@ -932,25 +942,15 @@ export default function MenuPage() {
                     </div>
                 )}
 
-                {/* Breadcrumb */}
-                {currentMenu && (
-                    <div className="mb-6">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                            <span>Cardápio</span> <ChevronRight className="h-4 w-4" /> <span className="font-medium text-foreground">{currentMenu.name}</span>
-                        </div>
-                        {currentMenu.description && <p className="text-muted-foreground">{currentMenu.description}</p>}
-                    </div>
-                )}
-
                 {/* Category Tabs */}
                 {categories.length > 0 ? (
-                    <div className="mb-8">
-                        <div className="border-b border-border mb-6">
-                            <div className="flex gap-1 overflow-x-auto pb-0 scrollbar-hide">
+                    <div className="mb-6">
+                        <div className="sticky top-24 z-30 bg-white/95 backdrop-blur-md border-b border-border pt-3 pb-0 mb-6 shadow-sm -mx-4 px-4 sm:mx-0 sm:px-0">
+                            <div className="flex gap-2 overflow-x-auto pb-0 scrollbar-hide">
                                 {categories.map(category => (
                                     <button key={category.id} onClick={() => setSelectedCategory(category.id)}
-                                        className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
-                                            selectedCategory === category.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                                        className={`flex-shrink-0 px-4 py-3 text-[15px] font-semibold border-b-2 transition-all whitespace-nowrap ${
+                                            selectedCategory === category.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                                         }`}>
                                         {category.name}
                                     </button>
@@ -968,15 +968,19 @@ export default function MenuPage() {
 
                         {/* Category Header */}
                         {currentCategory && (
-                            <div className="mb-6">
-                                <h2 className="text-2xl font-bold font-heading text-foreground">{currentCategory.name}</h2>
-                                {currentCategory.description && <p className="text-muted-foreground mt-1">{currentCategory.description}</p>}
+                            <div className="mb-5 mt-2">
+                                <h2 className="text-2xl font-bold font-heading text-foreground tracking-tight">{currentCategory.name}</h2>
+                                {currentCategory.description && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{currentCategory.description}</p>}
                             </div>
                         )}
 
-                        {/* Products Grid with Skeleton */}
-                        {filteredProducts.length > 0 ? (
-                            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {/* Products Grid */}
+                        {isProductLoading ? (
+                            <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
+                                {Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}
+                            </div>
+                        ) : filteredProducts.length > 0 ? (
+                            <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
                                 {filteredProducts.map(product => (
                                     <ProductCard key={product.id} product={product} onClick={setSelectedProduct} backendUrl={BACKEND_URL} />
                                 ))}
@@ -997,22 +1001,54 @@ export default function MenuPage() {
                         <p className="text-muted-foreground">Este menu ainda não possui categorias cadastradas</p>
                     </div>
                 )}
+                </main>
+
+                {/* Desktop Cart Sidebar */}
+                <aside className="hidden lg:block w-80 flex-shrink-0">
+                    <div className="sticky top-28 bg-white rounded-2xl border border-border shadow-lg overflow-hidden flex flex-col">
+                        <div className="bg-white border-b border-border/60 p-5 text-center">
+                            <h2 className="font-heading font-extrabold text-xl text-primary flex items-center justify-center gap-2">
+                                <ShoppingCart className="h-5 w-5 text-primary" /> Seu Pedido
+                            </h2>
+                        </div>
+                        <div className="p-5 max-h-[calc(100vh-250px)] overflow-auto bg-zinc-50/50">
+                            <CartContent items={items} removeItem={removeItem} updateQuantity={updateQuantity} total={total} itemCount={itemCount} onCheckout={() => navigate("/checkout")} />
+                        </div>
+                    </div>
+                </aside>
             </div>
 
-            {/* Sticky Cart Button (Mobile) */}
-            {itemCount > 0 && (
-                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border p-3 shadow-lg">
-                    <Button onClick={() => navigate("/checkout")} 
-                        className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-4 text-base font-semibold flex items-center justify-between px-6"
-                        data-testid="mobile-checkout-btn">
-                        <span className="flex items-center gap-2">
-                            <ShoppingCart className="h-5 w-5" />
-                            Ver Carrinho ({itemCount})
+            {/* Mobile Bottom Navigation */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border flex items-center justify-around pb-2 pt-2 px-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+                <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex flex-col items-center p-2 text-primary">
+                    <Store className="h-5 w-5 mb-1" />
+                    <span className="text-[10px] font-medium">Cardápio</span>
+                </button>
+                <button onClick={() => { document.querySelector('[data-testid="mobile-search"]')?.focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex flex-col items-center p-2 text-muted-foreground hover:text-primary transition-colors">
+                    <Search className="h-5 w-5 mb-1" />
+                    <span className="text-[10px] font-medium">Busca</span>
+                </button>
+                <button onClick={() => navigate("/checkout")} className="flex flex-col items-center p-2 text-muted-foreground hover:text-primary transition-colors relative">
+                    <ShoppingCart className="h-5 w-5 mb-1" />
+                    {itemCount > 0 && (
+                        <span className="absolute top-1 right-2 bg-accent text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold shadow-sm">
+                            {itemCount}
                         </span>
-                        <span>R$ {total.toFixed(2)}</span>
-                    </Button>
-                </div>
-            )}
+                    )}
+                    <span className="text-[10px] font-medium">Pedido</span>
+                </button>
+                {isLoggedIn ? (
+                    <button onClick={() => navigate("/historico")} className="flex flex-col items-center p-2 text-muted-foreground hover:text-primary transition-colors">
+                        <User className="h-5 w-5 mb-1" />
+                        <span className="text-[10px] font-medium">Perfil</span>
+                    </button>
+                ) : (
+                    <button onClick={() => setLoginModalOpen(true)} className="flex flex-col items-center p-2 text-muted-foreground hover:text-primary transition-colors">
+                        <User className="h-5 w-5 mb-1" />
+                        <span className="text-[10px] font-medium">Entrar</span>
+                    </button>
+                )}
+            </div>
 
             {/* Product Detail Modal */}
             <ProductDetailModal product={selectedProduct} open={!!selectedProduct} onClose={() => setSelectedProduct(null)} onAdd={handleAddItem} storeOpen={storeOpen} />

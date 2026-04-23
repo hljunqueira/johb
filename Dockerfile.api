@@ -1,5 +1,4 @@
-# Dockerfile simplificado para Railway - Backend API
-# Cache bust: 2026-03-05-api-48
+# Dockerfile para Backend API - VPS
 
 FROM python:3.10-slim
 
@@ -20,8 +19,8 @@ COPY backend/ .
 # Create uploads directory
 RUN mkdir -p uploads
 
-# Expose port (Railway will override with $PORT)
-EXPOSE 8000
+# Expose port
+EXPOSE 8001
 
-# Usamos a variável $PORT do Railway, com fallback para 8000
-CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers
+# Comando para iniciar o servidor
+CMD uvicorn server:app --host 0.0.0.0 --port 8001 --proxy-headers

@@ -17,57 +17,57 @@ h1, h2, h3, h4, h5, h6 {
 
 @layer base {
     :root {
-        --background: 43 37% 96%;
-        --foreground: 138 13% 20%;
-        --card: 0 0% 100%;
-        --card-foreground: 138 13% 20%;
+        --background: 210 20% 98%;      /* #F9FAFB */
+        --foreground: 267 15% 15%;      /* Dark Purple/Grey */
+        --card: 0 0% 100%;              /* #FFFFFF */
+        --card-foreground: 267 15% 15%;   
         --popover: 0 0% 100%;
-        --popover-foreground: 138 13% 20%;
-        --primary: 148 50% 33%;
+        --popover-foreground: 267 15% 15%;
+        --primary: 267 75% 31%;         /* Roxo #4A148C */
         --primary-foreground: 0 0% 100%;
-        --secondary: 132 29% 31%;
-        --secondary-foreground: 0 0% 100%;
-        --muted: 40 29% 93%;
-        --muted-foreground: 136 8% 39%;
-        --accent: 20 86% 66%;
+        --secondary: 45 100% 58%;       /* Amarelo #FFCA28 */
+        --secondary-foreground: 267 80% 15%;
+        --muted: 267 10% 94%;
+        --muted-foreground: 267 5% 45%;
+        --accent: 160 84% 39%;          /* Verde Folha #10B981 */
         --accent-foreground: 0 0% 100%;
-        --destructive: 1 76% 55%;
+        --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
-        --border: 43 23% 87%;
-        --input: 43 23% 87%;
-        --ring: 148 50% 33%;
-        --chart-1: 148 50% 33%;
-        --chart-2: 20 86% 66%;
-        --chart-3: 132 29% 31%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 1 76% 55%;
+        --border: 267 10% 90%;
+        --input: 267 10% 90%;
+        --ring: 267 75% 31%;
+        --chart-1: 267 75% 31%;
+        --chart-2: 45 100% 58%;
+        --chart-3: 160 84% 39%;
+        --chart-4: 267 40% 60%;
+        --chart-5: 0 84% 60%;
         --radius: 0.75rem;
     }
     .dark {
-        --background: 148 10% 11%;
-        --foreground: 140 12% 92%;
-        --card: 140 8% 15%;
-        --card-foreground: 140 12% 92%;
-        --popover: 140 8% 15%;
-        --popover-foreground: 140 12% 92%;
-        --primary: 148 50% 45%;
+        --background: 267 50% 10%;
+        --foreground: 267 20% 90%;
+        --card: 267 40% 15%;
+        --card-foreground: 267 20% 90%;
+        --popover: 267 40% 15%;
+        --popover-foreground: 267 20% 90%;
+        --primary: 267 75% 55%;         /* Roxo mais claro p/ dark */
         --primary-foreground: 0 0% 100%;
-        --secondary: 140 8% 22%;
-        --secondary-foreground: 140 12% 92%;
-        --muted: 140 8% 22%;
-        --muted-foreground: 140 8% 55%;
-        --accent: 20 86% 66%;
+        --secondary: 45 100% 58%;
+        --secondary-foreground: 267 80% 15%;
+        --muted: 267 20% 20%;
+        --muted-foreground: 267 10% 65%;
+        --accent: 160 84% 45%;
         --accent-foreground: 0 0% 100%;
-        --destructive: 1 62% 40%;
+        --destructive: 0 62% 40%;
         --destructive-foreground: 0 0% 100%;
-        --border: 140 8% 25%;
-        --input: 140 8% 25%;
-        --ring: 148 50% 45%;
-        --chart-1: 148 50% 45%;
-        --chart-2: 20 86% 66%;
-        --chart-3: 132 29% 40%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 1 62% 40%;
+        --border: 267 20% 25%;
+        --input: 267 20% 25%;
+        --ring: 267 75% 55%;
+        --chart-1: 267 75% 55%;
+        --chart-2: 45 100% 58%;
+        --chart-3: 160 84% 45%;
+        --chart-4: 267 40% 60%;
+        --chart-5: 0 62% 40%;
     }
 }
 

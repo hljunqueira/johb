@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # ==================== BACKEND API ====================
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: saladasoul_backend
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@saladasoul_db:5432/saladasoul
+      - DB_HOST=saladasoul_db
+      - DB_NAME=saladasoul
+      - DB_USER=postgres
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_PORT=5432
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_SSL=disable
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - saladasoul_network
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  # ==================== DATABASE ====================
+  db:
+    image: postgres:15-alpine
+    container_name: saladasoul_db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saladasoul"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: saladasoul
+    volumes:
+      - saladasoul_postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - saladasoul_network
+
+volumes:
+  saladasoul_postgres_data:
+
+networks:
+  saladasoul_network:
+    name: saladasoul_network
+    driver: bridge

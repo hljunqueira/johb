@@ -12,6 +12,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Railway fornece a variável PORT
-# Não expor porta fixa, usar a variável de ambiente PORT
-CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8001}
+# Comando para iniciar o servidor na porta 8001
+CMD uvicorn server:app --host 0.0.0.0 --port 8001

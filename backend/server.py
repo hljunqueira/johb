@@ -1,5 +1,5 @@
 """
-Servidor completo para Railway - Salada Soul API
+Servidor completo para VPS - Salada Soul API
 """
 import os
 import logging
@@ -186,12 +186,17 @@ async def get_db_pool():
         try:
             logger.info("Connecting to database...")
             dsn = DATABASE_URL
+            ssl_mode = os.environ.get('DB_SSL', 'require')
+            
             if 'sslmode' not in dsn:
-                dsn += "?sslmode=require"
-            logger.info(f"Using DSN: {dsn.split('@')[0]}@****")
+                connector = "&" if "?" in dsn else "?"
+                dsn += f"{connector}sslmode={ssl_mode}"
+            
+            logger.info(f"Using DSN: {dsn.split('@')[0]}@**** (SSL: {ssl_mode})")
+            
             db_pool = await asyncpg.create_pool(
                 dsn,
-                ssl='require',
+                ssl=ssl_mode if ssl_mode not in ['disable', 'prefer'] else None,
                 min_size=1,
                 max_size=5,
                 command_timeout=60,
@@ -1576,6 +1581,44 @@ async def admin_get_customer(customer_id: str, user=Depends(get_current_user)):
         row = await conn.fetchrow("SELECT * FROM customers WHERE id = $1", customer_id)
         if not row:
             raise HTTPException(status_code=404, detail="Customer not found")
+        return dict(row)
+
+
+@app.put("/api/admin/customers/{customer_id}")
+async def admin_update_customer(customer_id: str, request: dict, user=Depends(get_current_user)):
+    """Atualizar dados do cliente (tags, notas, etc)"""
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    async with db_pool.acquire() as conn:
+        # Verificar se cliente existe
+        row = await conn.fetchrow("SELECT * FROM customers WHERE id = $1", customer_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        
+        # Atualizar campos permitidos
+        update_fields = []
+        params = [customer_id]
+        idx = 2
+        
+        if "tags" in request:
+            update_fields.append(f"tags = ${idx}::jsonb")
+            params.append(json.dumps(request["tags"]))
+            idx += 1
+        if "notes" in request:
+            update_fields.append(f"notes = ${idx}")
+            params.append(request["notes"])
+            idx += 1
+        
+        if not update_fields:
+            return dict(row)
+        
+        await conn.execute(
+            f"UPDATE customers SET {', '.join(update_fields)} WHERE id = $1",
+            *params
+        )
+        
+        row = await conn.fetchrow("SELECT * FROM customers WHERE id = $1", customer_id)
         return dict(row)
 
 
