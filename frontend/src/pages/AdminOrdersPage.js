@@ -58,7 +58,7 @@ export default function AdminOrdersPage() {
                 <h1 className="text-2xl font-bold font-heading">Pedidos</h1>
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" onClick={fetchOrders} data-testid="refresh-orders"><RefreshCw className="h-4 w-4" /></Button>
-                    {["", "aguardando", "preparando", "entregue"].map(s => (
+                    {["", "aguardando", "preparando", "entregue", "cancelado"].map(s => (
                         <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => setFilter(s)}
                             className={`rounded-full text-xs ${filter === s ? "bg-primary text-white" : ""}`} data-testid={`filter-${s || "all"}`}>
                             {s ? statusConfig[s]?.label : "Todos"} {s === "" && <span className="ml-1 opacity-60">({orders.length})</span>}
@@ -108,8 +108,8 @@ export default function AdminOrdersPage() {
                                 <div className="flex justify-between items-center mb-3">
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-primary font-heading">R$ {order.total?.toFixed(2)}</span>
-                                        <Badge className={`text-xs rounded-full ${order.payment_status === "pago" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-                                            {order.payment_status === "pago" ? "Pago" : "Pendente"}
+                                        <Badge className={`text-xs rounded-full ${order.payment_status === "pago" ? "bg-green-100 text-green-700" : (order.payment_status === "estornado" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700")}`}>
+                                            {order.payment_status === "pago" ? "Pago" : (order.payment_status === "estornado" ? "Estornado" : "Pendente")}
                                         </Badge>
                                     </div>
                                     <span className="text-xs text-muted-foreground">{order.delivery_type === "entrega" ? "Entrega" : "Retirada"}</span>
@@ -126,7 +126,7 @@ export default function AdminOrdersPage() {
                                             Recusar
                                         </Button>
                                     )}
-                                    {order.payment_status !== "pago" && order.status !== "cancelado" && (
+                                    {order.payment_status !== "pago" && order.status !== "cancelado" && order.payment_status !== "estornado" && (
                                         <Button size="sm" variant="outline" onClick={() => markPaid(order.id)} className="rounded-full" data-testid={`pay-${order.id}`}>
                                             <DollarSign className="h-3 w-3 mr-1" /> Pago
                                         </Button>
@@ -143,6 +143,7 @@ export default function AdminOrdersPage() {
                 onClose={() => setConfirmModal({ isOpen: false, orderId: null })}
                 onConfirm={() => {
                     updateStatus(confirmModal.orderId, "cancelado");
+                    setFilter("cancelado");
                     setConfirmModal({ isOpen: false, orderId: null });
                 }}
                 title="Recusar Pedido"
