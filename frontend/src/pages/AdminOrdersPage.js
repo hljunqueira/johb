@@ -121,33 +121,33 @@ export default function AdminOrdersPage() {
     };
 
     return (
-        <div data-testid="admin-orders-page" className="h-[calc(100vh-64px)] bg-slate-50/50 flex flex-col">
-            <div className="p-4 md:p-8 flex flex-wrap items-center justify-between gap-6">
+        <div data-testid="admin-orders-page" className="h-[calc(100vh-64px)] bg-slate-50/50 flex flex-col overflow-hidden">
+            <div className="p-4 md:px-6 md:py-4 flex items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-800">Monitor de Pedidos</h1>
-                    <p className="text-slate-500 text-sm mt-1">Arraste os cards para gerenciar o fluxo da cozinha.</p>
+                    <h1 className="text-xl md:text-2xl font-black font-heading text-slate-800 leading-tight">Monitor de Pedidos</h1>
+                    <p className="text-slate-400 text-[10px] md:text-xs font-medium uppercase tracking-widest mt-0.5">Gestão de fluxo em tempo real</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={fetchOrders} className="rounded-xl bg-white shadow-sm">
-                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Atualizar
+                <Button variant="outline" size="sm" onClick={fetchOrders} className="rounded-xl bg-white shadow-sm h-9">
+                    <RefreshCw className={`h-3.5 w-3.5 mr-2 ${loading ? "animate-spin" : ""}`} /> <span className="hidden sm:inline">Atualizar</span>
                 </Button>
             </div>
 
-            <div className="flex-1 overflow-x-auto pb-8 px-4 md:px-8">
+            <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 px-4 md:px-6 custom-scrollbar">
                 <DragDropContext onDragEnd={onDragEnd}>
-                    <div className="flex gap-6 h-full min-w-max">
+                    <div className="flex gap-4 h-full min-w-max pb-2">
                         {KANBAN_COLUMNS.map((colId) => {
                             const config = statusConfig[colId];
                             const orders = columns[colId] || [];
                             return (
-                                <div key={colId} className="w-80 flex flex-col h-full bg-slate-100/50 rounded-[2rem] border border-slate-200/60 p-4">
-                                    <div className="flex items-center justify-between mb-4 px-2">
+                                <div key={colId} className="w-[260px] md:w-[280px] flex flex-col h-full bg-slate-200/40 rounded-[2rem] border border-slate-200/60 p-3">
+                                    <div className="flex items-center justify-between mb-3 px-2">
                                         <div className="flex items-center gap-2">
-                                            <div className={`p-1.5 rounded-xl ${config.color}`}>
-                                                <config.icon className="h-4 w-4" />
+                                            <div className={`p-1 rounded-lg ${config.color}`}>
+                                                <config.icon className="h-3.5 w-3.5" />
                                             </div>
-                                            <h3 className="font-bold text-slate-700">{config.label}</h3>
+                                            <h3 className="font-bold text-slate-700 text-sm">{config.label}</h3>
                                         </div>
-                                        <Badge variant="secondary" className="rounded-full bg-white text-slate-400 border-slate-200">
+                                        <Badge variant="secondary" className="rounded-full bg-white text-slate-400 border-slate-200 text-[10px] px-1.5 py-0">
                                             {orders.length}
                                         </Badge>
                                     </div>
@@ -157,8 +157,8 @@ export default function AdminOrdersPage() {
                                             <div
                                                 {...provided.droppableProps}
                                                 ref={provided.innerRef}
-                                                className={`flex-1 overflow-y-auto space-y-4 rounded-2xl transition-colors min-h-[200px] p-1 ${
-                                                    snapshot.isDraggingOver ? "bg-slate-200/30" : ""
+                                                className={`flex-1 overflow-y-auto space-y-3 rounded-2xl transition-colors min-h-[200px] p-1 custom-scrollbar ${
+                                                    snapshot.isDraggingOver ? "bg-slate-300/20" : ""
                                                 }`}
                                             >
                                                 {orders.map((order, index) => (
@@ -168,34 +168,34 @@ export default function AdminOrdersPage() {
                                                                 ref={provided.innerRef}
                                                                 {...provided.draggableProps}
                                                                 {...provided.dragHandleProps}
-                                                                className={`bg-white rounded-3xl border-2 p-5 shadow-sm transition-all ${
-                                                                    snapshot.isDragging ? "shadow-2xl ring-2 ring-primary border-primary rotate-2 scale-105" : "hover:border-slate-300"
+                                                                className={`bg-white rounded-[1.5rem] border-2 p-3.5 shadow-sm transition-all ${
+                                                                    snapshot.isDragging ? "shadow-2xl ring-2 ring-primary border-primary rotate-1 scale-105" : "hover:border-slate-300"
                                                                 } ${isDelayed(order) ? "border-red-200 bg-red-50/30" : "border-slate-100"}`}
                                                             >
-                                                                <div className="flex justify-between items-start mb-3">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <GripVertical className="h-4 w-4 text-slate-300" />
-                                                                        <span className="text-lg font-black font-heading text-slate-900">#{order.order_number}</span>
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <GripVertical className="h-3 w-3 text-slate-300" />
+                                                                        <span className="text-sm font-black font-heading text-slate-900">#{order.order_number}</span>
                                                                     </div>
                                                                     <DropdownMenu>
                                                                         <DropdownMenuTrigger asChild>
-                                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
-                                                                                <MoreVertical className="h-4 w-4 text-slate-400" />
+                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg">
+                                                                                <MoreVertical className="h-3.5 w-3.5 text-slate-400" />
                                                                             </Button>
                                                                         </DropdownMenuTrigger>
                                                                         <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-slate-100">
-                                                                            <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1.5">Pagamento</DropdownMenuLabel>
+                                                                            <DropdownMenuLabel className="text-[9px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1.5">Pagamento</DropdownMenuLabel>
                                                                             <DropdownMenuItem 
                                                                                 disabled={order.payment_status === "pago"}
                                                                                 onClick={() => markPaid(order.id)}
-                                                                                className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-medium focus:bg-emerald-50 text-emerald-600 cursor-pointer"
+                                                                                className="flex items-center gap-2 rounded-xl px-2 py-2 text-xs font-medium focus:bg-emerald-50 text-emerald-600 cursor-pointer"
                                                                             >
                                                                                 <DollarSign className="h-3 w-3" /> Marcar como Pago
                                                                             </DropdownMenuItem>
                                                                             <DropdownMenuSeparator className="my-1 mx-2 bg-slate-100" />
                                                                             <DropdownMenuItem 
                                                                                 onClick={() => setConfirmModal({ isOpen: true, orderId: order.id })}
-                                                                                className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-medium focus:bg-red-50 text-red-600 cursor-pointer"
+                                                                                className="flex items-center gap-2 rounded-xl px-2 py-2 text-xs font-medium focus:bg-red-50 text-red-600 cursor-pointer"
                                                                             >
                                                                                 <XCircle className="h-3 w-3" /> Recusar Pedido
                                                                             </DropdownMenuItem>
@@ -203,27 +203,27 @@ export default function AdminOrdersPage() {
                                                                     </DropdownMenu>
                                                                 </div>
 
-                                                                <div className="mb-4">
-                                                                    <p className="font-bold text-slate-700 text-sm truncate">{order.customer_name}</p>
-                                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase mt-0.5">
-                                                                        <Clock className="h-3 w-3" />
+                                                                <div className="mb-3">
+                                                                    <p className="font-bold text-slate-700 text-xs truncate uppercase tracking-tighter">{order.customer_name}</p>
+                                                                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 mt-0.5">
+                                                                        <Clock className="h-2.5 w-2.5" />
                                                                         {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                                                                     </div>
                                                                 </div>
 
-                                                                <div className="space-y-1.5 mb-4 max-h-32 overflow-y-auto pr-1">
+                                                                <div className="space-y-1 mb-3 max-h-24 overflow-y-auto pr-1">
                                                                     {(Array.isArray(order.items) ? order.items : []).map((item, i) => (
-                                                                        <div key={i} className="text-xs flex justify-between">
-                                                                            <span className="text-slate-600 font-medium">
+                                                                        <div key={i} className="text-[10px] flex justify-between leading-tight">
+                                                                            <span className="text-slate-500 font-medium line-clamp-1">
                                                                                 <span className="text-primary font-bold mr-1">{item.quantity}x</span> {item.product_name}
                                                                             </span>
                                                                         </div>
                                                                     ))}
                                                                 </div>
 
-                                                                <div className="flex justify-between items-center pt-3 border-t border-slate-100">
-                                                                    <span className="text-lg font-black text-primary font-heading leading-none">R$ {order.total?.toFixed(2)}</span>
-                                                                    <Badge className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border-none ${
+                                                                <div className="flex justify-between items-center pt-2.5 border-t border-slate-50">
+                                                                    <span className="text-sm font-black text-primary font-heading leading-none">R$ {order.total?.toFixed(2)}</span>
+                                                                    <Badge className={`px-1.5 py-0 rounded text-[8px] font-black uppercase tracking-widest border-none ${
                                                                         order.payment_status === "pago" ? "bg-emerald-500 text-white" : "bg-amber-400 text-white"
                                                                     }`}>
                                                                         {order.payment_status === "pago" ? "PAGO" : "PENDENTE"}
