@@ -1608,40 +1608,63 @@ async def admin_get_customer(customer_id: str, user=Depends(get_current_user)):
 
 @app.put("/api/admin/customers/{customer_id}")
 async def admin_update_customer(customer_id: str, request: dict, user=Depends(get_current_user)):
-    """Atualizar dados do cliente (tags, notas, etc)"""
+    """Atualizar dados do cliente"""
     if not db_pool:
         raise HTTPException(status_code=500, detail="Database not available")
 
     async with db_pool.acquire() as conn:
-        # Verificar se cliente existe
         row = await conn.fetchrow("SELECT * FROM customers WHERE id = $1", customer_id)
         if not row:
             raise HTTPException(status_code=404, detail="Customer not found")
         
-        # Atualizar campos permitidos
         update_fields = []
         params = [customer_id]
         idx = 2
         
-        if "tags" in request:
-            update_fields.append(f"tags = ${idx}::jsonb")
-            params.append(json.dumps(request["tags"]))
-            idx += 1
-        if "notes" in request:
-            update_fields.append(f"notes = ${idx}")
-            params.append(request["notes"])
-            idx += 1
+        fields = {
+            "name": "name",
+            "phone": "phone",
+            "address": "address",
+            "internal_note": "internal_note",
+            "tags": "tags"
+        }
+
+        for req_field, db_field in fields.items():
+            if req_field in request:
+                if req_field == "tags":
+                    update_fields.append(f"{db_field} = ${idx}")
+                    params.append(request[req_field]) # asyncpg handles list -> text[]
+                else:
+                    update_fields.append(f"{db_field} = ${idx}")
+                    params.append(request[req_field])
+                idx += 1
         
         if not update_fields:
             return dict(row)
         
-        await conn.execute(
-            f"UPDATE customers SET {', '.join(update_fields)} WHERE id = $1",
-            *params
-        )
+        try:
+            await conn.execute(
+                f"UPDATE customers SET {', '.join(update_fields)} WHERE id = $1",
+                *params
+            )
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
         
         row = await conn.fetchrow("SELECT * FROM customers WHERE id = $1", customer_id)
         return dict(row)
+
+
+@app.delete("/api/admin/customers/{customer_id}")
+async def admin_delete_customer(customer_id: str, user=Depends(get_current_user)):
+    """Excluir cliente"""
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    async with db_pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM customers WHERE id = $1", customer_id)
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Customer not found")
+        return {"success": True}
 
 
 # ============================================
