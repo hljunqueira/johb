@@ -88,7 +88,7 @@ export default function AdminOrdersPage() {
                                 </div>
 
                                 <div className="space-y-1 mb-3">
-                                    {order.items?.map((item, i) => (
+                                    {(Array.isArray(order.items) ? order.items : []).map((item, i) => (
                                         <div key={i} className="text-sm flex justify-between">
                                             <span>{item.quantity}x {item.product_name}</span>
                                             {item.observation && <span className="text-xs text-accent font-medium bg-accent/10 px-2 py-0.5 rounded-full ml-1">{item.observation}</span>}

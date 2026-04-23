@@ -950,6 +950,17 @@ async def rate_order(order_id: str, rating: int = Form(...), comment: Optional[s
 # ADMIN - ORDERS
 # ============================================
 
+def serialize_order(row: dict) -> dict:
+    """Garante que campos JSONB sejam retornados como tipos Python"""
+    d = dict(row)
+    items = d.get('items')
+    if isinstance(items, str):
+        try: d['items'] = json.loads(items)
+        except: d['items'] = []
+    elif items is None:
+        d['items'] = []
+    return d
+
 @app.get("/api/admin/orders")
 async def admin_get_orders(status: Optional[str] = None, user=Depends(get_current_user)):
     """Listar pedidos (admin)"""
@@ -964,7 +975,7 @@ async def admin_get_orders(status: Optional[str] = None, user=Depends(get_curren
             params.append(status)
         query += " ORDER BY created_at DESC LIMIT 100"
         rows = await conn.fetch(query, *params)
-        return [dict(r) for r in rows]
+        return [serialize_order(r) for r in rows]
 
 
 @app.put("/api/admin/orders/{order_id}/status")
