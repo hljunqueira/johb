@@ -989,10 +989,17 @@ async def admin_update_order_status(order_id: str, request: UpdateOrderStatusReq
         raise HTTPException(status_code=400, detail=f"Invalid status. Valid: {valid_statuses}")
 
     async with db_pool.acquire() as conn:
-        await conn.execute(
-            "UPDATE orders SET status = $1 WHERE id = $2",
-            request.status, order_id
-        )
+        if request.status == 'cancelado':
+            # Placeholder para integração futura com API da InfinitePay
+            await conn.execute(
+                "UPDATE orders SET status = $1, payment_status = 'estornado' WHERE id = $2",
+                request.status, order_id
+            )
+        else:
+            await conn.execute(
+                "UPDATE orders SET status = $1 WHERE id = $2",
+                request.status, order_id
+            )
         return {"success": True}
 
 

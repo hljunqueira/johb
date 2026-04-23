@@ -12,6 +12,7 @@ const statusConfig = {
     aguardando: { label: "Aguardando", color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock, next: "preparando" },
     preparando: { label: "Preparando", color: "bg-blue-100 text-blue-800 border-blue-200", icon: Package, next: "entregue" },
     entregue: { label: "Entregue", color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle, next: null },
+    cancelado: { label: "Cancelado", color: "bg-red-100 text-red-800 border-red-200", icon: CheckCircle, next: null },
 };
 
 export default function AdminOrdersPage() {
@@ -118,7 +119,16 @@ export default function AdminOrdersPage() {
                                             {sc.next === "preparando" ? "Preparar" : "Marcar Entregue"}
                                         </Button>
                                     )}
-                                    {order.payment_status !== "pago" && (
+                                    {order.status !== "entregue" && order.status !== "cancelado" && (
+                                        <Button size="sm" variant="ghost" onClick={() => {
+                                            if(window.confirm("Deseja realmente recusar este pedido? O estorno será processado.")) {
+                                                updateStatus(order.id, "cancelado");
+                                            }
+                                        }} className="text-destructive hover:text-destructive hover:bg-red-50 rounded-full" data-testid={`cancel-${order.id}`}>
+                                            Recusar
+                                        </Button>
+                                    )}
+                                    {order.payment_status !== "pago" && order.status !== "cancelado" && (
                                         <Button size="sm" variant="outline" onClick={() => markPaid(order.id)} className="rounded-full" data-testid={`pay-${order.id}`}>
                                             <DollarSign className="h-3 w-3 mr-1" /> Pago
                                         </Button>
