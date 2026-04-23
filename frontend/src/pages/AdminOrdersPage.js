@@ -1,15 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { 
     Clock, Package, CheckCircle2, DollarSign, RefreshCw, 
-    ThumbsUp, Timer, Truck, XCircle, CircleEllipsis 
+    ThumbsUp, Timer, Truck, XCircle, CircleEllipsis,
+    MoreVertical, ChevronRight, GripVertical
 } from "lucide-react";
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+    DropdownMenuLabel
+} from "@/components/ui/dropdown-menu";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 
@@ -17,74 +26,91 @@ const statusConfig = {
     aguardando: { 
         label: "Pendente", 
         color: "text-amber-500 bg-amber-50 border-amber-200", 
-        activeColor: "bg-amber-100 border-amber-400",
         icon: CircleEllipsis, 
-        next: "confirmado" 
     },
     confirmado: { 
         label: "Aceito", 
         color: "text-purple-500 bg-purple-50 border-purple-200", 
-        activeColor: "bg-purple-100 border-purple-400",
         icon: ThumbsUp, 
-        next: "preparando" 
     },
     preparando: { 
         label: "Preparo", 
         color: "text-orange-500 bg-orange-50 border-orange-200", 
-        activeColor: "bg-orange-100 border-orange-400",
         icon: Timer, 
-        next: "saiu_entrega" 
     },
     saiu_entrega: { 
         label: "Entrega", 
         color: "text-blue-500 bg-blue-50 border-blue-200", 
-        activeColor: "bg-blue-100 border-blue-400",
         icon: Truck, 
-        next: "entregue" 
     },
     entregue: { 
         label: "Concluído", 
         color: "text-emerald-500 bg-emerald-50 border-emerald-200", 
-        activeColor: "bg-emerald-100 border-emerald-400",
         icon: CheckCircle2, 
-        next: null 
-    },
-    cancelado: { 
-        label: "Cancelado", 
-        color: "text-red-500 bg-red-50 border-red-200", 
-        activeColor: "bg-red-100 border-red-400",
-        icon: XCircle, 
-        next: null 
     },
 };
 
+const KANBAN_COLUMNS = ['aguardando', 'confirmado', 'preparando', 'saiu_entrega', 'entregue'];
+
 export default function AdminOrdersPage() {
-    const [orders, setOrders] = useState([]);
-    const [filter, setFilter] = useState("");
+    const [columns, setColumns] = useState({});
     const [loading, setLoading] = useState(true);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
     const { token } = useAuth();
     const headers = { Authorization: `Bearer ${token}` };
 
-    const fetchOrders = async () => {
+    const fetchOrders = useCallback(async () => {
         try {
-            const params = filter ? `?status=${filter}` : "";
-            const res = await axios.get(`${API}/admin/orders${params}`, { headers });
-            setOrders(res.data);
+            const res = await axios.get(`${API}/admin/orders`, { headers });
+            const allOrders = res.data;
+            
+            const grouped = KANBAN_COLUMNS.reduce((acc, status) => {
+                acc[status] = allOrders.filter(o => o.status === status);
+                return acc;
+            }, {});
+            
+            // Adiciona cancelados em uma aba separada se necessário, mas no Kanban focamos no fluxo ativo
+            setColumns(grouped);
         } catch { toast.error("Erro ao carregar pedidos"); }
         finally { setLoading(false); }
-    };
+    }, [token]);
 
-    useEffect(() => { fetchOrders(); const i = setInterval(fetchOrders, 10000); return () => clearInterval(i); }, [filter]); // eslint-disable-line
+    useEffect(() => { fetchOrders(); const i = setInterval(fetchOrders, 10000); return () => clearInterval(i); }, [fetchOrders]);
 
     const updateStatus = async (orderId, status) => {
-        try { await axios.put(`${API}/admin/orders/${orderId}/status`, { status }, { headers }); toast.success("Status atualizado"); fetchOrders(); }
-        catch { toast.error("Erro ao atualizar status"); }
+        try { 
+            await axios.put(`${API}/admin/orders/${orderId}/status`, { status }, { headers }); 
+            toast.success(`Pedido movido para ${statusConfig[status]?.label || status}`);
+            fetchOrders(); 
+        } catch { toast.error("Erro ao atualizar status"); }
     };
 
     const markPaid = async (orderId) => {
         try { await axios.put(`${API}/admin/orders/${orderId}/payment`, {}, { headers }); toast.success("Pagamento confirmado"); fetchOrders(); }
         catch { toast.error("Erro ao marcar pagamento"); }
+    };
+
+    const onDragEnd = (result) => {
+        const { source, destination, draggableId } = result;
+        if (!destination) return;
+        if (source.droppableId === destination.droppableId) return;
+
+        const orderId = draggableId;
+        const newStatus = destination.droppableId;
+        
+        // Update local state for immediate feedback
+        const sourceOrders = Array.from(columns[source.droppableId]);
+        const destOrders = Array.from(columns[destination.droppableId]);
+        const [movedOrder] = sourceOrders.splice(source.index, 1);
+        destOrders.splice(destination.index, 0, { ...movedOrder, status: newStatus });
+        
+        setColumns({
+            ...columns,
+            [source.droppableId]: sourceOrders,
+            [destination.droppableId]: destOrders
+        });
+
+        updateStatus(orderId, newStatus);
     };
 
     const isDelayed = (order) => {
@@ -95,208 +121,141 @@ export default function AdminOrdersPage() {
     };
 
     return (
-        <div data-testid="admin-orders-page" className="min-h-screen bg-slate-50/50 p-4 md:p-8">
-            <div className="max-w-7xl mx-auto">
-                <div className="flex flex-wrap items-center justify-between gap-6 mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold font-heading text-slate-800">Pedidos</h1>
-                        <p className="text-slate-500 text-sm mt-1">Gerencie e acompanhe os pedidos em tempo real.</p>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={fetchOrders} 
-                            className="rounded-xl hover:bg-slate-100"
-                            data-testid="refresh-orders"
-                        >
-                            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                        </Button>
-                        
-                        {Object.entries(statusConfig).map(([key, config]) => {
-                            const Icon = config.icon;
-                            const isActive = filter === key;
-                            return (
-                                <button 
-                                    key={key}
-                                    onClick={() => setFilter(key)}
-                                    className={`flex items-center gap-2 px-4 py-2 h-10 rounded-xl border transition-all duration-200 text-sm font-medium ${
-                                        isActive 
-                                        ? `${config.activeColor} shadow-sm translate-y-[-1px]` 
-                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                                    }`}
-                                >
-                                    <div className={`p-1 rounded-full ${isActive ? "bg-white" : "bg-slate-100"}`}>
-                                        <Icon className={`h-4 w-4 ${isActive ? config.color.split(' ')[0] : "text-slate-400"}`} />
-                                    </div>
-                                    {config.label}
-                                </button>
-                            );
-                        })}
-
-                        <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => setFilter("")}
-                            className={`rounded-xl px-4 py-2 h-10 text-sm font-medium transition-all ${filter === "" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"}`}
-                        >
-                            Todos ({orders.length})
-                        </Button>
-                    </div>
+        <div data-testid="admin-orders-page" className="h-[calc(100vh-64px)] bg-slate-50/50 flex flex-col">
+            <div className="p-4 md:p-8 flex flex-wrap items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-3xl font-bold font-heading text-slate-800">Monitor de Pedidos</h1>
+                    <p className="text-slate-500 text-sm mt-1">Arraste os cards para gerenciar o fluxo da cozinha.</p>
                 </div>
+                <Button variant="outline" size="sm" onClick={fetchOrders} className="rounded-xl bg-white shadow-sm">
+                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Atualizar
+                </Button>
+            </div>
 
-                {loading && orders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4" />
-                        <p className="text-slate-500 animate-pulse">Buscando novos pedidos...</p>
-                    </div>
-                ) : orders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in duration-500 text-center">
-                        <h3 className="text-2xl font-bold font-heading text-slate-800">Tudo limpo por aqui!</h3>
-                        <p className="text-slate-500 mt-2">Aguardando os novos pedidos.</p>
-                        <Button 
-                            variant="outline" 
-                            className="mt-6 rounded-full border-slate-200" 
-                            onClick={fetchOrders}
-                        >
-                            Atualizar Agora
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                        {orders.map(order => {
-                            const sc = statusConfig[order.status] || statusConfig.aguardando;
-                            const Icon = sc.icon;
-                            const delayed = isDelayed(order);
+            <div className="flex-1 overflow-x-auto pb-8 px-4 md:px-8">
+                <DragDropContext onDragEnd={onDragEnd}>
+                    <div className="flex gap-6 h-full min-w-max">
+                        {KANBAN_COLUMNS.map((colId) => {
+                            const config = statusConfig[colId];
+                            const orders = columns[colId] || [];
                             return (
-                                <div 
-                                    key={order.id} 
-                                    className={`bg-white rounded-[2rem] border-2 p-6 transition-all duration-300 hover:shadow-xl hover:translate-y-[-4px] ${
-                                        delayed ? "border-red-200 shadow-lg shadow-red-50" : "border-slate-100 shadow-sm"
-                                    }`} 
-                                    data-testid={`admin-order-${order.id}`}
-                                >
-                                    <div className="flex justify-between items-start mb-5">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-2xl font-black font-heading text-slate-900">#{order.order_number}</span>
-                                                {delayed && <Badge className="bg-red-500 text-white border-none rounded-full px-3 py-0.5 animate-pulse">ATRASADO</Badge>}
+                                <div key={colId} className="w-80 flex flex-col h-full bg-slate-100/50 rounded-[2rem] border border-slate-200/60 p-4">
+                                    <div className="flex items-center justify-between mb-4 px-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`p-1.5 rounded-xl ${config.color}`}>
+                                                <config.icon className="h-4 w-4" />
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-slate-700 text-sm">{order.customer_name}</span>
-                                                <span className="text-xs text-slate-400 font-medium">{order.customer_phone}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">
-                                                <Clock className="h-3 w-3" />
-                                                {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                            </div>
+                                            <h3 className="font-bold text-slate-700">{config.label}</h3>
                                         </div>
-                                        <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl border text-xs font-bold uppercase tracking-widest ${sc.color}`}>
-                                            <Icon className="h-3.5 w-3.5" />
-                                            {sc.label}
-                                        </div>
+                                        <Badge variant="secondary" className="rounded-full bg-white text-slate-400 border-slate-200">
+                                            {orders.length}
+                                        </Badge>
                                     </div>
 
-                                    <div className="space-y-3 mb-6 bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
-                                        {(Array.isArray(order.items) ? order.items : []).map((item, i) => (
-                                            <div key={i} className="text-sm flex flex-col gap-1">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-bold text-slate-700">
-                                                        <span className="text-primary mr-2">{item.quantity}x</span> 
-                                                        {item.product_name}
-                                                    </span>
-                                                    <span className="text-xs font-bold text-slate-400">R$ {(item.price * item.quantity).toFixed(2)}</span>
-                                                </div>
-                                                {item.observation && (
-                                                    <div className="text-[11px] italic text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">
-                                                        "{item.observation}"
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                        
-                                        {order.observation && (
-                                            <div className="mt-2 pt-2 border-t border-slate-200">
-                                                <p className="text-[11px] text-slate-500 font-medium">
-                                                    <span className="text-slate-400 uppercase tracking-tighter mr-1">Observação do pedido:</span>
-                                                    {order.observation}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <Droppable droppableId={colId}>
+                                        {(provided, snapshot) => (
+                                            <div
+                                                {...provided.droppableProps}
+                                                ref={provided.innerRef}
+                                                className={`flex-1 overflow-y-auto space-y-4 rounded-2xl transition-colors min-h-[200px] p-1 ${
+                                                    snapshot.isDraggingOver ? "bg-slate-200/30" : ""
+                                                }`}
+                                            >
+                                                {orders.map((order, index) => (
+                                                    <Draggable key={order.id} draggableId={order.id} index={index}>
+                                                        {(provided, snapshot) => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                {...provided.dragHandleProps}
+                                                                className={`bg-white rounded-3xl border-2 p-5 shadow-sm transition-all ${
+                                                                    snapshot.isDragging ? "shadow-2xl ring-2 ring-primary border-primary rotate-2 scale-105" : "hover:border-slate-300"
+                                                                } ${isDelayed(order) ? "border-red-200 bg-red-50/30" : "border-slate-100"}`}
+                                                            >
+                                                                <div className="flex justify-between items-start mb-3">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <GripVertical className="h-4 w-4 text-slate-300" />
+                                                                        <span className="text-lg font-black font-heading text-slate-900">#{order.order_number}</span>
+                                                                    </div>
+                                                                    <DropdownMenu>
+                                                                        <DropdownMenuTrigger asChild>
+                                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
+                                                                                <MoreVertical className="h-4 w-4 text-slate-400" />
+                                                                            </Button>
+                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-slate-100">
+                                                                            <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1.5">Pagamento</DropdownMenuLabel>
+                                                                            <DropdownMenuItem 
+                                                                                disabled={order.payment_status === "pago"}
+                                                                                onClick={() => markPaid(order.id)}
+                                                                                className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-medium focus:bg-emerald-50 text-emerald-600 cursor-pointer"
+                                                                            >
+                                                                                <DollarSign className="h-3 w-3" /> Marcar como Pago
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuSeparator className="my-1 mx-2 bg-slate-100" />
+                                                                            <DropdownMenuItem 
+                                                                                onClick={() => setConfirmModal({ isOpen: true, orderId: order.id })}
+                                                                                className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-medium focus:bg-red-50 text-red-600 cursor-pointer"
+                                                                            >
+                                                                                <XCircle className="h-3 w-3" /> Recusar Pedido
+                                                                            </DropdownMenuItem>
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
+                                                                </div>
 
-                                    <div className="flex justify-between items-center mb-6 px-1">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Total do Pedido</span>
-                                            <span className="text-2xl font-black text-primary font-heading leading-none">R$ {order.total?.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            <Badge className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border-none ${
-                                                order.payment_status === "pago" ? "bg-emerald-500 text-white shadow-sm shadow-emerald-100" : 
-                                                (order.payment_status === "estornado" ? "bg-red-500 text-white" : "bg-amber-400 text-white shadow-sm shadow-amber-100")
-                                            }`}>
-                                                {order.payment_status === "pago" ? "PAGO" : (order.payment_status === "estornado" ? "ESTORNADO" : "PENDENTE")}
-                                            </Badge>
-                                            <span className={`text-[10px] font-bold uppercase tracking-tighter ${order.delivery_type === "entrega" ? "text-blue-500" : "text-purple-500"}`}>
-                                                {order.delivery_type === "entrega" ? "Motoboy" : "Retirada no Balcão"}
-                                            </span>
-                                        </div>
-                                    </div>
+                                                                <div className="mb-4">
+                                                                    <p className="font-bold text-slate-700 text-sm truncate">{order.customer_name}</p>
+                                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                                                                        <Clock className="h-3 w-3" />
+                                                                        {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                                                    </div>
+                                                                </div>
 
-                                    <div className="flex gap-2">
-                                        {sc.next && (
-                                            <Button 
-                                                onClick={() => updateStatus(order.id, sc.next)} 
-                                                className="flex-1 h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold shadow-lg shadow-slate-200 transition-all hover:scale-[1.02] active:scale-95" 
-                                                data-testid={`advance-${order.id}`}
-                                            >
-                                                {sc.next === "confirmado" ? "Aceitar Pedido" : 
-                                                 sc.next === "preparando" ? "Iniciar Preparo" : 
-                                                 sc.next === "saiu_entrega" ? "Saiu para Entrega" : "Finalizar Pedido"}
-                                            </Button>
+                                                                <div className="space-y-1.5 mb-4 max-h-32 overflow-y-auto pr-1">
+                                                                    {(Array.isArray(order.items) ? order.items : []).map((item, i) => (
+                                                                        <div key={i} className="text-xs flex justify-between">
+                                                                            <span className="text-slate-600 font-medium">
+                                                                                <span className="text-primary font-bold mr-1">{item.quantity}x</span> {item.product_name}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+
+                                                                <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+                                                                    <span className="text-lg font-black text-primary font-heading leading-none">R$ {order.total?.toFixed(2)}</span>
+                                                                    <Badge className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border-none ${
+                                                                        order.payment_status === "pago" ? "bg-emerald-500 text-white" : "bg-amber-400 text-white"
+                                                                    }`}>
+                                                                        {order.payment_status === "pago" ? "PAGO" : "PENDENTE"}
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ))}
+                                                {provided.placeholder}
+                                            </div>
                                         )}
-                                        {order.status !== "entregue" && order.status !== "cancelado" && (
-                                            <Button 
-                                                variant="ghost" 
-                                                onClick={() => setConfirmModal({ isOpen: true, orderId: order.id })} 
-                                                className="h-12 w-12 rounded-2xl text-red-500 hover:bg-red-50 border border-transparent hover:border-red-100 transition-all" 
-                                                data-testid={`cancel-${order.id}`}
-                                            >
-                                                <XCircle className="h-6 w-6" />
-                                            </Button>
-                                        )}
-                                        {order.payment_status !== "pago" && order.status !== "cancelado" && order.payment_status !== "estornado" && (
-                                            <Button 
-                                                variant="outline" 
-                                                onClick={() => markPaid(order.id)} 
-                                                className="h-12 px-4 rounded-2xl border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all"
-                                                data-testid={`pay-${order.id}`}
-                                            >
-                                                <DollarSign className="h-5 w-5" />
-                                            </Button>
-                                        )}
-                                    </div>
+                                    </Droppable>
                                 </div>
                             );
                         })}
                     </div>
-                )}
-
-                <ConfirmModal 
-                    isOpen={confirmModal.isOpen} 
-                    onClose={() => setConfirmModal({ isOpen: false, orderId: null })}
-                    onConfirm={() => {
-                        updateStatus(confirmModal.orderId, "cancelado");
-                        setFilter("cancelado");
-                        setConfirmModal({ isOpen: false, orderId: null });
-                    }}
-                    title="Recusar Pedido"
-                    description="Deseja realmente recusar este pedido? O estorno será processado automaticamente."
-                    confirmText="Recusar Pedido"
-                    variant="destructive"
-                />
+                </DragDropContext>
             </div>
+
+            <ConfirmModal 
+                isOpen={confirmModal.isOpen} 
+                onClose={() => setConfirmModal({ isOpen: false, orderId: null })}
+                onConfirm={() => {
+                    updateStatus(confirmModal.orderId, "cancelado");
+                    setConfirmModal({ isOpen: false, orderId: null });
+                }}
+                title="Recusar Pedido"
+                description="Deseja realmente recusar este pedido? O estorno será processado automaticamente."
+                confirmText="Recusar Pedido"
+                variant="destructive"
+            />
         </div>
     );
 }
