@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Clock, Package, CheckCircle, DollarSign, RefreshCw } from "lucide-react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const statusConfig = {
@@ -19,6 +20,7 @@ export default function AdminOrdersPage() {
     const [orders, setOrders] = useState([]);
     const [filter, setFilter] = useState("");
     const [loading, setLoading] = useState(true);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
     const { token } = useAuth();
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -120,11 +122,7 @@ export default function AdminOrdersPage() {
                                         </Button>
                                     )}
                                     {order.status !== "entregue" && order.status !== "cancelado" && (
-                                        <Button size="sm" variant="ghost" onClick={() => {
-                                            if(window.confirm("Deseja realmente recusar este pedido? O estorno será processado.")) {
-                                                updateStatus(order.id, "cancelado");
-                                            }
-                                        }} className="text-destructive hover:text-destructive hover:bg-red-50 rounded-full" data-testid={`cancel-${order.id}`}>
+                                        <Button size="sm" variant="ghost" onClick={() => setConfirmModal({ isOpen: true, orderId: order.id })} className="text-destructive hover:text-destructive hover:bg-red-50 rounded-full" data-testid={`cancel-${order.id}`}>
                                             Recusar
                                         </Button>
                                     )}
@@ -139,6 +137,19 @@ export default function AdminOrdersPage() {
                     })}
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={confirmModal.isOpen} 
+                onClose={() => setConfirmModal({ isOpen: false, orderId: null })}
+                onConfirm={() => {
+                    updateStatus(confirmModal.orderId, "cancelado");
+                    setConfirmModal({ isOpen: false, orderId: null });
+                }}
+                title="Recusar Pedido"
+                description="Deseja realmente recusar este pedido? O estorno será processado automaticamente."
+                confirmText="Recusar Pedido"
+                variant="destructive"
+            />
         </div>
     );
 }

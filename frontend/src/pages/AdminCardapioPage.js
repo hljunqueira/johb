@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Copy, Upload, Package, Layers, Tag, Grid3X3, X, Image, Gift, Search } from "lucide-react";
 import { useMenus } from "@/hooks/useCardapioData";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -23,7 +24,10 @@ export default function AdminCardapioPage() {
     
     // Tab atual
     const [activeTab, setActiveTab] = useState("menus"); // menus, categories, products, optionals, banners, combos
-
+    
+    // Modal de confirmação global para a página
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", description: "", onConfirm: () => {}, variant: "destructive" });
+    
     return (
         <div data-testid="admin-cardapio-page">
             {/* Header com Tabs de Navegação */}
@@ -111,37 +115,50 @@ export default function AdminCardapioPage() {
                     </button>
                 </div>
             </div>
-
+ 
             {/* Conteúdo baseado na tab atual */}
             {activeTab === "menus" && (
-                <MenusTabRefactored headers={headers} />
+                <MenusTabRefactored headers={headers} setConfirmModal={setConfirmModal} />
             )}
             
             {activeTab === "categories" && (
-                <CategoriesTab headers={headers} />
+                <CategoriesTab headers={headers} setConfirmModal={setConfirmModal} />
             )}
             
             {activeTab === "products" && (
-                <ProductsTab headers={headers} />
+                <ProductsTab headers={headers} setConfirmModal={setConfirmModal} />
             )}
             
             {activeTab === "optionals" && (
-                <OptionalsTab headers={headers} />
+                <OptionalsTab headers={headers} setConfirmModal={setConfirmModal} />
             )}
             
             {activeTab === "banners" && (
-                <BannersTab headers={headers} />
+                <BannersTab headers={headers} setConfirmModal={setConfirmModal} />
             )}
             
             {activeTab === "combos" && (
-                <CombosTab headers={headers} />
+                <CombosTab headers={headers} setConfirmModal={setConfirmModal} />
             )}
+
+            <ConfirmModal 
+                isOpen={confirmModal.isOpen} 
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={() => {
+                    confirmModal.onConfirm();
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                }}
+                title={confirmModal.title}
+                description={confirmModal.description}
+                confirmText="Confirmar"
+                variant={confirmModal.variant}
+            />
         </div>
     );
 }
 
 /* ==================== MENUS TAB (REFATORADO) ==================== */
-function MenusTabRefactored({ headers }) {
+function MenusTabRefactored({ headers, setConfirmModal }) {
     const { items: menus, create, update, remove } = useMenus(headers);
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -195,7 +212,12 @@ function MenusTabRefactored({ headers }) {
                             <div><h3 className="font-semibold font-heading">{m.name}</h3><p className="text-xs text-muted-foreground">{m.description}</p></div>
                             <div className="flex gap-1">
                                 <Button size="icon" variant="ghost" onClick={() => handleEdit(m)}><Pencil className="h-4 w-4" /></Button>
-                                <Button size="icon" variant="ghost" className="text-destructive" onClick={() => remove(m.id)}><Trash2 className="h-4 w-4" /></Button>
+                                <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setConfirmModal({
+                                    isOpen: true,
+                                    title: "Excluir Menu",
+                                    description: `Deseja realmente excluir o menu "${m.name}"?`,
+                                    onConfirm: () => remove(m.id)
+                                })}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                         </div>
                         <div className="flex items-center justify-between mt-3">
@@ -220,7 +242,7 @@ function MenusTabRefactored({ headers }) {
 }
 
 /* ==================== CATEGORIES TAB ==================== */
-function CategoriesTab({ headers }) {
+function CategoriesTab({ headers, setConfirmModal }) {
     const [categories, setCategories] = useState([]);
     const [menus, setMenus] = useState([]);
     const [showForm, setShowForm] = useState(false);
@@ -256,11 +278,17 @@ function CategoriesTab({ headers }) {
         }
     };
 
-    const del = async (id) => { 
-        if (!window.confirm("Excluir categoria?")) return; 
-        await axios.delete(`${API}/admin/categories/${id}`, { headers }); 
-        toast.success("Excluida"); 
-        fetchCategories(); 
+    const del = async (id, name) => { 
+        setConfirmModal({
+            isOpen: true,
+            title: "Excluir Categoria",
+            description: `Deseja realmente excluir a categoria "${name}"?`,
+            onConfirm: async () => {
+                await axios.delete(`${API}/admin/categories/${id}`, { headers }); 
+                toast.success("Excluida"); 
+                fetchCategories(); 
+            }
+        });
     };
     
     const edit = (c) => { 
@@ -301,7 +329,7 @@ function CategoriesTab({ headers }) {
                         <div className="flex items-center gap-1">
                             <Switch checked={c.active} onCheckedChange={() => toggleActive(c)} />
                             <Button size="icon" variant="ghost" onClick={() => edit(c)}><Pencil className="h-4 w-4" /></Button>
-                            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => del(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => del(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                     </div>
                 ))}
@@ -336,20 +364,7 @@ function CategoriesTab({ headers }) {
 
 /* ==================== CONFIRM DIALOG ==================== */
 function ConfirmDialog({ open, title, description, onConfirm, onCancel, confirmLabel = "Excluir", danger = true }) {
-    return (
-        <Dialog open={open} onOpenChange={onCancel}>
-            <DialogContent className="max-w-sm rounded-2xl">
-                <DialogHeader>
-                    <DialogTitle className="font-heading">{title}</DialogTitle>
-                </DialogHeader>
-                <p className="text-sm text-muted-foreground">{description}</p>
-                <div className="flex gap-3 mt-4">
-                    <Button variant="outline" className="flex-1 rounded-full" onClick={onCancel}>Cancelar</Button>
-                    <Button className={`flex-1 rounded-full text-white ${danger ? "bg-destructive hover:bg-destructive/90" : "bg-primary"}`} onClick={onConfirm}>{confirmLabel}</Button>
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
+    return null; // Removido para usar ConfirmModal global
 }
 
 /* ==================== SKELETON ==================== */
@@ -367,7 +382,7 @@ function ProductCardSkeleton() {
 }
 
 /* ==================== PRODUCTS TAB ==================== */
-function ProductsTab({ headers }) {
+function ProductsTab({ headers, setConfirmModal }) {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [complements, setComplements] = useState([]);
@@ -455,11 +470,16 @@ function ProductsTab({ headers }) {
         }
     };
 
-    const askDelete = (id) => { setConfirmTarget(id); setConfirmOpen(true); };
-    const confirmDelete = async () => {
-        try { await axios.delete(`${API}/admin/products/${confirmTarget}`, { headers }); toast.success("Produto excluído"); fetchAll(); }
-        catch { toast.error("Erro ao excluir"); }
-        finally { setConfirmOpen(false); setConfirmTarget(null); }
+    const askDelete = (p) => { 
+        setConfirmModal({
+            isOpen: true,
+            title: "Excluir Produto",
+            description: `Deseja realmente excluir o produto "${p.name}"? Esta ação não pode ser desfeita.`,
+            onConfirm: async () => {
+                try { await axios.delete(`${API}/admin/products/${p.id}`, { headers }); toast.success("Produto excluído"); fetchAll(); }
+                catch { toast.error("Erro ao excluir"); }
+            }
+        });
     };
     
     const clone = async (id) => { 
@@ -638,7 +658,7 @@ function ProductsTab({ headers }) {
                                         <div className="flex gap-0.5">
                                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => edit(p)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
                                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => clone(p.id)} title="Clonar"><Copy className="h-3.5 w-3.5" /></Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => askDelete(p.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => askDelete(p)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                                         </div>
                                     </div>
                                 </div>
@@ -662,7 +682,6 @@ function ProductsTab({ headers }) {
                 </div>
             )}
 
-            <ConfirmDialog open={confirmOpen} title="Excluir produto?" description="Esta ação não pode ser desfeita. O produto será removido do cardápio." confirmLabel="Excluir" danger onConfirm={confirmDelete} onCancel={() => { setConfirmOpen(false); setConfirmTarget(null); }} />
 
             <Dialog open={showForm} onOpenChange={setShowForm}>
                 <DialogContent className="max-w-2xl rounded-2xl max-h-[92vh] overflow-y-auto" data-testid="product-form">
@@ -1006,7 +1025,7 @@ function ProductsTab({ headers }) {
 }
 
 /* ==================== OPTIONALS TAB ==================== */
-function OptionalsTab({ headers }) {
+function OptionalsTab({ headers, setConfirmModal }) {
     const [complements, setComplements] = useState([]);
     const [compCategories, setCompCategories] = useState([]);
     const [showForm, setShowForm] = useState(false);
@@ -1052,11 +1071,17 @@ function OptionalsTab({ headers }) {
         }
     };
 
-    const del = async (id) => { 
-        if (!window.confirm("Excluir complemento?")) return; 
-        await axios.delete(`${API}/admin/complements/${id}`, { headers }); 
-        toast.success("Excluido"); 
-        fetch(); 
+    const del = async (id, name) => { 
+        setConfirmModal({
+            isOpen: true,
+            title: "Excluir Complemento",
+            description: `Deseja realmente excluir o complemento "${name}"?`,
+            onConfirm: async () => {
+                await axios.delete(`${API}/admin/complements/${id}`, { headers }); 
+                toast.success("Excluido"); 
+                fetch(); 
+            }
+        });
     };
     
     const edit = (c) => { 
@@ -1199,15 +1224,21 @@ function OptionalsTab({ headers }) {
         setShowCategoryForm(true);
     };
     
-    const delCategory = async (id) => {
-        if (!window.confirm("Excluir categoria?\n\nOs complementos desta categoria ficarão sem categoria.")) return;
-        try {
-            await axios.delete(`${API}/admin/complement-categories/${id}`, { headers });
-            toast.success("Categoria excluida");
-            fetchCategories();
-        } catch (err) {
-            toast.error(err.response?.data?.detail || "Erro ao excluir");
-        }
+    const delCategory = async (id, name) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Excluir Categoria de Complemento",
+            description: `Deseja realmente excluir a categoria "${name}"?\n\nOs complementos desta categoria ficarão sem categoria.`,
+            onConfirm: async () => {
+                try {
+                    await axios.delete(`${API}/admin/complement-categories/${id}`, { headers });
+                    toast.success("Categoria excluida");
+                    fetchCategories();
+                } catch (err) {
+                    toast.error(err.response?.data?.detail || "Erro ao excluir");
+                }
+            }
+        });
     };
 
     const openNewCategory = () => {
@@ -1253,7 +1284,7 @@ function OptionalsTab({ headers }) {
                                 <button onClick={() => editCategory(cat)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Editar">
                                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                 </button>
-                                <button onClick={() => delCategory(cat.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Excluir">
+                                <button onClick={() => delCategory(cat.id, cat.name)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Excluir">
                                     <Trash2 className="h-3.5 w-3.5 text-red-400" />
                                 </button>
                             </div>
@@ -1328,7 +1359,7 @@ function OptionalsTab({ headers }) {
                                             <div className="flex items-center gap-1">
                                                 <Switch checked={c.active} onCheckedChange={() => toggle(c)} />
                                                 <Button size="icon" variant="ghost" onClick={() => edit(c)} className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => del(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => del(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
                                             </div>
                                         </div>
                                     ))}
@@ -1483,7 +1514,7 @@ function OptionalsTab({ headers }) {
                                             <Button size="icon" variant="ghost" onClick={() => { setShowCategoryManager(false); editCategory(cat); }} className="h-9 w-9">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => delCategory(cat.id)}>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => delCategory(cat.id, cat.name)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -1634,11 +1665,17 @@ function BannersTab({ headers }) {
         }
     };
 
-    const del = async (id) => {
-        if (!window.confirm("Excluir banner?")) return;
-        await axios.delete(`${API}/admin/banners/${id}`, { headers });
-        toast.success("Banner excluido");
-        fetch();
+    const del = async (id) => { 
+        setConfirmModal({
+            isOpen: true,
+            title: "Excluir Banner",
+            description: "Deseja realmente excluir este banner?",
+            onConfirm: async () => {
+                await axios.delete(`${API}/admin/banners/${id}`, { headers }); 
+                toast.success("Excluido"); 
+                fetch(); 
+            }
+        });
     };
 
     const edit = (b) => {
@@ -1778,11 +1815,17 @@ function CombosTab({ headers }) {
         }
     };
 
-    const del = async (id) => {
-        if (!window.confirm("Excluir combo?")) return;
-        await axios.delete(`${API}/admin/combos/${id}`, { headers });
-        toast.success("Combo excluido");
-        fetch();
+    const del = async (id, name) => { 
+        setConfirmModal({
+            isOpen: true,
+            title: "Excluir Combo",
+            description: `Deseja realmente excluir o combo "${name}"?`,
+            onConfirm: async () => {
+                await axios.delete(`${API}/admin/combos/${id}`, { headers }); 
+                toast.success("Excluido"); 
+                fetch(); 
+            }
+        });
     };
 
     const edit = (c) => {

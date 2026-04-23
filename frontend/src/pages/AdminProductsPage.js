@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Copy, Upload, Package, X, Tag } from "lucide-react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -23,6 +24,7 @@ export default function AdminProductsPage() {
     const [editingProduct, setEditingProduct] = useState(null);
     const [form, setForm] = useState(emptyProduct);
     const [uploading, setUploading] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, productId: null });
     const { token } = useAuth();
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -52,8 +54,7 @@ export default function AdminProductsPage() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Excluir este produto?")) return;
-        try { await axios.delete(`${API}/admin/products/${id}`, { headers }); toast.success("Produto excluido"); fetchData(); }
+        try { await axios.delete(`${API}/admin/products/${id}`, { headers }); toast.success("Produto excluído"); fetchData(); }
         catch { toast.error("Erro ao excluir"); }
     };
 
@@ -126,7 +127,7 @@ export default function AdminProductsPage() {
                                 <div className="flex gap-1">
                                     <Button size="icon" variant="ghost" onClick={() => openEdit(p)} data-testid={`edit-${p.id}`}><Pencil className="h-4 w-4" /></Button>
                                     <Button size="icon" variant="ghost" onClick={() => handleClone(p.id)} data-testid={`clone-${p.id}`}><Copy className="h-4 w-4" /></Button>
-                                    <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)} className="text-destructive" data-testid={`delete-${p.id}`}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => setConfirmModal({ isOpen: true, productId: p.id })} className="text-destructive" data-testid={`delete-${p.id}`}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                         </div>
@@ -351,6 +352,19 @@ export default function AdminProductsPage() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <ConfirmModal 
+                isOpen={confirmModal.isOpen} 
+                onClose={() => setConfirmModal({ isOpen: false, productId: null })}
+                onConfirm={() => {
+                    handleDelete(confirmModal.productId);
+                    setConfirmModal({ isOpen: false, productId: null });
+                }}
+                title="Excluir Produto"
+                description="Você tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
+                confirmText="Excluir"
+                variant="destructive"
+            />
         </div>
     );
 }

@@ -55,7 +55,6 @@ export function useCrud(endpoint, headers) {
     }, [endpoint, headers, fetch]);
 
     const remove = useCallback(async (id) => {
-        if (!window.confirm('Tem certeza que deseja excluir?')) return;
         try {
             await axios.delete(`${API}${endpoint}/${id}`, { headers });
             toast.success('Item excluído com sucesso');
@@ -120,7 +119,6 @@ export function useCategories(headers) {
     }, [headers, fetchCategories]);
 
     const deleteCategory = useCallback(async (id) => {
-        if (!window.confirm('Excluir categoria?')) return;
         try {
             await axios.delete(`${API}/admin/categories/${id}`, { headers });
             toast.success('Categoria excluída');
@@ -184,7 +182,6 @@ export function useProducts(headers) {
     }, [headers, fetchData]);
 
     const deleteProduct = useCallback(async (id) => {
-        if (!window.confirm('Excluir produto?')) return;
         try {
             await axios.delete(`${API}/admin/products/${id}`, { headers });
             toast.success('Produto excluído');
@@ -277,7 +274,6 @@ export function useCombos(headers) {
     }, [headers, fetchData]);
 
     const deleteCombo = useCallback(async (id) => {
-        if (!window.confirm('Excluir combo?')) return;
         try {
             await axios.delete(`${API}/admin/combos/${id}`, { headers });
             toast.success('Combo excluído');
