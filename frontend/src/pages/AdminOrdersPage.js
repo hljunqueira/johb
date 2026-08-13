@@ -148,12 +148,11 @@ export default function AdminOrdersPage() {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, orderId: null });
     const { token } = useAuth();
-    const headers = { Authorization: `Bearer ${token}` };
-
     const fetchOrders = useCallback(async () => {
+        if (!token) return;
         try {
-            const res = await axios.get(`${API}/admin/orders`, { headers });
-            const allOrders = res.data;
+            const res = await axios.get(`${API}/admin/orders`, { headers: { Authorization: `Bearer ${token}` } });
+            const allOrders = Array.isArray(res.data) ? res.data : [];
             
             const grouped = KANBAN_COLUMNS.reduce((acc, status) => {
                 acc[status] = allOrders.filter(o => o.status === status);
@@ -161,7 +160,9 @@ export default function AdminOrdersPage() {
             }, {});
             
             setColumns(grouped);
-        } catch { toast.error("Erro ao carregar pedidos"); }
+        } catch (err) { 
+            console.error("Erro ao carregar pedidos:", err); 
+        }
         finally { setLoading(false); }
     }, [token]);
 
@@ -228,8 +229,10 @@ export default function AdminOrdersPage() {
                 
                 <div className="flex flex-wrap gap-2.5 mt-6">
                     {KANBAN_COLUMNS.map(colId => {
-                        const StatusIcon = statusConfig[colId].icon;
+                        const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
+                        const StatusIcon = config.icon || CircleEllipsis;
                         const isTabActive = activeTab === colId;
+                        const count = Array.isArray(columns[colId]) ? columns[colId].length : 0;
                         return (
                             <Button 
                                 key={colId}
@@ -242,7 +245,7 @@ export default function AdminOrdersPage() {
                                 }`}
                             >
                                 <StatusIcon className="h-4 w-4" />
-                                {statusConfig[colId].label} ({columns[colId]?.length || 0})
+                                {config.label} ({count})
                             </Button>
                         );
                     })}
@@ -255,7 +258,7 @@ export default function AdminOrdersPage() {
                                 : "bg-[#141414] text-gray-300 border-white/10 hover:border-[#D4AF37]/40 hover:text-white"
                         }`}
                     >
-                        Todos ({Object.values(columns).flat().length})
+                        Todos ({Object.values(columns || {}).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0)})
                     </Button>
                 </div>
             </div>
@@ -267,18 +270,16 @@ export default function AdminOrdersPage() {
                         /* Kanban View */
                         <div className="flex gap-6 h-full min-w-max pb-6">
                             {KANBAN_COLUMNS.map((colId) => {
-                                const config = statusConfig[colId];
-                                const orders = columns[colId] || [];
+                                const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
+                                const StatusIcon = config.icon || CircleEllipsis;
+                                const orders = Array.isArray(columns[colId]) ? columns[colId] : [];
                                 
                                 return (
                                     <div key={colId} className="w-[320px] flex flex-col h-full bg-[#141414] rounded-2xl border border-white/10 p-4 shadow-xl">
                                         <div className="flex items-center justify-between mb-4 px-2">
                                             <div className="flex items-center gap-2">
                                                 <div className="p-2 rounded-lg bg-[#1E1E1E] text-[#F4B544] border border-[#D4AF37]/30 shadow-sm">
-                                                    {(() => {
-                                                        const StatusIcon = config.icon;
-                                                        return <StatusIcon className="h-4 w-4" />;
-                                                    })()}
+                                                    <StatusIcon className="h-4 w-4" />
                                                 </div>
                                                 <h3 className="font-bold text-white text-sm uppercase tracking-wider">{config.label}</h3>
                                             </div>
