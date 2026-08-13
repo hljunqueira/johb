@@ -502,6 +502,37 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
                 </div>
             )}
 
+            {/* Configurações de Antecedência de Agendamento */}
+            <div className="p-5 bg-[#1E1E1E] border border-[#F4B544]/20 rounded-2xl space-y-4">
+                <p className="text-xs uppercase tracking-wider font-extrabold text-[#F4B544]">Regras de Agendamento Prévio</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <Label className="text-xs font-bold text-gray-300">Antecedência Mínima (Horas)</Label>
+                        <Input 
+                            type="number" 
+                            min="1" 
+                            max="72"
+                            value={settings.min_lead_hours ?? 8}
+                            onChange={e => setSettings(s => ({ ...s, min_lead_hours: parseInt(e.target.value) || 8 }))}
+                            className="mt-1 rounded-xl bg-[#10100F] text-white border-white/10 focus:border-[#F4B544]"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">Tempo de antecedência mínimo exigido para o preparo (ex: 8h = 1 dia/noite antes)</p>
+                    </div>
+                    <div>
+                        <Label className="text-xs font-bold text-gray-300">Limite de Dias no Futuro</Label>
+                        <Input 
+                            type="number" 
+                            min="1" 
+                            max="30"
+                            value={settings.max_schedule_days ?? 7}
+                            onChange={e => setSettings(s => ({ ...s, max_schedule_days: parseInt(e.target.value) || 7 }))}
+                            className="mt-1 rounded-xl bg-[#10100F] text-white border-white/10 focus:border-[#F4B544]"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">Até quantos dias pra frente o cliente pode escolher a data do pedido</p>
+                    </div>
+                </div>
+            </div>
+
             <div className="space-y-3">
                 {DAYS.map(({ key, label }) => {
                     const h = settings.business_hours?.[key] || { open: true, start: "11:00", end: "22:00" };

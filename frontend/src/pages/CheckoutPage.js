@@ -22,7 +22,7 @@ const getImageUrl = (url) => {
 };
 
 export default function CheckoutPage() {
-    const { items, total, clearCart } = useCart();
+    const { items, total, clearCart, scheduledDate, scheduledTime, setScheduleInfo } = useCart();
     const navigate = useNavigate();
     
     // Dados do cliente vêm do localStorage
@@ -101,7 +101,9 @@ export default function CheckoutPage() {
                 delivery_fee: finalDeliveryFee,
                 total: grandTotal,
                 observation: observation,
-                payment_method: paymentMethod
+                payment_method: paymentMethod,
+                scheduled_date: scheduledDate,
+                scheduled_time: scheduledTime
             });
 
             const createdOrder = res.data;
@@ -348,6 +350,14 @@ export default function CheckoutPage() {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* Card de Agendamento */}
+                            <div className="p-3.5 rounded-xl bg-[#171612] border border-[#F4B544]/30 space-y-1">
+                                <span className="text-[10px] uppercase font-bold text-[#F4B544] tracking-wider block">🗓️ Horário Agendado</span>
+                                <span className="text-xs font-extrabold text-[#FFFAF0] block">
+                                    Data: {scheduledDate ? new Date(scheduledDate + 'T00:00:00').toLocaleDateString("pt-BR") : "Hoje"} às {scheduledTime || "12:00"} hs
+                                </span>
                             </div>
 
                             {/* Totais */}

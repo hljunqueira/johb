@@ -111,12 +111,19 @@ const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm }
                     </DropdownMenu>
                 </div>
 
-                <div className="mb-4">
+                <div className="mb-3">
                     <p className="font-bold text-white text-sm truncate uppercase tracking-tight">{order.customer_name}</p>
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mt-1">
-                        <Clock className="h-3.5 w-3.5 text-[#F4B544]" />
-                        {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </div>
+                    {(order.scheduled_date || order.scheduled_time) ? (
+                        <div className="mt-1.5 py-1 px-2.5 rounded-lg bg-[#F4B544]/20 border border-[#F4B544]/30 text-[#F4B544] text-[11px] font-extrabold flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-[#F4B544] shrink-0" />
+                            <span>Agendado: {order.scheduled_date ? new Date(order.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : ""} {order.scheduled_time ? `às ${order.scheduled_time}h` : ""}</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mt-1">
+                            <Clock className="h-3.5 w-3.5 text-[#F4B544]" />
+                            {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-1.5 mb-4 flex-1 max-h-32 overflow-y-auto pr-1 custom-scrollbar">

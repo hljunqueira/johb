@@ -178,6 +178,12 @@ export default function OrderConfirmationPage() {
                                 <span className="font-medium text-[#FFFAF0] text-right">{order.address}</span>
                             </div>
                         )}
+                        {(order.scheduled_date || order.scheduled_time) && (
+                            <div className="flex justify-between py-2 px-3 rounded-xl bg-[#171612] border border-[#F4B544]/30 text-[#F4B544] font-extrabold my-2">
+                                <span>🗓️ Horário Agendado:</span>
+                                <span>{order.scheduled_date ? new Date(order.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : ""} {order.scheduled_time ? `às ${order.scheduled_time}h` : ""}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between border-t border-[#F4B544]/15 pt-2 text-sm font-bold text-[#FFFAF0]">
                             <span className="font-serif">Total:</span>
                             <span className="text-[#F4B544]">R$ {floatVal(order.total).toFixed(2).replace(".", ",")}</span>
@@ -187,13 +193,13 @@ export default function OrderConfirmationPage() {
 
                 {/* Botão de Suporte WhatsApp */}
                 <a
-                    href={`https://wa.me/message/FUNP4LBHYBA3O1?text=Olá,%20gostaria%20de%20saber%20sobre%20o%20pedido%20%23${order.order_number}`}
+                    href={`https://wa.me/message/FUNP4LBHYBA3O1?text=${encodeURIComponent(`Olá, gostaria de confirmar detalhes do meu pedido agendado #${order.order_number}${order.scheduled_time ? ` para às ${order.scheduled_time}h` : ''}`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="w-full py-3.5 px-6 rounded-full bg-[#171612] border border-[#F4B544]/30 hover:border-[#F4B544] text-[#FFFAF0] hover:text-[#F4B544] font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all gold-glow-sm"
                 >
                     <PhoneCall className="w-4 h-4 text-[#F4B544]" />
-                    <span>Falar sobre o Pedido no WhatsApp</span>
+                    <span>Falar sobre o Pedido Agendado no WhatsApp</span>
                 </a>
 
             </main>

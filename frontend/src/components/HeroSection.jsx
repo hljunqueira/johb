@@ -65,7 +65,7 @@ export function HeroSection({ onVerCardapio }) {
                                 })}
                                 className="group inline-flex items-center justify-center gap-3 px-9 py-4 rounded-full bg-[#F4B544] text-[#050505] font-bold text-sm uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5 gold-glow"
                             >
-                                <span>Ver Cardápio</span>
+                                <span>Ver Cardápio & Agendar</span>
                                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                             </button>
                         </div>

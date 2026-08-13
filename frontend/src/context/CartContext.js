@@ -19,6 +19,29 @@ export function CartProvider({ children }) {
         catch { return []; }
     });
 
+    const [scheduledDate, setScheduledDate] = useState(() => {
+        return sessionStorage.getItem("johb-scheduled-date") || "";
+    });
+
+    const [scheduledTime, setScheduledTime] = useState(() => {
+        return sessionStorage.getItem("johb-scheduled-time") || "";
+    });
+
+    useEffect(() => {
+        if (scheduledDate) sessionStorage.setItem("johb-scheduled-date", scheduledDate);
+        else sessionStorage.removeItem("johb-scheduled-date");
+    }, [scheduledDate]);
+
+    useEffect(() => {
+        if (scheduledTime) sessionStorage.setItem("johb-scheduled-time", scheduledTime);
+        else sessionStorage.removeItem("johb-scheduled-time");
+    }, [scheduledTime]);
+
+    const setScheduleInfo = (date, time) => {
+        setScheduledDate(date);
+        setScheduledTime(time);
+    };
+
     // Atualiza o carrinho quando a chave muda (cliente loga/desloga)
     useEffect(() => {
         const handleStorageChange = () => {
@@ -70,12 +93,16 @@ export function CartProvider({ children }) {
         setItems(prev => prev.map(i => i.cart_id === cartId ? { ...i, observation } : i));
     };
 
-    const clearCart = () => setItems([]);
+    const clearCart = () => {
+        setItems([]);
+        setScheduledDate("");
+        setScheduledTime("");
+    };
     const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
     const itemCount = items.reduce((s, i) => s + i.quantity, 0);
 
     return (
-        <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, updateObservation, clearCart, total, itemCount }}>
+        <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, updateObservation, clearCart, total, itemCount, scheduledDate, scheduledTime, setScheduleInfo }}>
             {children}
         </CartContext.Provider>
     );

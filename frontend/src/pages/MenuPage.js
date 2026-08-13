@@ -162,19 +162,21 @@ function CategorySkeleton() {
 }
 
 function StoreStatusBanner({ status }) {
-    if (status.alwaysOpen) return null;
-    if (status.isOpen && !status.closingSoon) return null;
-
+    const isClosed = !status.isOpen || status.temporarilyClosed;
     return (
-        <div className={`py-2 px-4 text-center text-xs font-semibold tracking-wider ${
-            status.isOpen 
-                ? "bg-[#F4B544]/20 text-[#F4B544] border-b border-[#F4B544]/30" 
-                : "bg-red-500/20 text-red-300 border-b border-red-500/30"
+        <div className={`py-2.5 px-4 text-center text-xs font-extrabold tracking-wider ${
+            isClosed
+                ? "bg-amber-500/20 text-amber-300 border-b border-amber-500/30"
+                : "bg-[#F4B544]/20 text-[#F4B544] border-b border-[#F4B544]/30"
         }`}>
             <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
-                <Clock className="w-3.5 h-3.5" />
-                <span>{status.message}</span>
-                {status.nextOpen && <span className="opacity-80">({status.nextOpen})</span>}
+                <Clock className="w-4 h-4 text-[#F4B544] shrink-0" />
+                <span>
+                    {isClosed 
+                        ? "🔴 Atendimento Presencial Fechado — Aceitando Pedidos por Agendamento Prévio!" 
+                        : "🗓️ Pedidos por Agendamento Prévio (Antecedência mínima de 8 horas para produção)."
+                    }
+                </span>
             </div>
         </div>
     );
@@ -381,6 +383,32 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
 });
 
 function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout }) {
+    const { scheduledDate, scheduledTime, setScheduleInfo } = useCart();
+
+    // Gerar próximas datas disponíveis (Hoje + 7 dias)
+    const availableDates = useMemo(() => {
+        const dates = [];
+        const today = new Date();
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            const dateStr = d.toISOString().split('T')[0];
+            const label = i === 0 ? "Hoje" : i === 1 ? "Amanhã" : d.toLocaleDateString("pt-BR", { weekday: 'short', day: '2-digit', month: '2-digit' });
+            dates.push({ value: dateStr, label, displayDate: d.toLocaleDateString("pt-BR") });
+        }
+        return dates;
+    }, []);
+
+    // Seletor de faixas de horário (intervalos de 30min das 11:30 às 21:00)
+    const timeSlots = [
+        "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+        "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00",
+        "18:30", "19:00", "19:30", "20:00", "20:30", "21:00"
+    ];
+
+    const selDate = scheduledDate || availableDates[0]?.value || "";
+    const selTime = scheduledTime || timeSlots[0] || "";
+
     if (items.length === 0) {
         return (
             <div className="text-center py-12 space-y-4">
@@ -391,7 +419,8 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
+            {/* Lista de Itens */}
             <div className="space-y-3">
                 {items.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-[#050505] border border-[#F4B544]/15">
@@ -417,16 +446,64 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
                 ))}
             </div>
 
-            <div className="pt-4 border-t border-[#F4B544]/15 space-y-3">
+            {/* Bloco de Escolha do Horário de Agendamento */}
+            <div className="p-4 bg-[#050505] border border-[#F4B544]/30 rounded-2xl space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#F4B544] uppercase tracking-wider">
+                    <Clock className="w-4 h-4 text-[#F4B544]" />
+                    <span>Horário do Pedido Agendado</span>
+                </div>
+
+                {/* Seleção da Data */}
+                <div>
+                    <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Data Desejada:</label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                        {availableDates.slice(0, 3).map(d => (
+                            <button
+                                key={d.value}
+                                type="button"
+                                onClick={() => setScheduleInfo(d.value, selTime)}
+                                className={`py-2 px-2 text-[11px] font-extrabold rounded-xl border transition-all ${
+                                    selDate === d.value
+                                        ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black border-[#F4B544]"
+                                        : "bg-[#10100F] text-[#B8B1A3] border-white/10 hover:border-white/30"
+                                }`}
+                            >
+                                {d.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Seleção da Faixa de Horário */}
+                <div>
+                    <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Horário de Entrega/Retirada:</label>
+                    <select
+                        value={selTime}
+                        onChange={e => setScheduleInfo(selDate, e.target.value)}
+                        className="w-full bg-[#10100F] text-[#FFFAF0] border border-[#F4B544]/30 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#F4B544]"
+                    >
+                        {timeSlots.map(t => (
+                            <option key={t} value={t}>{t} hs</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Subtotal e Ação de Checkout */}
+            <div className="pt-2 border-t border-[#F4B544]/15 space-y-3">
                 <div className="flex items-center justify-between text-sm font-bold">
                     <span className="text-[#FFFAF0]">Subtotal:</span>
                     <span className="text-[#F4B544] font-serif text-lg">R$ {total.toFixed(2)}</span>
                 </div>
                 <button
-                    onClick={onCheckout}
-                    className="w-full py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all gold-glow"
+                    onClick={() => {
+                        setScheduleInfo(selDate, selTime);
+                        onCheckout();
+                    }}
+                    className="w-full py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-extrabold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all gold-glow flex items-center justify-center gap-2"
                 >
-                    Finalizar Pedido
+                    <span>Avançar para Checkout</span>
+                    <ChevronRight className="w-4 h-4" />
                 </button>
             </div>
         </div>

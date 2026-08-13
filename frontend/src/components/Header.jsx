@@ -31,8 +31,8 @@ export default function Header({ onOpenCart }) {
                             <span className="font-semibold">Balneário Arroio do Silva — SC</span>
                         </span>
                         <span className="hidden md:inline-block text-[#F4B544]/40">•</span>
-                        <span className="hidden md:inline-flex items-center gap-1">
-                            Salgados Assados & Fritos Quentinhos no Capricho
+                        <span className="hidden md:inline-flex items-center gap-1.5 text-[#F4B544] font-bold">
+                            🗓️ Somente Pedidos por Agendamento Prévio
                         </span>
                     </div>
                     <a
