@@ -198,23 +198,26 @@ export default function AdminDeliveryPage() {
     ];
 
     return (
-        <div data-testid="admin-delivery-page">
-            <h1 className="text-2xl font-bold font-heading mb-1">Configurações</h1>
-            <p className="text-sm text-muted-foreground mb-6">Entrega, pagamento e horários de funcionamento</p>
+    return (
+        <div className="text-white space-y-6" data-testid="admin-delivery-page">
+            <div>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight">Configurações do Estabelecimento</h1>
+                <p className="text-xs text-gray-400 mt-1">Gerencie entregas, horários de funcionamento e dados de pagamento</p>
+            </div>
 
             {/* Tabs Navigation */}
-            <div className="bg-white dark:bg-card rounded-2xl border border-border p-1 mb-6">
-                <div className="flex flex-wrap gap-1">
+            <div className="bg-[#141414] rounded-2xl border border-white/10 p-1.5 shadow-xl">
+                <div className="flex flex-wrap gap-1.5">
                     {tabs.map(tab => {
                         const Icon = tab.icon;
                         return (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-extrabold transition-all ${
                                     activeTab === tab.id
-                                        ? "bg-primary text-white shadow-sm"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                        ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black shadow-lg shadow-[#F4B544]/20"
+                                        : "text-gray-400 hover:text-white hover:bg-white/10"
                                 }`}
                             >
                                 <Icon className="h-4 w-4" />
@@ -285,98 +288,98 @@ function DeliveryTab({
     resetToDefaultRates
 }) {
     return (
-        <div className="bg-white dark:bg-card rounded-2xl border border-border p-5 space-y-5">
-            <div className="flex items-center gap-3">
-                <Truck className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold font-heading">Configurações de Entrega</h2>
+        <div className="bg-[#141414] text-white rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl">
+            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                <Truck className="h-6 w-6 text-[#F4B544]" />
+                <h2 className="font-extrabold text-white text-xl">Configurações de Entrega</h2>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
                 <Switch checked={settings.active} onCheckedChange={v => setSettings(s => ({ ...s, active: v }))} data-testid="delivery-active" />
-                <span className="text-sm font-medium">{settings.active ? "Entregas ativas" : "Entregas desativadas"}</span>
+                <span className="text-sm font-extrabold text-white">{settings.active ? "Entregas ativas" : "Entregas desativadas"}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <Label className="text-sm">Taxa padrão (R$)</Label>
-                    <div className="relative mt-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Label className="text-sm font-semibold text-gray-300">Taxa padrão (R$)</Label>
+                    <div className="relative mt-1.5">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
                         <Input type="number" step="0.01" min="0" value={settings.delivery_fee}
                             onChange={e => setSettings(s => ({ ...s, delivery_fee: parseFloat(e.target.value) || 0 }))}
-                            className="rounded-lg pl-9" data-testid="default-fee" />
+                            className="rounded-xl bg-[#1E1E1E] text-white border-white/10 pl-10 focus:border-[#F4B544]" data-testid="default-fee" />
                     </div>
                 </div>
                 <div>
-                    <Label className="text-sm">Mínimo para frete grátis (R$)</Label>
-                    <div className="relative mt-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Label className="text-sm font-semibold text-gray-300">Mínimo para frete grátis (R$)</Label>
+                    <div className="relative mt-1.5">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
                         <Input type="number" step="0.01" min="0" value={settings.min_free_delivery}
                             onChange={e => setSettings(s => ({ ...s, min_free_delivery: parseFloat(e.target.value) || 0 }))}
-                            className="rounded-lg pl-9" data-testid="min-free" />
+                            className="rounded-xl bg-[#1E1E1E] text-white border-white/10 pl-10 focus:border-[#F4B544]" data-testid="min-free" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">Use 0 para nunca oferecer grátis</p>
+                    <p className="text-xs text-gray-500 mt-1">Use 0 para nunca oferecer grátis</p>
                 </div>
             </div>
 
-            <Separator />
+            <Separator className="bg-white/10" />
 
             {/* Endereço do Restaurante */}
             <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                    <Navigation className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-semibold">Endereço do Restaurante</p>
+                    <Navigation className="h-5 w-5 text-[#F4B544]" />
+                    <p className="text-base font-extrabold text-white">Endereço do Restaurante</p>
                 </div>
-                <p className="text-xs text-muted-foreground">Usado para calcular a distância até o cliente</p>
+                <p className="text-xs text-gray-400">Usado para calcular a distância exata até o cliente</p>
                 <Input 
                     value={settings.restaurant_address || ""} 
                     onChange={e => setSettings(s => ({ ...s, restaurant_address: e.target.value }))}
-                    placeholder="Ex: Rua das Flores, 123, Centro, São Paulo - SP"
-                    className="rounded-lg"
+                    placeholder="Ex: Rua das Flores, 123, Centro, Balneário Arroio do Silva - SC"
+                    className="rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544] mt-1"
                 />
             </div>
 
-            <Separator />
+            <Separator className="bg-white/10" />
 
             {/* Taxas por Distância */}
-            <div className="space-y-2">
+            <div className="space-y-3">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-primary" />
-                        <p className="text-sm font-semibold">Taxas por Distância (km)</p>
+                        <MapPin className="h-5 w-5 text-[#F4B544]" />
+                        <p className="text-base font-extrabold text-white">Taxas por Distância (km)</p>
                     </div>
                     <Button 
                         type="button" 
                         variant="ghost" 
                         size="sm" 
                         onClick={resetToDefaultRates}
-                        className="text-xs text-primary hover:text-primary/80"
+                        className="text-xs text-[#F4B544] hover:text-white hover:bg-white/10"
                     >
                         Restaurar padrão
                     </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">Configure a taxa para cada faixa de distância</p>
+                <p className="text-xs text-gray-400">Configure a taxa para cada faixa de distância</p>
                 
-                <div className="space-y-1 max-h-48 overflow-y-auto">
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {(settings.distance_rates || []).length === 0 && (
-                        <p className="text-xs text-muted-foreground italic py-2 text-center border-2 border-dashed border-border rounded-lg">
+                        <p className="text-xs text-gray-500 italic py-3 text-center border border-dashed border-white/10 rounded-xl">
                             Nenhuma taxa cadastrada
                         </p>
                     )}
                     {(settings.distance_rates || []).map((rate, i) => (
-                        <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                            <span className="text-xs text-muted-foreground w-16">Até</span>
-                            <span className="text-sm font-medium flex-1">{rate.max_distance} km</span>
-                            <span className="text-sm font-semibold text-primary">
+                        <div key={i} className="flex items-center gap-3 bg-[#1E1E1E] border border-white/10 rounded-xl px-4 py-2.5">
+                            <span className="text-xs text-gray-400 w-16 font-semibold">Até</span>
+                            <span className="text-sm font-extrabold text-white flex-1">{rate.max_distance} km</span>
+                            <span className="text-sm font-black text-[#F4B544]">
                                 R$ {Number(rate.fee).toFixed(2)}
                             </span>
-                            <Button size="icon" variant="ghost" onClick={() => removeRate(i)} className="h-7 w-7 text-destructive hover:bg-destructive/10">
-                                <Trash2 className="h-3 w-3" />
+                            <Button size="icon" variant="ghost" onClick={() => removeRate(i)} className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg">
+                                <Trash2 className="h-4 w-4" />
                             </Button>
                         </div>
                     ))}
                 </div>
                 
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-3 mt-3">
                     <div className="relative flex-1">
                         <Input 
                             type="number" 
@@ -386,11 +389,11 @@ function DeliveryTab({
                             onChange={e => setNewRate(r => ({ ...r, max_distance: e.target.value }))}
                             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRate(); } }}
                             placeholder="Km máx" 
-                            className="rounded-lg" 
+                            className="rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" 
                         />
                     </div>
-                    <div className="relative w-28">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <div className="relative w-32">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
                         <Input 
                             type="number" 
                             step="0.01" 
@@ -398,20 +401,20 @@ function DeliveryTab({
                             value={newRate.fee}
                             onChange={e => setNewRate(r => ({ ...r, fee: e.target.value }))}
                             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRate(); } }}
-                            className="rounded-lg pl-9" 
+                            className="rounded-xl bg-[#1E1E1E] text-white border-white/10 pl-9 focus:border-[#F4B544]" 
                         />
                     </div>
-                    <Button size="icon" onClick={addRate} className="bg-primary text-white rounded-lg shrink-0">
-                        <Plus className="h-4 w-4" />
+                    <Button size="icon" onClick={addRate} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-10 w-10 shrink-0">
+                        <Plus className="h-5 w-5" />
                     </Button>
                 </div>
             </div>
 
-            <Separator />
+            <Separator className="bg-white/10" />
 
             {/* Distância Máxima */}
             <div className="space-y-2">
-                <p className="text-sm font-semibold">Distância Máxima de Entrega</p>
+                <p className="text-sm font-extrabold text-white">Distância Máxima de Entrega</p>
                 <div className="relative">
                     <Input 
                         type="number" 
@@ -419,15 +422,15 @@ function DeliveryTab({
                         min="0" 
                         value={settings.max_delivery_distance || 10.5}
                         onChange={e => setSettings(s => ({ ...s, max_delivery_distance: parseFloat(e.target.value) || 10.5 }))}
-                        className="rounded-lg pr-12"
+                        className="rounded-xl bg-[#1E1E1E] text-white border-white/10 pr-12 focus:border-[#F4B544]"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">km</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">km</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Pedidos além desta distância não serão aceitos</p>
+                <p className="text-xs text-gray-400">Pedidos além desta distância não serão aceitos no carrinho público</p>
             </div>
 
-            <Button onClick={saveDelivery} disabled={loading} className="w-full bg-primary text-white rounded-full" data-testid="save-delivery-btn">
-                <Save className="h-4 w-4 mr-2" /> Salvar Configurações de Entrega
+            <Button onClick={saveDelivery} disabled={loading} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all" data-testid="save-delivery-btn">
+                <Save className="h-5 w-5 mr-2" /> Salvar Configurações de Entrega
             </Button>
         </div>
     );
@@ -436,30 +439,30 @@ function DeliveryTab({
 /* ==================== HOURS TAB ==================== */
 function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) {
     return (
-        <div className="bg-white dark:bg-card rounded-2xl border border-border p-5">
-            <div className="flex items-center gap-3 mb-5">
-                <Clock className="h-5 w-5 text-primary" />
+        <div className="bg-[#141414] text-white rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl">
+            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                <Clock className="h-6 w-6 text-[#F4B544]" />
                 <div>
-                    <h2 className="font-semibold font-heading">Horário de Funcionamento</h2>
-                    <p className="text-xs text-muted-foreground">Defina os horários em que o restaurante aceita pedidos</p>
+                    <h2 className="font-extrabold text-white text-xl">Horário de Funcionamento</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Defina os horários em que o restaurante aceita pedidos</p>
                 </div>
             </div>
 
             {/* Opções especiais de horário */}
-            <div className="space-y-3 mb-6 p-4 bg-muted/30 rounded-xl">
-                <p className="text-sm font-medium text-muted-foreground mb-3">Opções especiais</p>
+            <div className="space-y-4 p-5 bg-[#1E1E1E] border border-white/10 rounded-2xl">
+                <p className="text-xs uppercase tracking-wider font-extrabold text-[#F4B544]">Opções especiais</p>
                 
                 {/* Sempre aberto */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.always_open ? "bg-green-100 text-green-600" : "bg-muted text-muted-foreground"}`}>
+                        <div className={`p-2.5 rounded-xl ${settings.always_open ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/10 text-gray-400"}`}>
                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium">Aberto 24 horas</p>
-                            <p className="text-xs text-muted-foreground">Ignorar horários de funcionamento</p>
+                            <p className="text-sm font-extrabold text-white">Aberto 24 horas</p>
+                            <p className="text-xs text-gray-400">Ignorar horários de funcionamento específicos</p>
                         </div>
                     </div>
                     <Switch 
@@ -468,19 +471,19 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
                     />
                 </div>
 
-                <Separator className="my-2" />
+                <Separator className="bg-white/10" />
 
                 {/* Fechamento temporário */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.temporarily_closed ? "bg-red-100 text-red-600" : "bg-muted text-muted-foreground"}`}>
+                        <div className={`p-2.5 rounded-xl ${settings.temporarily_closed ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-white/10 text-gray-400"}`}>
                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium">Fechado temporariamente</p>
-                            <p className="text-xs text-muted-foreground">Loja fechada sem alterar horários</p>
+                            <p className="text-sm font-extrabold text-white">Fechado temporariamente</p>
+                            <p className="text-xs text-gray-400">Pausar pedidos imediatamente sem alterar os horários cadastrados</p>
                         </div>
                     </div>
                     <Switch 
@@ -492,7 +495,7 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
 
             {/* Aviso quando uma opção especial está ativa */}
             {(settings.always_open || settings.temporarily_closed) && (
-                <div className={`mb-4 p-3 rounded-lg text-sm ${settings.always_open ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                <div className={`p-4 rounded-xl text-sm font-bold border ${settings.always_open ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30" : "bg-red-500/10 text-red-300 border-red-500/30"}`}>
                     {settings.always_open 
                         ? "A loja está configurada como 'Aberto 24 horas'. Os horários abaixo serão ignorados."
                         : "A loja está 'Fechada temporariamente'. Os horários abaixo não serão aplicados até que você desative esta opção."
@@ -504,32 +507,32 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
                 {DAYS.map(({ key, label }) => {
                     const h = settings.business_hours?.[key] || { open: true, start: "11:00", end: "22:00" };
                     return (
-                        <div key={key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${h.open ? "border-primary/20 bg-primary/3" : "border-border bg-muted/20"}`}>
+                        <div key={key} className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all ${h.open ? "border-[#F4B544]/30 bg-[#1E1E1E]" : "border-white/10 bg-[#141414] opacity-60"}`}>
                             {/* Toggle */}
                             <Switch checked={h.open} onCheckedChange={v => updateHour(key, "open", v)} />
                             {/* Dia */}
-                            <span className={`text-sm font-medium w-20 ${h.open ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+                            <span className={`text-sm font-extrabold w-24 ${h.open ? "text-white" : "text-gray-500"}`}>{label}</span>
                             {/* Horários */}
                             {h.open ? (
-                                <div className="flex items-center gap-2 flex-1">
+                                <div className="flex items-center gap-3 flex-1">
                                     <input type="time" value={h.start}
                                         onChange={e => updateHour(key, "start", e.target.value)}
-                                        className="rounded-lg border border-input bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                                    <span className="text-muted-foreground text-sm">até</span>
+                                        className="rounded-lg border border-white/10 bg-[#10100F] text-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F4B544]" />
+                                    <span className="text-gray-400 text-sm font-bold">até</span>
                                     <input type="time" value={h.end}
                                         onChange={e => updateHour(key, "end", e.target.value)}
-                                        className="rounded-lg border border-input bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        className="rounded-lg border border-white/10 bg-[#10100F] text-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F4B544]" />
                                 </div>
                             ) : (
-                                <span className="text-sm text-muted-foreground flex-1 italic">Fechado</span>
+                                <span className="text-sm text-gray-500 flex-1 italic font-semibold">Fechado</span>
                             )}
                         </div>
                     );
                 })}
             </div>
 
-            <Button onClick={saveDelivery} disabled={loading} className="mt-5 w-full bg-primary text-white rounded-full">
-                <Save className="h-4 w-4 mr-2" /> Salvar Horários
+            <Button onClick={saveDelivery} disabled={loading} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all">
+                <Save className="h-5 w-5 mr-2" /> Salvar Horários de Funcionamento
             </Button>
         </div>
     );
@@ -538,23 +541,23 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
 /* ==================== PAYMENT TAB ==================== */
 function PaymentTab({ pixSettings, setPixSettings, uploadingQr, savePix, handleQrUpload }) {
     return (
-        <div className="bg-white dark:bg-card rounded-2xl border border-border p-5 space-y-5">
-            <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold font-heading">Configurações Pix</h2>
+        <div className="bg-[#141414] text-white rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl">
+            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                <DollarSign className="h-6 w-6 text-[#F4B544]" />
+                <h2 className="font-extrabold text-white text-xl">Configurações PIX</h2>
             </div>
 
             {/* Tipo de chave */}
             <div>
-                <Label className="text-sm">Tipo de chave Pix</Label>
+                <Label className="text-sm font-semibold text-gray-300">Tipo de chave Pix</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                     {PIX_KEY_TYPES.map(t => (
                         <button key={t.value} type="button"
                             onClick={() => setPixSettings(s => ({ ...s, pix_key_type: t.value }))}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                            className={`px-4 py-2 rounded-xl text-xs font-extrabold border transition-all ${
                                 pixSettings.pix_key_type === t.value
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-white text-foreground border-border hover:border-primary/50"
+                                    ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black border-[#F4B544] shadow-md"
+                                    : "bg-[#1E1E1E] text-gray-300 border-white/10 hover:border-white/30"
                             }`}>
                             {t.label}
                         </button>
@@ -564,7 +567,7 @@ function PaymentTab({ pixSettings, setPixSettings, uploadingQr, savePix, handleQ
 
             {/* Chave */}
             <div>
-                <Label className="text-sm">Chave Pix</Label>
+                <Label className="text-sm font-semibold text-gray-300">Chave Pix</Label>
                 <Input value={pixSettings.pix_key}
                     onChange={e => setPixSettings(s => ({ ...s, pix_key: e.target.value }))}
                     placeholder={
@@ -574,69 +577,69 @@ function PaymentTab({ pixSettings, setPixSettings, uploadingQr, savePix, handleQ
                         pixSettings.pix_key_type === "telefone" ? "+55 (00) 00000-0000" :
                         "Chave aleatória (UUID)"
                     }
-                    className="mt-1 rounded-lg" data-testid="pix-key" />
+                    className="mt-1.5 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="pix-key" />
             </div>
 
             {/* Nome */}
             <div>
-                <Label className="text-sm">Nome do titular</Label>
+                <Label className="text-sm font-semibold text-gray-300">Nome do titular</Label>
                 <Input value={pixSettings.pix_name}
                     onChange={e => setPixSettings(s => ({ ...s, pix_name: e.target.value }))}
-                    placeholder="Nome que aparece no Pix" className="mt-1 rounded-lg" data-testid="pix-name" />
+                    placeholder="Nome que aparece no recebedor do Pix" className="mt-1.5 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="pix-name" />
             </div>
 
             {/* QR Code */}
             <div>
-                <Label className="text-sm">QR Code Pix</Label>
+                <Label className="text-sm font-semibold text-gray-300">QR Code Pix</Label>
                 {pixSettings.qr_code_url ? (
-                    <div className="mt-2 flex items-start gap-4">
+                    <div className="mt-2 flex items-start gap-4 p-4 bg-[#1E1E1E] border border-white/10 rounded-2xl">
                         <div className="relative inline-block">
                             <img src={pixSettings.qr_code_url} alt="QR Code Pix" className="h-32 w-32 rounded-xl object-contain border p-1 bg-white" />
                             <button type="button" onClick={() => setPixSettings(s => ({ ...s, qr_code_url: "" }))}
-                                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition">
-                                <X className="h-3 w-3" />
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition shadow-lg">
+                                <X className="h-4 w-4" />
                             </button>
                         </div>
-                        <div className="flex-1 space-y-2">
-                            <p className="text-xs text-muted-foreground">Imagem atual do QR Code</p>
+                        <div className="flex-1 space-y-3">
+                            <p className="text-xs text-gray-400 font-semibold">Imagem atual do QR Code</p>
                             <label className="cursor-pointer">
                                 <input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
-                                <Button type="button" variant="outline" size="sm" className="rounded-lg w-full" disabled={uploadingQr} asChild>
-                                    <span><Upload className="h-3.5 w-3.5 mr-1.5" />{uploadingQr ? "Enviando..." : "Substituir imagem"}</span>
+                                <Button type="button" variant="outline" size="sm" className="rounded-xl w-full border-white/10 bg-white/5 text-white hover:bg-white/10" disabled={uploadingQr} asChild>
+                                    <span><Upload className="h-4 w-4 mr-2" />{uploadingQr ? "Enviando..." : "Substituir imagem"}</span>
                                 </Button>
                             </label>
                             <div>
-                                <p className="text-xs text-muted-foreground mb-1">Ou cole a URL:</p>
+                                <p className="text-xs text-gray-400 mb-1">Ou cole a URL:</p>
                                 <Input value={pixSettings.qr_code_url}
                                     onChange={e => setPixSettings(s => ({ ...s, qr_code_url: e.target.value }))}
-                                    placeholder="https://..." className="rounded-lg text-xs" data-testid="pix-qr-url" />
+                                    placeholder="https://..." className="rounded-xl bg-[#10100F] text-white border-white/10 text-xs" data-testid="pix-qr-url" />
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="mt-2 space-y-2">
-                        <label className="cursor-pointer flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl p-5 hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                    <div className="mt-2 space-y-3">
+                        <label className="cursor-pointer flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-2xl p-6 hover:border-[#F4B544] hover:bg-white/5 transition-colors bg-[#1E1E1E]">
                             <input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
                             {uploadingQr ? (
-                                <><div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" /><span className="text-sm text-muted-foreground">Enviando...</span></>
+                                <><div className="h-8 w-8 rounded-full border-2 border-[#F4B544] border-t-transparent animate-spin" /><span className="text-sm text-gray-400 font-semibold">Enviando...</span></>
                             ) : (
-                                <><QrCode className="h-8 w-8 text-muted-foreground/40" /><span className="text-sm text-muted-foreground">Clique para enviar o QR Code</span><span className="text-xs text-muted-foreground/60">PNG, JPG — máx. 2MB</span></>
+                                <><QrCode className="h-8 w-8 text-[#F4B544]" /><span className="text-sm font-extrabold text-white">Clique para enviar a imagem do QR Code</span><span className="text-xs text-gray-400">PNG, JPG — máx. 2MB</span></>
                             )}
                         </label>
                         <div className="flex items-center gap-2">
-                            <div className="h-px flex-1 bg-border" />
-                            <span className="text-xs text-muted-foreground">ou</span>
-                            <div className="h-px flex-1 bg-border" />
+                            <div className="h-px flex-1 bg-white/10" />
+                            <span className="text-xs text-gray-500 font-bold uppercase">ou</span>
+                            <div className="h-px flex-1 bg-white/10" />
                         </div>
                         <Input value={pixSettings.qr_code_url}
                             onChange={e => setPixSettings(s => ({ ...s, qr_code_url: e.target.value }))}
-                            placeholder="Cole a URL da imagem do QR Code" className="rounded-lg text-sm" data-testid="pix-qr-url" />
+                            placeholder="Cole a URL da imagem do QR Code" className="rounded-xl bg-[#1E1E1E] text-white border-white/10 text-sm focus:border-[#F4B544]" data-testid="pix-qr-url" />
                     </div>
                 )}
             </div>
 
-            <Button onClick={savePix} className="w-full bg-primary text-white rounded-full" data-testid="save-pix-btn">
-                <Save className="h-4 w-4 mr-2" /> Salvar Configurações Pix
+            <Button onClick={savePix} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all" data-testid="save-pix-btn">
+                <Save className="h-5 w-5 mr-2" /> Salvar Configurações Pix
             </Button>
         </div>
     );

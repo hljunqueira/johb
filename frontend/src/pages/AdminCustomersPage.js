@@ -78,43 +78,50 @@ export default function AdminCustomersPage() {
     const tagColors = { novo: "bg-blue-100 text-blue-700", frequente: "bg-green-100 text-green-700", vip: "bg-amber-100 text-amber-700" };
 
     return (
-        <div data-testid="admin-customers-page">
+        <div className="text-white space-y-6" data-testid="admin-customers-page">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold font-heading">Clientes</h1>
-                <Badge variant="outline" className="rounded-full px-3">{customers.length} Clientes</Badge>
+                <div>
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Gestão de Clientes</h1>
+                    <p className="text-xs text-gray-400 mt-1">Histórico de compras, notas internas e contatos dos clientes</p>
+                </div>
+                <Badge className="bg-[#141414] text-[#F4B544] border border-[#D4AF37]/30 rounded-xl px-4 py-1.5 text-xs font-extrabold">{customers.length} Clientes</Badge>
             </div>
 
             <div className="flex flex-wrap gap-3 mb-6">
-                <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou telefone..." className="pl-10 rounded-full" data-testid="customer-search" />
+                <div className="relative flex-1 min-w-[220px]">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou telefone..." className="pl-10 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="customer-search" />
                 </div>
                 {["", "novo", "frequente", "vip"].map(t => (
-                    <Button key={t} size="sm" variant={tagFilter === t ? "default" : "outline"} onClick={() => setTagFilter(t)}
-                        className={`rounded-full text-xs ${tagFilter === t ? "bg-primary text-white" : ""}`} data-testid={`tag-filter-${t || "all"}`}>
-                        {t || "Todos"}
+                    <Button key={t} size="sm" onClick={() => setTagFilter(t)}
+                        className={`rounded-xl text-xs font-extrabold transition-all ${
+                            tagFilter === t 
+                                ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black shadow-md shadow-[#F4B544]/20" 
+                                : "bg-[#141414] text-gray-300 border border-white/10 hover:border-white/30"
+                        }`} data-testid={`tag-filter-${t || "all"}`}>
+                        {t ? t.toUpperCase() : "TODOS"}
                     </Button>
                 ))}
             </div>
 
             {customers.length === 0 ? (
-                <div className="text-center py-16"><Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">Nenhum cliente encontrado</p></div>
+                <div className="text-center py-16 bg-[#141414] rounded-2xl border border-white/10"><Users className="h-12 w-12 text-gray-500 mx-auto mb-4" /><p className="text-gray-400">Nenhum cliente encontrado</p></div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {customers.map(c => (
-                        <div key={c.id} className="bg-white dark:bg-card rounded-2xl border border-border p-5 cursor-pointer hover:border-primary/30 transition-all shadow-sm hover:shadow-md" onClick={() => viewCustomer(c.id)} data-testid={`customer-${c.id}`}>
+                        <div key={c.id} className="bg-[#141414] text-white rounded-2xl border border-white/10 p-5 cursor-pointer hover:border-[#D4AF37]/40 transition-all shadow-lg hover:scale-[1.01]" onClick={() => viewCustomer(c.id)} data-testid={`customer-${c.id}`}>
                             <div className="flex justify-between items-start mb-2">
                                 <div>
-                                    <p className="font-bold font-heading text-lg">{c.name}</p>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><Phone className="h-3 w-3" />{c.phone}</p>
+                                    <p className="font-extrabold text-white text-lg">{c.name}</p>
+                                    <p className="text-xs text-gray-400 flex items-center gap-1.5 mt-1.5"><Phone className="h-3.5 w-3.5 text-[#F4B544]" />{c.phone}</p>
                                 </div>
                                 <div className="flex gap-1">
-                                    {c.tags?.map(t => <Badge key={t} className={`${tagColors[t] || "bg-gray-100"} text-[10px] rounded-full uppercase font-bold tracking-tighter`}>{t}</Badge>)}
+                                    {c.tags?.map(t => <Badge key={t} className="bg-[#F4B544]/20 text-[#F4B544] border border-[#F4B544]/30 text-[10px] rounded-lg uppercase font-black">{t}</Badge>)}
                                 </div>
                             </div>
-                            <div className="flex justify-between text-xs text-muted-foreground mt-4 pt-3 border-t">
-                                <span>{c.orders_count || 0} pedidos</span>
-                                {c.last_order_date && <span>Ultimo: {new Date(c.last_order_date).toLocaleDateString("pt-BR")}</span>}
+                            <div className="flex justify-between text-xs text-gray-400 mt-4 pt-3 border-t border-white/10">
+                                <span className="font-semibold text-white">{c.orders_count || 0} pedidos</span>
+                                {c.last_order_date && <span>Último: {new Date(c.last_order_date).toLocaleDateString("pt-BR")}</span>}
                             </div>
                         </div>
                     ))}
@@ -123,24 +130,24 @@ export default function AdminCustomersPage() {
 
             {/* Customer Detail Dialog */}
             <Dialog open={showDetail} onOpenChange={setShowDetail}>
-                <DialogContent className="max-w-lg rounded-[2rem] max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl" data-testid="customer-detail">
+                <DialogContent className="max-w-lg rounded-2xl bg-[#141414] text-white border border-[#D4AF37]/30 max-h-[90vh] overflow-y-auto p-0 shadow-2xl" data-testid="customer-detail">
                     {selectedCustomer && (
                         <div className="flex flex-col">
-                            <div className="p-6 bg-slate-900 text-white rounded-t-[2rem]">
+                            <div className="p-6 bg-[#1E1E1E] text-white border-b border-white/10 rounded-t-2xl">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
                                         {isEditing ? (
-                                            <Input value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} className="bg-white/10 border-white/20 text-white font-heading text-xl h-10" />
+                                            <Input value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} className="bg-[#10100F] border-white/20 text-white font-extrabold text-xl h-10" />
                                         ) : (
-                                            <h2 className="text-2xl font-black font-heading">{selectedCustomer.name}</h2>
+                                            <h2 className="text-2xl font-extrabold text-white">{selectedCustomer.name}</h2>
                                         )}
-                                        <p className="text-white/60 text-xs mt-1">ID: {selectedCustomer.id.slice(0, 8)}...</p>
+                                        <p className="text-gray-400 text-xs mt-1">ID: {selectedCustomer.id.slice(0, 8)}...</p>
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)} className="rounded-xl hover:bg-white/10 text-white">
+                                        <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)} className="rounded-xl hover:bg-white/10 text-gray-300">
                                             {isEditing ? <X className="h-5 w-5" /> : <Edit2 className="h-5 w-5" />}
                                         </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => setShowDetail(false)} className="rounded-xl hover:bg-white/10 text-white">
+                                        <Button variant="ghost" size="icon" onClick={() => setShowDetail(false)} className="rounded-xl hover:bg-white/10 text-gray-300">
                                             <X className="h-5 w-5" />
                                         </Button>
                                     </div>
@@ -152,71 +159,71 @@ export default function AdminCustomersPage() {
                                             const tags = selectedCustomer.tags?.includes(t) ? selectedCustomer.tags.filter(x => x !== t) : [...(selectedCustomer.tags || []), t];
                                             updateTags(selectedCustomer.id, tags);
                                             setSelectedCustomer(s => ({ ...s, tags }));
-                                        }} className={`cursor-pointer transition-all ${selectedCustomer.tags?.includes(t) ? "bg-primary text-white" : "bg-white/10 text-white/60 hover:bg-white/20"} rounded-full px-3 py-1 text-[10px] uppercase font-bold border-none`}>
+                                        }} className={`cursor-pointer transition-all ${selectedCustomer.tags?.includes(t) ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black" : "bg-white/10 text-gray-400 hover:bg-white/20"} rounded-xl px-3 py-1 text-[10px] uppercase font-extrabold border-none`}>
                                             {t}
                                         </Badge>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="p-8 space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Telefone</label>
+                                        <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Telefone</label>
                                         {isEditing ? (
-                                            <Input value={editData.phone} onChange={e => setEditData({ ...editData, phone: e.target.value })} className="rounded-xl" />
+                                            <Input value={editData.phone} onChange={e => setEditData({ ...editData, phone: e.target.value })} className="rounded-xl bg-[#1E1E1E] text-white border-white/10" />
                                         ) : (
-                                            <p className="text-sm font-bold text-slate-700 flex items-center gap-2"><Phone className="h-4 w-4 text-primary" />{selectedCustomer.phone}</p>
+                                            <p className="text-sm font-extrabold text-white flex items-center gap-2 mt-1"><Phone className="h-4 w-4 text-[#F4B544]" />{selectedCustomer.phone}</p>
                                         )}
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total de Pedidos</label>
-                                        <p className="text-sm font-bold text-slate-700">{selectedCustomer.orders_count || 0} pedidos feitos</p>
+                                        <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Total de Pedidos</label>
+                                        <p className="text-sm font-extrabold text-white mt-1">{selectedCustomer.orders_count || 0} pedidos</p>
                                     </div>
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Endereço Principal</label>
+                                    <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Endereço Principal</label>
                                     {isEditing ? (
-                                        <textarea value={editData.address} onChange={e => setEditData({ ...editData, address: e.target.value })} className="w-full rounded-xl border border-input p-3 text-sm min-h-[80px]" />
+                                        <textarea value={editData.address} onChange={e => setEditData({ ...editData, address: e.target.value })} className="w-full rounded-xl bg-[#1E1E1E] text-white border border-white/10 p-3 text-sm min-h-[80px]" />
                                     ) : (
-                                        <p className="text-sm text-slate-600 flex items-start gap-2 leading-relaxed">
-                                            <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                                        <p className="text-sm text-gray-300 flex items-start gap-2 leading-relaxed mt-1">
+                                            <MapPin className="h-4 w-4 text-[#F4B544] mt-0.5 shrink-0" />
                                             {selectedCustomer.address || "Não informado"}
                                         </p>
                                     )}
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notas Internas</label>
-                                    <div className="relative">
-                                        <textarea value={editData.internal_note} onChange={e => setEditData({ ...editData, internal_note: e.target.value })} placeholder="Observações importantes sobre este cliente..." className="w-full rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm min-h-[100px] focus:ring-2 focus:ring-primary/20 transition-all outline-none" />
-                                        <MessageSquare className="absolute right-4 bottom-4 h-4 w-4 text-slate-300" />
+                                    <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Notas Internas</label>
+                                    <div className="relative mt-1">
+                                        <textarea value={editData.internal_note} onChange={e => setEditData({ ...editData, internal_note: e.target.value })} placeholder="Observações sobre este cliente..." className="w-full rounded-2xl border border-white/10 bg-[#1E1E1E] text-white p-4 text-sm min-h-[100px] focus:ring-2 focus:ring-[#F4B544]/20 transition-all outline-none" />
+                                        <MessageSquare className="absolute right-4 bottom-4 h-4 w-4 text-gray-500" />
                                     </div>
                                 </div>
 
                                 {isEditing && (
-                                    <Button onClick={handleSave} className="w-full h-12 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold gap-2">
+                                    <Button onClick={handleSave} className="w-full h-12 rounded-xl bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold gap-2 shadow-lg shadow-[#F4B544]/20">
                                         <Save className="h-5 w-5" /> Salvar Alterações
                                     </Button>
                                 )}
 
-                                <Separator className="my-6" />
+                                <Separator className="bg-white/10 my-6" />
                                 
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Últimos Pedidos</p>
-                                    {selectedCustomer.orders?.length === 0 ? <p className="text-xs text-muted-foreground bg-slate-50 p-4 rounded-xl text-center italic">Nenhum pedido realizado ainda.</p> : (
+                                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-4">Últimos Pedidos</p>
+                                    {selectedCustomer.orders?.length === 0 ? <p className="text-xs text-gray-500 bg-[#1E1E1E] p-4 rounded-xl text-center italic">Nenhum pedido realizado ainda.</p> : (
                                         <div className="space-y-3 max-h-60 overflow-auto pr-2 custom-scrollbar">
                                             {selectedCustomer.orders?.map(o => (
-                                                <div key={o.id} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
+                                                <div key={o.id} className="bg-[#1E1E1E] border border-white/10 rounded-xl p-4 shadow-sm">
                                                     <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-sm font-black font-heading">#{o.order_number}</span>
-                                                        <Badge className={`text-[9px] font-bold px-2 py-0.5 rounded-lg border-none ${o.status === "entregue" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{o.status.toUpperCase()}</Badge>
+                                                        <span className="text-sm font-extrabold text-white">#{o.order_number}</span>
+                                                        <Badge className={`text-[9px] font-extrabold px-2 py-0.5 rounded-lg border-none ${o.status === "entregue" ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-300"}`}>{o.status.toUpperCase()}</Badge>
                                                     </div>
-                                                    <p className="text-[11px] text-slate-500 line-clamp-1 mb-2">{o.items?.map(i => `${i.quantity}x ${i.product_name}`).join(", ")}</p>
-                                                    <div className="flex justify-between items-end border-t border-slate-50 pt-2">
-                                                        <span className="text-[10px] text-slate-400">{new Date(o.created_at).toLocaleDateString("pt-BR")}</span>
-                                                        <span className="text-sm font-black text-primary">R$ {o.total?.toFixed(2)}</span>
+                                                    <p className="text-[11px] text-gray-400 line-clamp-1 mb-2">{o.items?.map(i => `${i.quantity}x ${i.product_name}`).join(", ")}</p>
+                                                    <div className="flex justify-between items-end border-t border-white/10 pt-2">
+                                                        <span className="text-[10px] text-gray-400">{new Date(o.created_at).toLocaleDateString("pt-BR")}</span>
+                                                        <span className="text-sm font-extrabold text-[#F4B544]">R$ {o.total?.toFixed(2)}</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -225,8 +232,8 @@ export default function AdminCustomersPage() {
                                 </div>
                             </div>
 
-                            <DialogFooter className="p-6 bg-slate-50 rounded-b-[2rem] border-t border-slate-100 sm:justify-start">
-                                <Button variant="ghost" onClick={() => setConfirmDelete({ isOpen: true, customerId: selectedCustomer.id })} className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl font-bold gap-2">
+                            <DialogFooter className="p-4 bg-[#1E1E1E] rounded-b-2xl border-t border-white/10 sm:justify-start">
+                                <Button variant="ghost" onClick={() => setConfirmDelete({ isOpen: true, customerId: selectedCustomer.id })} className="text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-xl font-extrabold gap-2">
                                     <Trash2 className="h-4 w-4" /> Remover Cliente
                                 </Button>
                             </DialogFooter>
