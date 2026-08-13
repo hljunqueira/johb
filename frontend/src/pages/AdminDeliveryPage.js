@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Truck, Plus, Trash2, DollarSign, MapPin, Save, Clock, Upload, Image, X, QrCode, Navigation, Package } from "lucide-react";
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+import { API } from "@/lib/constants";
 
 const DAYS = [
     { key: "seg", label: "Segunda" },

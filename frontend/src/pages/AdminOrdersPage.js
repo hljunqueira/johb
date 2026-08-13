@@ -18,9 +18,7 @@ import {
     DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+import { API } from "@/lib/constants";
 
 const statusConfig = {
     aguardando: { 

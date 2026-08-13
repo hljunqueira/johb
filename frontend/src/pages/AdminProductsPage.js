@@ -11,8 +11,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Copy, Upload, Package, X, Tag } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+import { API, API_URL as BACKEND_URL } from "@/lib/constants";
 const getImageUrl = (url) => { if (!url) return ""; if (url.startsWith("http")) return url; return `${BACKEND_URL}${url}`; };
 
 const emptyProduct = { name: "", description: "", price: "", category_id: "", image_url: "", stock: -1, tags: [], active: true };

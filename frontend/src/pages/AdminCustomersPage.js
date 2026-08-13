@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Search, Users, Phone, MessageSquare, Trash2, Edit2, Save, X, MapPin } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+import { API } from "@/lib/constants";
 
 export default function AdminCustomersPage() {
     const [customers, setCustomers] = useState([]);

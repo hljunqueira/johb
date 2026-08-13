@@ -27,10 +27,10 @@ export default function AdminLayout() {
     const handleLogout = async () => { await logout(); navigate("/admin/login"); };
 
     const NavContent = ({ onNav }) => (
-        <nav className="space-y-1">
+        <nav className="space-y-1.5">
             {navItems.map(item => (
                 <NavLink key={item.to} to={item.to} onClick={onNav}
-                    className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? "bg-[#D4AF37] text-black font-bold shadow-md" : "text-foreground hover:bg-muted"}`}
+                    className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${isActive ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 scale-[1.02]" : "text-[#A0A0A0] hover:text-white hover:bg-white/5"}`}
                     data-testid={`nav-${item.label.toLowerCase()}`}>
                     <item.icon className="h-4 w-4" />{item.label}
                 </NavLink>
@@ -39,33 +39,30 @@ export default function AdminLayout() {
     );
 
     return (
-        <div className="min-h-screen bg-background" data-testid="admin-layout">
+        <div className="min-h-screen bg-[#0A0A0A] text-white font-sans" data-testid="admin-layout">
             {/* Top Bar */}
-            <header className="sticky top-0 z-40 bg-[#1E1E1E] backdrop-blur-md border-b border-[#D4AF37]/20 shadow-lg">
+            <header className="sticky top-0 z-40 bg-[#141414]/95 backdrop-blur-md border-b border-[#D4AF37]/20 shadow-xl">
                 <div className="px-4 lg:px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Sheet open={mobileNav} onOpenChange={setMobileNav}>
                             <SheetTrigger asChild><Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/10"><Menu className="h-5 w-5" /></Button></SheetTrigger>
-                            <SheetContent side="left" className="w-64 p-4">
-                                <div className="mb-6 mt-2">
-                                    <h2 className="font-bold font-heading text-lg text-[#D4AF37]">JOHB</h2>
-                                    <p className="text-xs text-muted-foreground">{user?.name}</p>
+                            <SheetContent side="left" className="w-64 p-4 bg-[#141414] text-white border-r border-[#D4AF37]/20">
+                                <div className="mb-6 mt-2 flex items-center gap-3">
+                                    <img src="/logo-semfundo.png" alt="JOHB Logo" className="h-9 w-auto object-contain" />
+                                    <div>
+                                        <h2 className="font-bold text-sm text-[#F4B544]">Painel JOHB</h2>
+                                        <p className="text-xs text-gray-400">{user?.name}</p>
+                                    </div>
                                 </div>
                                 <NavContent onNav={() => setMobileNav(false)} />
                             </SheetContent>
                         </Sheet>
-                        <div className="h-10 w-10 rounded-full border-2 border-[#D4AF37] bg-[#121212] flex items-center justify-center shadow-inner">
-                            <span className="font-extrabold text-[#D4AF37] text-sm tracking-wider">JOHB</span>
-                        </div>
-                        <span className="font-bold font-heading text-white text-lg hidden sm:block tracking-tight">JOHB</span>
-                        <span className="text-[10px] bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 px-2 py-0.5 rounded-full hidden sm:block font-bold uppercase tracking-wider">Admin</span>
+                        <img src="/logo-semfundo.png" alt="JOHB Logo" className="h-10 w-auto object-contain drop-shadow-md" />
+                        <span className="text-[10px] bg-[#D4AF37]/20 text-[#F4B544] border border-[#D4AF37]/40 px-2.5 py-0.5 rounded-full hidden sm:block font-bold uppercase tracking-wider">Admin</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={toggleDark} data-testid="toggle-dark" className="text-white hover:bg-white/10">
-                            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                        </Button>
-                        <span className="text-sm text-gray-200 hidden sm:block font-medium mr-2">{user?.name}</span>
-                        <Button variant="secondary" size="sm" onClick={handleLogout} data-testid="logout-btn" className="bg-white/10 hover:bg-white/20 text-white border-none rounded-lg px-4">
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-300 hidden sm:block font-semibold mr-1">{user?.name || "Administrador JOHB"}</span>
+                        <Button variant="secondary" size="sm" onClick={handleLogout} data-testid="logout-btn" className="bg-white/10 hover:bg-red-500/20 hover:text-red-400 text-white border border-white/10 rounded-xl px-4 transition-all">
                             <LogOut className="h-4 w-4 mr-2" /> Sair
                         </Button>
                     </div>
@@ -74,12 +71,12 @@ export default function AdminLayout() {
 
             <div className="flex">
                 {/* Desktop Sidebar */}
-                <aside className="hidden lg:block w-56 border-r border-border min-h-[calc(100vh-57px)] p-4 bg-white dark:bg-card">
+                <aside className="hidden lg:block w-60 border-r border-[#D4AF37]/15 min-h-[calc(100vh-61px)] p-4 bg-[#141414] shadow-2xl">
                     <NavContent />
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 p-4 lg:p-6 overflow-auto">
+                <main className="flex-1 p-4 lg:p-6 overflow-auto bg-[#0A0A0A]">
                     <Outlet />
                 </main>
             </div>

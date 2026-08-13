@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { BarChart3, TrendingUp, Clock, Download, DollarSign, ShoppingCart, Truck, Store } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+import { API } from "@/lib/constants";
 const COLORS = ["#2A7D4B", "#F28F5E", "#386641", "#E53935", "#FFC107"];
 
 export default function AdminReportsPage() {

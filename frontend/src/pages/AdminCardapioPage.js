@@ -14,8 +14,7 @@ import { Plus, Pencil, Trash2, Copy, Upload, Package, Layers, Tag, Grid3X3, X, I
 import { useMenus } from "@/hooks/useCardapioData";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+import { API, API_URL as BACKEND_URL } from "@/lib/constants";
 const getImageUrl = (url) => { if (!url) return ""; if (url.startsWith("http")) return url; return `${BACKEND_URL}${url}`; };
 
 export default function AdminCardapioPage() {
