@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import axios from "axios";
 
 const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
-const BACKEND_URL = (rawBackend && !rawBackend.includes('saladasoul') && !rawBackend.includes('railway'))
+const BACKEND_URL = (rawBackend && rawBackend.includes('hljdev.com.br'))
     ? rawBackend
     : 'https://api.hljdev.com.br';
 const API = `${BACKEND_URL}/api`;

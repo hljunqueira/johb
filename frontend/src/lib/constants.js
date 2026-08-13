@@ -1,5 +1,5 @@
 const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
-export const API_URL = (rawBackend && !rawBackend.includes('saladasoul') && !rawBackend.includes('railway'))
+export const API_URL = (rawBackend && rawBackend.includes('hljdev.com.br'))
     ? rawBackend
     : 'https://api.hljdev.com.br';
 export const API = `${API_URL}/api`;
