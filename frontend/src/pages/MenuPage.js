@@ -657,11 +657,11 @@ export default function MenuPage() {
                         <div className="pt-4 grid grid-cols-2 gap-6 border-t border-[#F4B544]/15">
                             <div>
                                 <span className="block font-serif text-xl font-bold text-[#F4B544]">Balneário Arroio do Silva</span>
-                                <span className="text-xs text-[#B8B1A3]">Delivery rápido e direto para sua casa ou trabalho em SC</span>
+                                <span className="text-xs text-[#B8B1A3]">Delivery rápido e direto para sua casa.</span>
                             </div>
                             <div>
                                 <span className="block font-serif text-xl font-bold text-[#F4B544]">Atendimento</span>
-                                <span className="text-xs text-[#B8B1A3]">Segunda a Sábado, das 07h00 às 19h00</span>
+                                <span className="text-xs text-[#B8B1A3]">Somente pedidos agendados</span>
                             </div>
                         </div>
                     </div>
