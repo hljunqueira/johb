@@ -2,7 +2,11 @@ import { createContext, useContext, useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
+const BACKEND_URL = (rawBackend && !rawBackend.includes('saladasoul') && !rawBackend.includes('railway'))
+    ? rawBackend
+    : 'https://api.hljdev.com.br';
+const API = `${BACKEND_URL}/api`;
 const AuthContext = createContext();
 
 AuthProvider.propTypes = {

@@ -2,10 +2,10 @@
  * API Client with consistent error handling
  * Provides standardized error messages and request/response interceptors
  */
-import axios from 'axios';
-import { toast } from 'sonner';
-
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL;
+const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
+const API_BASE_URL = (rawBackend && !rawBackend.includes('saladasoul') && !rawBackend.includes('railway'))
+    ? rawBackend
+    : 'https://api.hljdev.com.br';
 
 // Create axios instance
 const apiClient = axios.create({

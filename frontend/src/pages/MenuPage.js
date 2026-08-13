@@ -17,8 +17,11 @@ import { HeroSection } from "@/components/HeroSection";
 import { CategoryPills } from "@/components/CategoryPills";
 import { EnhancedProductCard } from "@/components/EnhancedProductCard";
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
+const BACKEND_URL = (rawBackend && !rawBackend.includes('saladasoul') && !rawBackend.includes('railway'))
+    ? rawBackend
+    : 'https://api.hljdev.com.br';
+const API = `${BACKEND_URL}/api`;
 
 // Categorias padrão JOHB para exibição contínua
 const DEFAULT_JOHB_CATEGORIES = [

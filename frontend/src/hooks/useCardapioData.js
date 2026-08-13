@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
+import { API } from '../lib/constants';
 
 /**
  * Hook genérico para operações CRUD

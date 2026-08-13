@@ -1,6 +1,7 @@
-// API Configuration
-// When REACT_APP_BACKEND_URL is empty, use relative paths (same domain via Nginx proxy)
-export const API_URL = process.env.REACT_APP_BACKEND_URL || '';
+const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
+export const API_URL = (rawBackend && !rawBackend.includes('saladasoul') && !rawBackend.includes('railway'))
+    ? rawBackend
+    : 'https://api.hljdev.com.br';
 export const API = `${API_URL}/api`;
 
 // Helper to get full image URL
