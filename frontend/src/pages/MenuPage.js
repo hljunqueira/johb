@@ -859,17 +859,7 @@ export default function MenuPage() {
         );
     }
 
-    if (menus.length === 0) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <div className="text-center max-w-md mx-auto px-4">
-                    <Layers className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <h2 className="text-xl font-bold font-heading mb-2">Cardápio em preparação</h2>
-                    <p className="text-muted-foreground mb-4">Nosso cardápio está sendo montado. Volte em breve!</p>
-                </div>
-            </div>
-        );
-    }
+    // Exibir o layout completo da loja JOHB mesmo se o banco estiver sem menus no momento
 
     return (
         <div className="min-h-screen bg-[#050505] text-[#FFFAF0] font-sans antialiased selection:bg-[#F4B544]/30" data-testid="menu-page">
