@@ -64,10 +64,8 @@ app = FastAPI(
 DEFAULT_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://salada-soul-admin-h9jz7jb5k-henriques-projects-31af9234.vercel.app",
-    "https://salada-soul-admin.vercel.app",
-    "https://salada-soul.vercel.app",
-    "https://admin.saladasoul.com",
+    "https://johb-cyan.vercel.app",
+    "https://johb-qm4um2wl7-henriques-projects-31af9234.vercel.app",
 ]
 
 # Adicionar origens da variável de ambiente se existir
