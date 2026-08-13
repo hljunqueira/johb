@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,11 @@ export default function AdminLoginPage() {
     const { login, user } = useAuth();
     const navigate = useNavigate();
 
-    if (user) { 
-        setTimeout(() => navigate("/admin/pedidos", { replace: true }), 0); 
-        return null; 
-    }
+    useEffect(() => {
+        if (user) {
+            navigate("/admin/pedidos", { replace: true });
+        }
+    }, [user, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
