@@ -63,6 +63,7 @@
   },
   "scripts": {
     "start": "craco start",
+    "dev": "craco start",
     "build": "craco build",
     "test": "craco test",
     "test:ci": "craco test --ci --coverage --watchAll=false",
