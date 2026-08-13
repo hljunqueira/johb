@@ -198,7 +198,6 @@ export default function AdminDeliveryPage() {
     ];
 
     return (
-    return (
         <div className="text-white space-y-6" data-testid="admin-delivery-page">
             <div>
                 <h1 className="text-3xl font-extrabold text-white tracking-tight">Configurações do Estabelecimento</h1>
