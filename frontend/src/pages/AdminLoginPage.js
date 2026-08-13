@@ -28,8 +28,9 @@ export default function AdminLoginPage() {
             toast.success("Login realizado com sucesso!");
             navigate("/admin/pedidos", { replace: true }); 
         }
-        catch { 
-            toast.error("Email ou senha incorretos"); 
+        catch (err) { 
+            const errorMsg = err.response?.data?.detail || err.message || "Email ou senha incorretos";
+            toast.error(typeof errorMsg === 'string' ? errorMsg : "Email ou senha incorretos"); 
         }
         finally { 
             setLoading(false); 

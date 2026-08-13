@@ -26,7 +26,7 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         if (token) {
-            axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` }, withCredentials: true })
+            axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
                 .then(res => { setUser(res.data); setLoading(false); })
                 .catch(() => { setToken(null); setUser(null); setLoading(false); });
         } else { setLoading(false); }
@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
 
     const processGoogleSession = async (sessionId) => {
         const res = await axios.get(`${API}/auth/google-session`, {
-            headers: { "X-Session-ID": sessionId }, withCredentials: true
+            headers: { "X-Session-ID": sessionId }
         });
         setToken(res.data.token);
         setUser(res.data.user);
@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
     };
 
     const logout = async () => {
-        try { await axios.post(`${API}/auth/logout`, {}, { headers: token ? { Authorization: `Bearer ${token}` } : {}, withCredentials: true }); } catch {}
+        try { await axios.post(`${API}/auth/logout`, {}, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); } catch {}
         setToken(null);
         setUser(null);
     };
