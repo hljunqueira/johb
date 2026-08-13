@@ -625,9 +625,11 @@ export default function MenuPage() {
                     <div className="text-center py-16 bg-[#10100F] rounded-2xl border border-[#F4B544]/15">
                         <Coffee className="h-12 w-12 text-[#F4B544] mx-auto mb-4 opacity-50" />
                         <p className="text-lg font-serif font-bold text-[#FFFAF0]">Nenhum item cadastrado nesta categoria</p>
-                        <p className="text-[#B8B1A3] text-sm mt-1">
-                            {search ? "Tente buscar por outro termo" : "Cadastre produtos através do painel admin /admin/login"}
-                        </p>
+                        {search && (
+                            <p className="text-[#B8B1A3] text-sm mt-1">
+                                Tente buscar por outro termo
+                            </p>
+                        )}
                         {search && (
                             <Button
                                 variant="outline"
