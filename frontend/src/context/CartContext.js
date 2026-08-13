@@ -9,8 +9,8 @@ CartProvider.propTypes = {
 
 // Função para obter a chave do carrinho baseada no telefone do cliente
 const getCartKey = () => {
-    const phone = localStorage.getItem("salada-soul-phone");
-    return phone ? `salada-soul-cart-${phone}` : "salada-soul-cart-guest";
+    const phone = localStorage.getItem("johb-phone");
+    return phone ? `johb-cart-${phone}` : "johb-cart-guest";
 };
 
 export function CartProvider({ children }) {

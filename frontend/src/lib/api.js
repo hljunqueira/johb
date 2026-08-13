@@ -75,7 +75,7 @@ export function getErrorMessage(error) {
  */
 apiClient.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('salada-soul-admin-token');
+        const token = localStorage.getItem('johb-admin-token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -95,7 +95,7 @@ apiClient.interceptors.response.use(
         // Handle specific cases
         if (error.response?.status === 401) {
             // Clear auth and redirect to login
-            localStorage.removeItem('salada-soul-admin-token');
+            localStorage.removeItem('johb-admin-token');
             window.location.href = '/admin/login';
         }
         

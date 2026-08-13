@@ -13,7 +13,7 @@ CustomerProvider.propTypes = {
 export function CustomerProvider({ children }) {
     const [customer, setCustomer] = useState(() => {
         try {
-            const saved = localStorage.getItem("salada-soul-customer");
+            const saved = localStorage.getItem("johb-customer");
             return saved ? JSON.parse(saved) : null;
         } catch {
             return null;
@@ -26,9 +26,9 @@ export function CustomerProvider({ children }) {
     // Salvar no localStorage quando customer mudar
     useEffect(() => {
         if (customer) {
-            localStorage.setItem("salada-soul-customer", JSON.stringify(customer));
+            localStorage.setItem("johb-customer", JSON.stringify(customer));
         } else {
-            localStorage.removeItem("salada-soul-customer");
+            localStorage.removeItem("johb-customer");
         }
     }, [customer]);
 

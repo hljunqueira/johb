@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "@/context/CartContext";
@@ -6,429 +6,388 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { ArrowLeft, Truck, Store, Copy, Check, Loader2, Edit2, X, Plus, Minus, MapPin } from "lucide-react";
+import { 
+    ArrowLeft, Truck, Store, Check, Loader2, MapPin, 
+    CreditCard, QrCode, ShoppingBag, ShieldCheck, Sparkles 
+} from "lucide-react";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
-const getImageUrl = (url) => { if (!url) return ""; if (url.startsWith("http")) return url; return `${BACKEND_URL}${url}`; };
+
+const getImageUrl = (url) => {
+    if (!url) return "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=200";
+    if (url.startsWith("http")) return url;
+    return `${BACKEND_URL}${url}`;
+};
 
 export default function CheckoutPage() {
-    const { items, total, clearCart, updateObservation, updateQuantity, removeItem } = useCart();
-    const [editingItem, setEditingItem] = useState(null);
-    const [editObservation, setEditObservation] = useState("");
+    const { items, total, clearCart } = useCart();
     const navigate = useNavigate();
     
-    // Dados do cliente vêm do localStorage (login feito no MenuPage)
+    // Dados do cliente vêm do localStorage
     const customerData = (() => {
         try {
-            const saved = localStorage.getItem("salada-soul-customer");
+            const saved = localStorage.getItem("johb-customer");
             return saved ? JSON.parse(saved) : null;
         } catch {
             return null;
         }
     })();
-    const name = customerData?.name || localStorage.getItem("salada-soul-name") || "";
-    const phone = customerData?.phone || localStorage.getItem("salada-soul-phone") || "";
+
+    const [name, setName] = useState(customerData?.name || localStorage.getItem("johb-name") || "");
+    const [phone, setPhone] = useState(customerData?.phone || localStorage.getItem("johb-phone") || "");
     
-    const [deliveryType, setDeliveryType] = useState("retirada");
-    const [address, setAddress] = useState(() => localStorage.getItem("salada-soul-address") || "");
-    const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("salada-soul-neighborhood") || "");
-    const [deliverySettings, setDeliverySettings] = useState(null);
-    const [pixSettings, setPixSettings] = useState(null);
-    const [showPix, setShowPix] = useState(false);
-    const [pixCopied, setPixCopied] = useState(false);
+    const [deliveryType, setDeliveryType] = useState("entrega"); // 'entrega' ou 'retirada'
+    const [address, setAddress] = useState(() => localStorage.getItem("johb-address") || "");
+    const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("johb-neighborhood") || "Centro");
+    const [observation, setObservation] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState("asaas"); // 'asaas' (PIX/Cartão online) ou 'pix_manual'
+    
+    const [deliveryFee, setDeliveryFee] = useState(5.00); // Taxa padrã de Balneário Arroio do Silva — SC
     const [loading, setLoading] = useState(false);
-    const [calculatingFee, setCalculatingFee] = useState(false);
-    const [orderId, setOrderId] = useState(null);
-    const [saveAddress, setSaveAddress] = useState(true);
-    const [calculatedDistance, setCalculatedDistance] = useState(null);
-    const [deliveryFeeData, setDeliveryFeeData] = useState(null);
 
     useEffect(() => {
-        // Redireciona para home se não estiver logado
-        if (!phone) {
-            toast.error("Por favor, identifique-se antes de finalizar o pedido");
+        if (items.length === 0) {
+            toast.error("Seu carrinho está vazio!");
             navigate("/");
-            return;
         }
-        if (items.length === 0) navigate("/");
-        axios.get(`${API}/delivery-settings`).then(r => setDeliverySettings(r.data));
-        axios.get(`${API}/pix-settings`).then(r => setPixSettings(r.data));
-    }, []); // eslint-disable-line
+    }, [items, navigate]);
 
-    // Calcular taxa de entrega baseada na distância
-    const calculateDeliveryFee = useCallback(async () => {
-        if (deliveryType !== "entrega" || !address || !deliverySettings) {
-            setDeliveryFeeData(null);
-            setCalculatedDistance(null);
-            return;
-        }
-        
-        setCalculatingFee(true);
-        try {
-            const response = await axios.get(`${API}/calculate-delivery-fee`, {
-                params: { address: `${address}, ${neighborhood}` }
-            });
-            setDeliveryFeeData(response.data);
-            setCalculatedDistance(response.data.distance_km);
-        } catch (error) {
-            console.error("Erro ao calcular taxa de entrega:", error);
-            toast.error(error.response?.data?.detail || "Não foi possível calcular a taxa de entrega");
-            setDeliveryFeeData(null);
-            setCalculatedDistance(null);
-        } finally {
-            setCalculatingFee(false);
-        }
-    }, [deliveryType, address, neighborhood, deliverySettings]);
-
-    // Calcular taxa quando o endereço mudar (com debounce)
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            if (deliveryType === "entrega" && address && address.length > 10) {
-                calculateDeliveryFee();
-            }
-        }, 1000); // Aguarda 1 segundo após o usuário parar de digitar
-        
-        return () => clearTimeout(timeoutId);
-    }, [address, neighborhood, deliveryType, calculateDeliveryFee]);
-
-    const deliveryFee = (() => {
-        if (deliveryType !== "entrega" || !deliverySettings) return 0;
-        // Sem endereço válido, ainda não calcula
-        if (!address || address.length < 10) return null; // null = ainda não calculado
-        // Tem endereço calculado
-        if (deliveryFeeData) return deliveryFeeData.delivery_fee;
-        // Endereço inserido mas ainda calculando ou erro
-        return null;
-    })();
-    const grandTotal = total + deliveryFee;
+    const finalDeliveryFee = deliveryType === "entrega" ? deliveryFee : 0;
+    const grandTotal = total + finalDeliveryFee;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (deliveryType === "entrega" && (!address || !neighborhood)) { toast.error("Preencha endereco e bairro"); return; }
+
+        if (!name.trim()) {
+            toast.error("Por favor, informe seu nome.");
+            return;
+        }
+        if (!phone.trim()) {
+            toast.error("Por favor, informe seu WhatsApp.");
+            return;
+        }
+        if (deliveryType === "entrega" && (!address.trim() || !neighborhood.trim())) {
+            toast.error("Preencha seu endereço completo e bairro em Balneário Arroio do Silva.");
+            return;
+        }
+
         setLoading(true);
         try {
-            const res = await axios.post(`${API}/orders`, {
-                customer_name: name, customer_phone: phone, delivery_type: deliveryType,
-                address, neighborhood,
-                items: items.map(i => {
-                    let obs = i.observation || "";
-                    if (i.additionals?.length > 0) {
-                        const addText = "Adicionais: " + i.additionals.map(a => a.name).join(", ");
-                        obs = obs ? `${addText} | ${obs}` : addText;
-                    }
-                    return { product_id: i.product_id, product_name: i.product_name, quantity: i.quantity, price: i.price, observation: obs };
-                })
-            });
-            if (saveAddress && deliveryType === "entrega") {
-                localStorage.setItem("salada-soul-address", address);
-                localStorage.setItem("salada-soul-neighborhood", neighborhood);
+            // salvar dados no localStorage
+            localStorage.setItem("johb-name", name);
+            localStorage.setItem("johb-phone", phone);
+            if (deliveryType === "entrega") {
+                localStorage.setItem("johb-address", address);
+                localStorage.setItem("johb-neighborhood", neighborhood);
             }
-            setOrderId(res.data.id);
-            if (pixSettings?.pix_key) { setShowPix(true); }
-            else { clearCart(); navigate(`/pedido/${res.data.id}`); }
-        } catch { toast.error("Erro ao criar pedido"); }
-        finally { setLoading(false); }
-    };
 
-    const handlePixDone = () => { setShowPix(false); clearCart(); navigate(`/pedido/${orderId}`); };
+            // 1. Criar pedido no backend
+            const res = await axios.post(`${API}/orders`, {
+                customer_name: name,
+                customer_phone: phone,
+                delivery_type: deliveryType,
+                address: deliveryType === "entrega" ? address : "Retirada no Balcão",
+                neighborhood: deliveryType === "entrega" ? neighborhood : "Balneário Arroio do Silva",
+                items: items.map(i => ({
+                    product_id: i.product_id || i.id,
+                    name: i.name || i.product_name,
+                    quantity: i.quantity,
+                    price: i.price,
+                    complements: i.complements || []
+                })),
+                subtotal: total,
+                delivery_fee: finalDeliveryFee,
+                total: grandTotal,
+                observation: observation,
+                payment_method: paymentMethod
+            });
 
-    const startEditObservation = (item) => {
-        setEditingItem(item.cart_id);
-        setEditObservation(item.observation || "");
-    };
+            const createdOrder = res.data;
+            const orderId = createdOrder.id;
 
-    const saveObservation = (cartId) => {
-        updateObservation(cartId, editObservation);
-        setEditingItem(null);
-        toast.success("Observação atualizada!");
-    };
+            // 2. Criar cobrança no Asaas
+            try {
+                const checkoutRes = await axios.post(`${API}/payments/asaas/checkout`, {
+                    order_id: orderId,
+                    billing_type: "UNDEFINED"
+                });
 
-    const cancelEditObservation = () => {
-        setEditingItem(null);
-        setEditObservation("");
-    };
-    const copyPixKey = () => {
-        navigator.clipboard.writeText(pixSettings?.pix_key || "");
-        setPixCopied(true); toast.success("Chave Pix copiada!");
-        setTimeout(() => setPixCopied(false), 3000);
+                clearCart();
+
+                if (checkoutRes.data?.invoice_url) {
+                    toast.success("Pedido criado com sucesso! Redirecionando para o pagamento...");
+                    window.location.href = checkoutRes.data.invoice_url;
+                } else {
+                    toast.success("Pedido recebido com sucesso!");
+                    navigate(`/pedido/${orderId}`);
+                }
+            } catch (asaasErr) {
+                console.warn("Asaas Sandbox / Fallback:", asaasErr);
+                clearCart();
+                toast.success("Pedido registrado! Acompanhe o status do pagamento.");
+                navigate(`/pedido/${orderId}`);
+            }
+
+        } catch (err) {
+            console.error("Erro ao criar pedido:", err);
+            toast.error("Não foi possível finalizar o pedido. Tente novamente.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div className="min-h-screen bg-background" data-testid="checkout-page">
-            <header className="bg-white border-b border-border">
-                <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="back-btn"><ArrowLeft className="h-5 w-5" /></Button>
-                    <h1 className="text-xl font-bold font-heading">Finalizar Pedido</h1>
+        <div className="min-h-screen bg-[#050505] text-[#FFFAF0] antialiased pb-16">
+            {/* Header de Checkout */}
+            <header className="sticky top-0 z-30 bg-[#10100F]/95 backdrop-blur-md border-b border-[#F4B544]/20 py-4 px-4 sm:px-8">
+                <div className="max-w-4xl mx-auto flex items-center justify-between">
+                    <button
+                        onClick={() => navigate("/")}
+                        className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#B8B1A3] hover:text-[#F4B544] transition-colors font-medium"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Voltar ao Cardápio</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                        <img src="/logo.png" alt="JOHB" className="h-8 w-auto object-contain" />
+                        <span className="font-serif font-bold text-lg text-[#FFFAF0]">JOHB</span>
+                    </div>
+
+                    <div className="text-xs uppercase tracking-wider text-[#F4B544] font-semibold flex items-center gap-1">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span className="hidden sm:inline">Checkout Seguro</span>
+                    </div>
                 </div>
             </header>
 
-            <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Summary */}
-                    <div className="bg-white rounded-2xl border border-border p-5">
-                        <h2 className="font-semibold font-heading mb-3">Resumo do Pedido</h2>
-                        <div className="space-y-3">
-                            {items.map(item => (
-                                <div key={item.cart_id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
-                                    <img src={getImageUrl(item.image_url)} alt="" className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium">{item.product_name}</p>
-                                                {item.additionals?.length > 0 && (
-                                                    <p className="text-xs text-accent mt-0.5">+ {item.additionals.map(a => a.name).join(", ")}</p>
-                                                )}
-                                            </div>
-                                            <span className="text-sm font-semibold text-primary">R$ {(item.price * item.quantity).toFixed(2)}</span>
-                                        </div>
-                                        
-                                        {/* Quantity Controls */}
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => updateQuantity(item.cart_id, item.quantity - 1)}
-                                                className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
-                                            >
-                                                <Minus className="h-3 w-3" />
-                                            </button>
-                                            <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => updateQuantity(item.cart_id, item.quantity + 1)}
-                                                className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
-                                            >
-                                                <Plus className="h-3 w-3" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeItem(item.cart_id)}
-                                                className="ml-2 text-xs text-red-500 hover:text-red-700 underline"
-                                            >
-                                                Remover
-                                            </button>
-                                        </div>
+            <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+                <div className="text-center space-y-2 mb-8">
+                    <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold flex items-center justify-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Balneário Arroio do Silva — SC</span>
+                    </span>
+                    <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#FFFAF0]">
+                        Finalizar Seu Pedido
+                    </h1>
+                    <p className="text-xs sm:text-sm text-[#B8B1A3] font-light">
+                        Salgados artesanais quentinhos preparados especialmente para você.
+                    </p>
+                </div>
 
-                                        {/* Observation Section */}
-                                        <div className="mt-2">
-                                            {editingItem === item.cart_id ? (
-                                                <div className="space-y-2">
-                                                    <Textarea
-                                                        value={editObservation}
-                                                        onChange={e => setEditObservation(e.target.value)}
-                                                        placeholder="Ex: Sem cebola, molho à parte..."
-                                                        className="text-xs min-h-[60px] rounded-lg"
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="h-7 text-xs rounded-full"
-                                                            onClick={() => saveObservation(item.cart_id)}
-                                                        >
-                                                            <Check className="h-3 w-3 mr-1" /> Salvar
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-7 text-xs rounded-full"
-                                                            onClick={cancelEditObservation}
-                                                        >
-                                                            <X className="h-3 w-3 mr-1" /> Cancelar
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    {item.observation ? (
-                                                        <>
-                                                            <p className="text-xs text-muted-foreground italic flex-1">"{item.observation}"</p>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => startEditObservation(item)}
-                                                                className="text-xs text-primary hover:underline flex items-center gap-1"
-                                                            >
-                                                                <Edit2 className="h-3 w-3" /> Editar
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => startEditObservation(item)}
-                                                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                                                        >
-                                                            <Edit2 className="h-3 w-3" /> Adicionar observação
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Coluna Principal: Formulário */}
+                    <div className="lg:col-span-7 space-y-6">
+                        
+                        {/* 1. Tipo de Entrega */}
+                        <div className="bg-[#10100F] rounded-2xl p-5 border border-[#F4B544]/20 space-y-4">
+                            <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
+                                <Truck className="w-5 h-5 text-[#F4B544]" />
+                                <span>1. Modalidade de Entrega</span>
+                            </h2>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setDeliveryType("entrega")}
+                                    className={`p-4 rounded-xl border text-left flex items-start gap-3 transition-all ${
+                                        deliveryType === "entrega"
+                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
+                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                    }`}
+                                >
+                                    <Truck className={`w-5 h-5 mt-0.5 ${deliveryType === "entrega" ? "text-[#F4B544]" : "text-[#B8B1A3]"}`} />
+                                    <div>
+                                        <span className="block font-semibold text-sm text-[#FFFAF0]">Entrega em Casa</span>
+                                        <span className="block text-[11px] text-[#B8B1A3]">Balneário Arroio do Silva</span>
+                                        <span className="block text-xs font-bold text-[#F4B544] mt-1">Taxa: R$ 5,00</span>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                                </button>
 
-                    {/* Customer Info */}
-                    <div className="bg-white rounded-2xl border border-border p-5 space-y-4">
-                        <h2 className="font-semibold font-heading">Seus Dados</h2>
-                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-primary font-semibold">{name.charAt(0).toUpperCase()}</span>
-                            </div>
-                            <div>
-                                <p className="font-medium">{name}</p>
-                                <p className="text-sm text-muted-foreground">{phone}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setDeliveryType("retirada")}
+                                    className={`p-4 rounded-xl border text-left flex items-start gap-3 transition-all ${
+                                        deliveryType === "retirada"
+                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
+                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                    }`}
+                                >
+                                    <Store className={`w-5 h-5 mt-0.5 ${deliveryType === "retirada" ? "text-[#F4B544]" : "text-[#B8B1A3]"}`} />
+                                    <div>
+                                        <span className="block font-semibold text-sm text-[#FFFAF0]">Retirada no Balcão</span>
+                                        <span className="block text-[11px] text-[#B8B1A3]">Sem taxa de entrega</span>
+                                        <span className="block text-xs font-bold text-emerald-400 mt-1">Grátis</span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Delivery */}
-                    <div className="bg-white rounded-2xl border border-border p-5 space-y-4">
-                        <h2 className="font-semibold font-heading">Tipo de Entrega</h2>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button type="button" onClick={() => setDeliveryType("retirada")} data-testid="delivery-pickup"
-                                className={`p-4 rounded-xl border-2 text-center transition-all ${deliveryType === "retirada" ? "border-primary bg-primary/5" : "border-border"}`}>
-                                <Store className="h-6 w-6 mx-auto mb-2 text-primary" /><p className="font-medium text-sm">Retirada</p><p className="text-xs text-muted-foreground">No local</p>
-                            </button>
-                            <button type="button" onClick={() => setDeliveryType("entrega")} data-testid="delivery-delivery"
-                                className={`p-4 rounded-xl border-2 text-center transition-all ${deliveryType === "entrega" ? "border-primary bg-primary/5" : "border-border"}`}>
-                                <Truck className="h-6 w-6 mx-auto mb-2 text-primary" /><p className="font-medium text-sm">Entrega</p><p className="text-xs text-muted-foreground">No seu endereco</p>
-                            </button>
-                        </div>
-                        {deliveryType === "entrega" && (
-                            <div className="space-y-3 pt-2">
-                                {/* Status do frete - mostra imediatamente */}
-                                <div className="bg-primary/5 rounded-xl p-4 border-2 border-primary/10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-full bg-primary/10 text-primary">
-                                            <Truck className="h-5 w-5" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-semibold text-primary">Taxa de entrega por distância</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                O valor é calculado automaticamente conforme sua localização
-                                            </p>
-                                        </div>
-                                    </div>
+                        {/* 2. Seus Dados */}
+                        <div className="bg-[#10100F] rounded-2xl p-5 border border-[#F4B544]/20 space-y-4">
+                            <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
+                                <MapPin className="w-5 h-5 text-[#F4B544]" />
+                                <span>2. Seus Dados de Contato</span>
+                            </h2>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">Nome Completo</Label>
+                                    <Input
+                                        required
+                                        value={name}
+                                        onChange={e => setName(e.target.value)}
+                                        placeholder="Seu nome"
+                                        className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544]"
+                                    />
                                 </div>
 
                                 <div>
-                                    <Label>Endereço completo</Label>
-                                    <Textarea 
-                                        data-testid="checkout-address" 
-                                        value={address} 
-                                        onChange={e => setAddress(e.target.value)} 
-                                        placeholder="Rua, número, bairro, cidade..."
-                                        className="mt-1 rounded-lg" 
-                                        required 
+                                    <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">WhatsApp (para atualizações)</Label>
+                                    <Input
+                                        required
+                                        value={phone}
+                                        onChange={e => setPhone(e.target.value)}
+                                        placeholder="(48) 99999-9999"
+                                        className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544]"
                                     />
                                 </div>
-                                
-                                {/* Indicador de distância e taxa */}
-                                {address && address.length > 10 && (
+
+                                {deliveryType === "entrega" && (
                                     <>
-                                        {calculatingFee && (
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                <span>Calculando distância...</span>
-                                            </div>
-                                        )}
-                                        
-                                        {calculatedDistance !== null && !calculatingFee && (
-                                            <div className="bg-primary/5 rounded-lg p-4 space-y-2 border border-primary/10">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2 text-sm">
-                                                        <MapPin className="h-4 w-4 text-primary" />
-                                                        <span className="text-muted-foreground">Distância:</span>
-                                                    </div>
-                                                    <span className="font-semibold text-primary">{calculatedDistance.toFixed(1)} km</span>
-                                                </div>
-                                                
-                                                <div className="flex items-center justify-between pt-2 border-t border-primary/10">
-                                                    <div className="flex items-center gap-2 text-sm">
-                                                        <Truck className="h-4 w-4 text-primary" />
-                                                        <span className="text-muted-foreground">Taxa de entrega:</span>
-                                                    </div>
-                                                    <span className="font-bold text-lg text-primary">
-                                                        R$ {deliveryFeeData?.delivery_fee?.toFixed(2) || '0,00'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )}
+                                        <div>
+                                            <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">Endereço Completo (Rua, Número, Apto/Bloco)</Label>
+                                            <Input
+                                                required
+                                                value={address}
+                                                onChange={e => setAddress(e.target.value)}
+                                                placeholder="Ex: Av. Barriga Verde, 123, Apto 102"
+                                                className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544]"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">Bairro</Label>
+                                            <Input
+                                                required
+                                                value={neighborhood}
+                                                onChange={e => setNeighborhood(e.target.value)}
+                                                placeholder="Ex: Centro, Praia dos Golfinhos, etc."
+                                                className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544]"
+                                            />
+                                        </div>
                                     </>
                                 )}
-                                
-                                {!address && (
-                                    <p className="text-sm text-muted-foreground italic bg-muted/30 rounded-lg p-3">
-                                        Digite seu endereço completo para calcular a taxa de entrega
-                                    </p>
-                                )}
-                                
-                                {/* Checkbox para salvar endereço */}
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={saveAddress} 
-                                        onChange={e => setSaveAddress(e.target.checked)}
-                                        className="rounded border-gray-300"
+
+                                <div>
+                                    <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">Observações do Pedido (Opcional)</Label>
+                                    <Textarea
+                                        value={observation}
+                                        onChange={e => setObservation(e.target.value)}
+                                        placeholder="Ex: Mandar maionese temperada extra, embalar para presente..."
+                                        className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544] min-h-[70px]"
                                     />
-                                    <span className="text-sm text-muted-foreground">Salvar endereço para próximas compras</span>
-                                </label>
+                                </div>
                             </div>
-                        )}
+                        </div>
+
+                        {/* 3. Forma de Pagamento (Asaas) */}
+                        <div className="bg-[#10100F] rounded-2xl p-5 border border-[#F4B544]/20 space-y-4">
+                            <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
+                                <CreditCard className="w-5 h-5 text-[#F4B544]" />
+                                <span>3. Forma de Pagamento Online (Asaas)</span>
+                            </h2>
+
+                            <div className="p-4 rounded-xl bg-[#171612] border border-[#F4B544]/30 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
+                                        <QrCode className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <span className="block font-semibold text-sm text-[#FFFAF0]">PIX & Cartão de Crédito</span>
+                                        <span className="block text-xs text-[#B8B1A3]">Pagamento online instantâneo via Asaas</span>
+                                    </div>
+                                </div>
+                                <Check className="w-5 h-5 text-[#F4B544]" />
+                            </div>
+                        </div>
+
                     </div>
 
-                    {/* Totals */}
-                    <div className="bg-white rounded-2xl border border-border p-5 space-y-2">
-                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>R$ {total.toFixed(2)}</span></div>
-                        {deliveryType === "entrega" && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Taxa de entrega</span>
-                                <span>
-                                    {deliveryFee === null 
-                                        ? "A calcular" 
-                                        : `R$ ${deliveryFee.toFixed(2)}`}
+                    {/* Coluna Lateral: Resumo do Pedido */}
+                    <div className="lg:col-span-5 space-y-6">
+                        <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/30 space-y-6 sticky top-24 gold-glow-sm">
+                            <div className="flex items-center justify-between border-b border-[#F4B544]/15 pb-4">
+                                <h2 className="font-serif text-xl font-bold text-[#FFFAF0] flex items-center gap-2">
+                                    <ShoppingBag className="w-5 h-5 text-[#F4B544]" />
+                                    <span>Resumo</span>
+                                </h2>
+                                <span className="text-xs font-bold text-[#F4B544] uppercase tracking-wider">
+                                    {items.length} {items.length === 1 ? "Item" : "Itens"}
                                 </span>
                             </div>
-                        )}
-                        <Separator />
-                        <div className="flex justify-between text-xl font-bold font-heading">
-                            <span>Total</span>
-                            <span className="text-primary">R$ {grandTotal.toFixed(2)}</span>
+
+                            {/* Lista de Itens */}
+                            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                {items.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl bg-[#171612] border border-[#F4B544]/10">
+                                        <img
+                                            src={getImageUrl(item.image_url)}
+                                            alt={item.name}
+                                            className="w-12 h-12 rounded-lg object-cover border border-[#F4B544]/20"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <span className="block font-medium text-xs text-[#FFFAF0] truncate">
+                                                {item.quantity}x {item.name || item.product_name}
+                                            </span>
+                                            <span className="block text-[11px] font-bold text-[#F4B544]">
+                                                R$ {((item.price || 0) * item.quantity).toFixed(2).replace(".", ",")}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Totais */}
+                            <div className="space-y-2 border-t border-[#F4B544]/15 pt-4 text-xs">
+                                <div className="flex justify-between text-[#B8B1A3]">
+                                    <span>Subtotal:</span>
+                                    <span>R$ {total.toFixed(2).replace(".", ",")}</span>
+                                </div>
+                                <div className="flex justify-between text-[#B8B1A3]">
+                                    <span>Taxa de Entrega:</span>
+                                    <span>{finalDeliveryFee > 0 ? `R$ ${finalDeliveryFee.toFixed(2).replace(".", ",")}` : "Grátis"}</span>
+                                </div>
+                                <div className="flex justify-between text-base font-bold text-[#FFFAF0] border-t border-[#F4B544]/20 pt-3">
+                                    <span className="font-serif">Total do Pedido:</span>
+                                    <span className="text-[#F4B544]">R$ {grandTotal.toFixed(2).replace(".", ",")}</span>
+                                </div>
+                            </div>
+
+                            {/* Botão de Finalização */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full py-4 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-50 transform hover:-translate-y-0.5"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin text-[#050505]" />
+                                        <span>Processando...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Ir para o Pagamento Asaas</span>
+                                        <ArrowLeft className="w-4 h-4 rotate-180" />
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
-
-                    <Button type="submit" disabled={loading} className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-5 text-lg font-semibold" data-testid="submit-order-btn">
-                        {loading && <Loader2 className="h-5 w-5 animate-spin mr-2" />}Confirmar Pedido - R$ {grandTotal.toFixed(2)}
-                    </Button>
                 </form>
-            </div>
-
-            {/* Pix Modal */}
-            <Dialog open={showPix} onOpenChange={setShowPix}>
-                <DialogContent className="rounded-2xl" data-testid="pix-modal">
-                    <DialogHeader><DialogTitle className="font-heading text-xl">Pagamento via Pix</DialogTitle></DialogHeader>
-                    <div className="text-center space-y-4 py-4">
-                        <p className="text-sm text-muted-foreground">Copie a chave Pix abaixo e realize o pagamento no app do seu banco</p>
-                        {pixSettings?.qr_code_url && <img src={getImageUrl(pixSettings.qr_code_url)} alt="QR Code Pix" className="mx-auto h-48 w-48 rounded-xl" />}
-                        <div className="bg-muted rounded-xl p-4">
-                            <p className="text-xs text-muted-foreground mb-1">Chave Pix</p>
-                            <p className="font-mono text-sm font-medium break-all">{pixSettings?.pix_key || "Chave Pix sera configurada em breve"}</p>
-                        </div>
-                        <Button onClick={copyPixKey} variant="outline" className="rounded-full" data-testid="copy-pix-btn">
-                            {pixCopied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}{pixCopied ? "Copiado!" : "Copiar Chave"}
-                        </Button>
-                        <Separator />
-                        <Button onClick={handlePixDone} className="w-full bg-primary text-white rounded-full py-5" data-testid="pix-done-btn">Ja realizei o pagamento</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            </main>
         </div>
     );
 }

@@ -13,7 +13,7 @@ export function FavoritesProvider({ children }) {
     // Armazena objetos completos dos produtos favoritos
     const [favorites, setFavorites] = useState(() => {
         try {
-            const saved = localStorage.getItem("salada-soul-favorites-v2");
+            const saved = localStorage.getItem("johb-favorites-v2");
             return saved ? JSON.parse(saved) : [];
         } catch {
             return [];
@@ -21,7 +21,7 @@ export function FavoritesProvider({ children }) {
     });
     const [customerPhone, setCustomerPhone] = useState(() => {
         try {
-            const saved = localStorage.getItem("salada-soul-customer");
+            const saved = localStorage.getItem("johb-customer");
             return saved ? JSON.parse(saved)?.phone : null;
         } catch {
             return null;
@@ -30,7 +30,7 @@ export function FavoritesProvider({ children }) {
 
     // Salvar no localStorage quando favorites mudar
     useEffect(() => {
-        localStorage.setItem("salada-soul-favorites-v2", JSON.stringify(favorites));
+        localStorage.setItem("johb-favorites-v2", JSON.stringify(favorites));
     }, [favorites]);
 
     // Sincronizar com banco quando houver cliente logado

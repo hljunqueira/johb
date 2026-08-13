@@ -1,139 +1,110 @@
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Heart, Eye, Plus, Star } from "lucide-react";
+import React from "react";
+import { Plus, Heart, Sparkles } from "lucide-react";
 import { useFavorites } from "@/context/FavoritesContext";
+import { useCart } from "@/context/CartContext";
+import { toast } from "sonner";
 
 const getImageUrl = (url, backendUrl) => {
-    if (!url) return "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=400";
+    if (!url) return "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500&auto=format&fit=crop&q=80";
     if (url.startsWith("http")) return url;
-    return `${backendUrl}${url}`;
+    return `${backendUrl || ''}${url}`;
 };
 
-const tagLabels = {
-    vegano: { label: "Vegano", color: "bg-emerald-100 text-emerald-700" },
-    leve: { label: "Leve", color: "bg-sky-100 text-sky-700" },
-    mais_pedido: { label: "Popular", color: "bg-orange-100 text-orange-700" },
-    recomendado: { label: "Recomendado", color: "bg-amber-100 text-amber-700" },
-    personalizavel: { label: "Personalizável", color: "bg-purple-100 text-purple-700" }
-};
-
-const getTagStyle = (tag) => tagLabels[tag] || { label: tag, color: "bg-gray-100 text-gray-700" };
-
-export function EnhancedProductCard({ product, onClick, onQuickView, backendUrl }) {
+export function EnhancedProductCard({ product, onClick, backendUrl }) {
     const { toggleFavorite, isFavorite } = useFavorites();
-    const hasAdditionals = product.additionals?.length > 0;
-    const isCustomizable = product.tags?.includes("personalizavel");
+    const { addToCart } = useCart();
     const favorited = isFavorite(product.id);
+    const hasAdditionals = (product.additionals && product.additionals.length > 0) || (product.complements && product.complements.length > 0);
+
+    const handleQuickAdd = (e) => {
+        e.stopPropagation();
+        if (hasAdditionals) {
+            // Se possui adicionais, abre os detalhes para personalização
+            onClick(product);
+        } else {
+            // Adição direta ao carrinho
+            addToCart({
+                ...product,
+                quantity: 1,
+                additionals: [],
+                observation: ""
+            });
+            toast.success(`${product.name} adicionado ao carrinho!`, {
+                style: {
+                    background: "#171612",
+                    color: "#FFFAF0",
+                    border: "1px solid rgba(244, 181, 68, 0.4)"
+                }
+            });
+        }
+    };
 
     return (
-        <div 
-            className="bg-white rounded-2xl border border-border/50 overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300"
+        <div
             onClick={() => onClick(product)}
+            className="group relative bg-[#10100F] rounded-xl overflow-hidden border border-[#F4B544]/15 hover:border-[#F4B544]/50 transition-all duration-300 flex flex-col justify-between cursor-pointer gold-glow-sm hover:-translate-y-1"
             data-testid={`product-${product.id}`}
         >
-            {/* Image */}
-            <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                <img 
-                    src={getImageUrl(product.image_url, backendUrl)} 
+            {/* Foto com overlay sutil */}
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#171612]">
+                <img
+                    src={getImageUrl(product.image_url, backendUrl)}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                 />
-                
-                {/* Tags */}
-                <div className="absolute top-3 left-3 flex flex-wrap gap-1">
-                    {product.tags?.slice(0, 2).map(tag => {
-                        const style = getTagStyle(tag);
-                        return (
-                            <span key={tag} className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.color}`}>
-                                {style.label}
-                            </span>
-                        );
-                    })}
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#10100F] via-transparent to-transparent opacity-60" />
 
-                {/* Favorite Button */}
+                {/* Favorito */}
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
                         toggleFavorite(product.id);
                     }}
-                    className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-white transition-colors"
+                    className="absolute top-2.5 right-2.5 p-2 rounded-full bg-[#050505]/75 backdrop-blur-md border border-[#F4B544]/20 hover:border-[#F4B544] text-[#B8B1A3] hover:text-[#F4B544] transition-colors"
+                    aria-label="Favoritar produto"
                 >
-                    <Heart 
-                        className={`h-5 w-5 transition-colors ${favorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`}
-                    />
+                    <Heart className={`w-3.5 h-3.5 ${favorited ? "fill-[#F4B544] text-[#F4B544]" : ""}`} />
                 </button>
 
-                {/* Customizable Badge */}
-                {(hasAdditionals || isCustomizable) && (
-                    <div className="absolute bottom-3 right-3">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-foreground shadow-sm">
-                            Personalizável
+                {/* Badge de Destaque / Personalizável */}
+                {hasAdditionals && (
+                    <div className="absolute top-2.5 left-2.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-[#050505]/85 backdrop-blur-md text-[#F4B544] border border-[#F4B544]/30">
+                            <Sparkles className="w-2.5 h-2.5" /> Opções
                         </span>
                     </div>
                 )}
             </div>
 
-            {/* Content */}
-            <div className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-base font-heading flex-1 line-clamp-1">
+            {/* Conteúdo do Card */}
+            <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                <div>
+                    <h3 className="font-serif text-lg font-bold text-[#FFFAF0] group-hover:text-[#F4B544] transition-colors line-clamp-1">
                         {product.name}
                     </h3>
-                    <span className="font-bold text-lg whitespace-nowrap ml-2">
-                        R$ {product.price.toFixed(2)}
-                    </span>
+                    <p className="text-xs text-[#B8B1A3] line-clamp-2 mt-1 font-light leading-relaxed">
+                        {product.description || "Ingredientes selecionados e preparo artesanal."}
+                    </p>
                 </div>
 
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                    {product.description}
-                </p>
+                {/* Preço e Botão Rápido de + */}
+                <div className="pt-2 flex items-center justify-between border-t border-[#F4B544]/10">
+                    <div>
+                        <span className="text-[10px] uppercase tracking-wider text-[#B8B1A3] block">Preço</span>
+                        <span className="text-base font-bold text-[#F4B544] tracking-tight">
+                            R$ {(product.price || 0).toFixed(2).replace(".", ",")}
+                        </span>
+                    </div>
 
-                {/* Rating & Tags */}
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                    {product.rating && (
-                        <Badge variant="outline" className="text-xs">
-                            <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
-                            {product.rating}
-                            {product.reviews && ` (${product.reviews})`}
-                        </Badge>
-                    )}
-                    {(hasAdditionals || isCustomizable) && (
-                        <Badge variant="outline" className="text-xs text-purple-700 border-purple-200">
-                            Personalizável
-                        </Badge>
-                    )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                    {onQuickView && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 rounded-full"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onQuickView(product);
-                            }}
-                        >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver
-                        </Button>
-                    )}
-                    <Button
-                        size="sm"
-                        className="flex-[2] bg-accent hover:bg-accent/90 text-white rounded-full"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onClick(product);
-                        }}
+                    <button
+                        onClick={handleQuickAdd}
+                        className="p-2.5 rounded-full bg-[#F4B544] text-[#050505] hover:bg-[#FFC85C] font-bold transition-all transform active:scale-95 shadow-md flex items-center justify-center gap-1"
+                        title={hasAdditionals ? "Personalizar" : "Adicionar rápido"}
                         data-testid={`add-${product.id}`}
                     >
-                        <Plus className="h-4 w-4 mr-1" />
-                        {(hasAdditionals || isCustomizable) ? "Escolher" : "Adicionar"}
-                    </Button>
+                        <Plus className="w-4 h-4 stroke-[3]" />
+                    </button>
                 </div>
             </div>
         </div>

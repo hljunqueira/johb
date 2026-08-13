@@ -1,5 +1,5 @@
 """
-Servidor completo para VPS - Salada Soul API
+Servidor completo para VPS - JOHB API
 """
 import os
 import logging
@@ -54,7 +54,7 @@ def serialize_product(row: dict) -> dict:
     return d
 
 app = FastAPI(
-    title="Salada Soul API",
+    title="JOHB API",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -64,10 +64,7 @@ app = FastAPI(
 DEFAULT_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://saladasoul.com",
-    "https://www.saladasoul.com",
-    "https://saladasoul.shop",
-    "https://www.saladasoul.shop",
+    "https://salada-soul-admin-h9jz7jb5k-henriques-projects-31af9234.vercel.app",
     "https://salada-soul-admin.vercel.app",
     "https://salada-soul.vercel.app",
     "https://admin.saladasoul.com",
@@ -271,7 +268,7 @@ def create_token(user_id: str, email: str, role: str = 'admin'):
 
 @app.on_event("startup")
 async def startup():
-    logger.info("Starting up Salada Soul API")
+    logger.info("Starting up JOHB API")
     logger.info(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
     logger.info("Scheduling background database connection...")
     asyncio.create_task(connect_db_background())
@@ -527,7 +524,7 @@ async def geocode_address(address: str) -> Optional[dict]:
                         "limit": 1,
                         "countrycodes": "br"
                     },
-                    headers={"User-Agent": "SaladaSoul/1.0"},
+                    headers={"User-Agent": "JOHB/1.0"},
                     timeout=10.0
                 )
                 response.raise_for_status()
@@ -864,34 +861,90 @@ async def update_customer(phone: str, request: CustomerUpdate):
 
 @app.post("/api/orders")
 async def create_order(request: CreateOrderRequest):
-    """Criar novo pedido"""
+    """Criar novo pedido com recálculo 100% no backend (Regra de Segurança de Preços)"""
     if not db_pool:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    if not request.items or len(request.items) == 0:
+        raise HTTPException(status_code=400, detail="O pedido precisa conter pelo menos um item")
+
     async with db_pool.acquire() as conn:
+        # 1. Recalcular Subtotal no Backend a partir da tabela de produtos do banco de dados
+        recalculated_subtotal = 0.0
+        processed_items = []
+
+        for item in request.items:
+            try:
+                prod_uuid = uuid.UUID(item.product_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"ID de produto inválido: {item.product_id}")
+
+            product_row = await conn.fetchrow("SELECT id, name, price, active FROM products WHERE id = $1", prod_uuid)
+            if not product_row or not product_row['active']:
+                raise HTTPException(status_code=400, detail=f"Produto '{item.name}' não está mais disponível no cardápio")
+
+            unit_price = float(product_row['price'])
+            
+            # Recalcular adicionais / complementos
+            complements_total = 0.0
+            if item.complements:
+                for comp in item.complements:
+                    if isinstance(comp, dict) and "price" in comp:
+                        complements_total += float(comp.get("price", 0))
+
+            item_unit_total = unit_price + complements_total
+            item_line_total = item_unit_total * item.quantity
+            recalculated_subtotal += item_line_total
+
+            processed_items.append({
+                "product_id": str(product_row['id']),
+                "product_name": product_row['name'],
+                "price": unit_price,
+                "quantity": item.quantity,
+                "complements": item.complements or [],
+                "line_total": item_line_total
+            })
+
+        # 2. Recalcular Taxa de Entrega no Backend
+        recalculated_delivery_fee = 0.0
+        if request.delivery_type == "entrega":
+            settings_row = await conn.fetchrow("SELECT delivery_fee FROM delivery_settings WHERE id = 1")
+            if settings_row and settings_row['delivery_fee']:
+                recalculated_delivery_fee = float(settings_row['delivery_fee'])
+            else:
+                recalculated_delivery_fee = 5.00 # Taxa padrão para Balneário Arroio do Silva
+
+        recalculated_total = recalculated_subtotal + recalculated_delivery_fee
+
+        # 3. Gerar número de pedido único
         order_number = await conn.fetchval(
             "UPDATE counters SET value = value + 1 WHERE name = 'order_number' RETURNING value"
         )
 
+        clean_phone = re.sub(r'\D', '', request.customer_phone or '')
+
+        # 4. Inserir pedido com os valores calculados pelo backend
         order_id = await conn.fetchval(
             """INSERT INTO orders 
                (order_number, customer_name, customer_phone, delivery_type, address, 
-                neighborhood, items, subtotal, delivery_fee, total, status, payment_status, observation)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'aguardando', 'pendente', $11)
+                neighborhood, items, subtotal, delivery_fee, total, status, payment_status, payment_method, observation)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'aguardando', 'pendente', $11, $12)
                RETURNING id""",
             order_number,
             request.customer_name,
-            request.customer_phone.replace("\\D", ""),
+            clean_phone,
             request.delivery_type,
             request.address,
             request.neighborhood,
-            json.dumps([item.dict() for item in request.items]),
-            request.subtotal,
-            request.delivery_fee,
-            request.total,
+            json.dumps(processed_items),
+            recalculated_subtotal,
+            recalculated_delivery_fee,
+            recalculated_total,
+            request.payment_method or "asaas",
             request.observation
         )
 
+        # 5. Atualizar histórico do cliente
         await conn.execute(
             """INSERT INTO customers (name, phone, orders_count, last_order_date) 
                VALUES ($1, $2, 1, NOW())
@@ -900,13 +953,19 @@ async def create_order(request: CreateOrderRequest):
                last_order_date = NOW(),
                name = EXCLUDED.name""",
             request.customer_name,
-            request.customer_phone.replace("\\D", "")
+            clean_phone
         )
+
+        logger.info(f"Pedido #{order_number} criado com sucesso (ID: {order_id}). Total Recalculado Backend: R$ {recalculated_total:.2f}")
 
         return {
             "id": str(order_id),
             "order_number": order_number,
-            "status": "aguardando"
+            "subtotal": recalculated_subtotal,
+            "delivery_fee": recalculated_delivery_fee,
+            "total": recalculated_total,
+            "status": "aguardando",
+            "payment_status": "pendente"
         }
 
 
@@ -916,14 +975,13 @@ async def get_order(order_id: str):
     if not db_pool:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Validar UUID
     try:
         uuid.UUID(order_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Order not found")
     
     async with db_pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT * FROM orders WHERE id = $1", order_id)
+        row = await conn.fetchrow("SELECT * FROM orders WHERE id = $1", uuid.UUID(order_id))
         if not row:
             raise HTTPException(status_code=404, detail="Order not found")
         return dict(row)
@@ -941,9 +999,230 @@ async def rate_order(order_id: str, rating: int = Form(...), comment: Optional[s
     async with db_pool.acquire() as conn:
         await conn.execute(
             "UPDATE orders SET rating = $1, rating_comment = $2 WHERE id = $3",
-            rating, comment, order_id
+            rating, comment, uuid.UUID(order_id)
         )
         return {"success": True}
+
+
+# ============================================
+# ASAAS PAYMENT INTEGRATION (SANDBOX / PRODUÇÃO)
+# ============================================
+
+class AsaasCheckoutRequest(BaseModel):
+    order_id: str
+    billing_type: Optional[str] = "UNDEFINED" # PIX, CREDIT_CARD ou UNDEFINED (permite ambos no checkout hospedado)
+
+ASAAS_API_KEY = os.environ.get("ASAAS_API_KEY", "").strip()
+ASAAS_ENV = os.environ.get("ASAAS_ENVIRONMENT", "sandbox").strip().lower()
+ASAAS_WEBHOOK_TOKEN = os.environ.get("ASAAS_WEBHOOK_TOKEN", "").strip()
+
+# URL base centralizada
+ASAAS_BASE_URL = "https://www.asaas.com/api/v3" if ASAAS_ENV == "production" else "https://sandbox.asaas.com/api/v3"
+
+
+@app.post("/api/payments/asaas/checkout")
+async def create_asaas_checkout(request: AsaasCheckoutRequest):
+    """Cria uma sessão de checkout hospedado no Asaas (PIX / Cartão) com proteção contra duplicação"""
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        order_uuid = uuid.UUID(request.order_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de pedido inválido")
+
+    async with db_pool.acquire() as conn:
+        order = await conn.fetchrow("SELECT * FROM orders WHERE id = $1", order_uuid)
+        if not order:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+        order_dict = dict(order)
+
+        # Regra de Idempotência: Se já existir um link de pagamento ativo no pedido, reutilizá-lo!
+        if order_dict.get("payment_url") and order_dict.get("payment_status") == "pendente":
+            logger.info(f"Reutilizando checkout Asaas existente para o pedido {order_uuid}")
+            return {
+                "success": True,
+                "reused": True,
+                "payment_id": order_dict.get("asaas_payment_id"),
+                "invoice_url": order_dict.get("payment_url"),
+                "order_id": str(order_dict['id'])
+            }
+
+        # Regra de Proteção de Produção: Em produção, falhar se a chave ASAAS_API_KEY estiver ausente
+        if ASAAS_ENV == "production" and not ASAAS_API_KEY:
+            logger.error("ERRO CRÍTICO DE CONFIGURAÇÃO: Tentativa de checkout em Produção sem ASAAS_API_KEY configurada.")
+            raise HTTPException(status_code=500, detail="Configuração de pagamentos em produção indisponível.")
+
+        # Modo Simulado exclusivo para desenvolvimento Sandbox quando não há API Key no .env
+        if not ASAAS_API_KEY:
+            logger.info("ASAAS_API_KEY não configurada no backend/.env. Retornando resposta de simulação Sandbox.")
+            simulated_url = f"/pedido/{order_dict['id']}"
+            await conn.execute("UPDATE orders SET payment_url = $1 WHERE id = $2", simulated_url, order_uuid)
+            return {
+                "success": True,
+                "sandbox_simulated": True,
+                "message": "Modo de testes Sandbox. Adicione ASAAS_API_KEY no arquivo backend/.env para gerar links reais no Asaas.",
+                "order_id": str(order_dict['id']),
+                "total": float(order_dict['total']),
+                "invoice_url": simulated_url
+            }
+
+        headers = {
+            "access_token": ASAAS_API_KEY,
+            "Content-Type": "application/json"
+        }
+
+        # 1. Buscar ou Criar cliente no Asaas pelo telefone
+        customer_phone = order_dict['customer_phone']
+        customer_name = order_dict['customer_name']
+        asaas_customer_id = order_dict.get("asaas_customer_id")
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            if not asaas_customer_id:
+                # Buscar cliente existente no Asaas
+                cust_res = await client.get(
+                    f"{ASAAS_BASE_URL}/customers",
+                    params={"mobilePhone": customer_phone},
+                    headers=headers
+                )
+                if cust_res.status_code == 200:
+                    data = cust_res.json()
+                    if data.get("data") and len(data["data"]) > 0:
+                        asaas_customer_id = data["data"][0]["id"]
+
+                if not asaas_customer_id:
+                    # Criar novo cliente no Asaas
+                    new_cust = await client.post(
+                        f"{ASAAS_BASE_URL}/customers",
+                        headers=headers,
+                        json={
+                            "name": customer_name,
+                            "mobilePhone": customer_phone,
+                            "notificationDisabled": True
+                        }
+                    )
+                    if new_cust.status_code in [200, 201]:
+                        asaas_customer_id = new_cust.json().get("id")
+
+            # 2. Criar cobrança hospedada no Asaas
+            due_date = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+            payment_payload = {
+                "customer": asaas_customer_id,
+                "billingType": request.billing_type if request.billing_type != "UNDEFINED" else "UNDEFINED",
+                "value": float(order_dict['total']),
+                "dueDate": due_date,
+                "description": f"JOHB Salgados — Pedido #{order_dict['order_number']}",
+                "externalReference": str(order_dict['id'])
+            }
+
+            pay_res = await client.post(
+                f"{ASAAS_BASE_URL}/payments",
+                headers=headers,
+                json=payment_payload
+            )
+
+            if pay_res.status_code in [200, 201]:
+                pay_data = pay_res.json()
+                payment_id = pay_data.get("id")
+                invoice_url = pay_data.get("invoiceUrl") or pay_data.get("bankSlipUrl")
+
+                # Gravar dados do Asaas no pedido
+                await conn.execute(
+                    """UPDATE orders SET 
+                       asaas_payment_id = $1, 
+                       asaas_customer_id = $2, 
+                       payment_url = $3, 
+                       payment_status = 'pendente' 
+                       WHERE id = $4""",
+                    payment_id, asaas_customer_id, invoice_url, order_uuid
+                )
+
+                logger.info(f"Cobrança Asaas criada para Pedido #{order_dict['order_number']} (Payment ID: {payment_id})")
+
+                return {
+                    "success": True,
+                    "payment_id": payment_id,
+                    "invoice_url": invoice_url,
+                    "order_id": str(order_dict['id'])
+                }
+            else:
+                logger.error(f"Erro ao criar cobrança Asaas: Status {pay_res.status_code} - Resposta: {pay_res.text}")
+                raise HTTPException(status_code=400, detail="Não foi possível gerar o checkout no Asaas.")
+
+
+@app.post("/api/webhooks/asaas")
+async def asaas_webhook(request: Request):
+    """Webhook do Asaas para atualização do status de pagamento com validação rigorosa de token e idempotência"""
+    # Validação do Token no Header asaas-access-token
+    if ASAAS_WEBHOOK_TOKEN:
+        token_header = request.headers.get("asaas-access-token")
+        if not token_header or token_header != ASAAS_WEBHOOK_TOKEN:
+            logger.warning(f"Tentativa não autorizada no Webhook Asaas. Token fornecido: '{token_header}'")
+            raise HTTPException(status_code=401, detail="Token de segurança do Webhook inválido ou ausente.")
+
+    try:
+        body = await request.json()
+        event = body.get("event")
+        payment = body.get("payment", {})
+        order_id = payment.get("externalReference")
+
+        logger.info(f"Webhook Asaas Recebido | Evento: {event} | OrderID: {order_id}")
+
+        if not order_id or not db_pool:
+            return {"status": "ignored", "reason": "Sem ID de pedido interno"}
+
+        try:
+            order_uuid = uuid.UUID(order_id)
+        except ValueError:
+            return {"status": "ignored", "reason": "ID de pedido inválido"}
+
+        async with db_pool.acquire() as conn:
+            order = await conn.fetchrow("SELECT id, payment_status, status FROM orders WHERE id = $1", order_uuid)
+            if not order:
+                return {"status": "ignored", "reason": "Pedido não encontrado no banco JOHB"}
+
+            order_dict = dict(order)
+
+            # Processar Eventos Oficiais do Asaas
+            if event in ["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"]:
+                # Regra de Idempotência: Se já foi pago, não repete efeitos
+                if order_dict.get("payment_status") == "pago":
+                    logger.info(f"Webhook repetido para pedido {order_id} já marcado como PAGO. Ignorando duplicação.")
+                    return {"status": "already_processed", "payment_status": "pago"}
+
+                await conn.execute(
+                    """UPDATE orders SET 
+                       payment_status = 'pago', 
+                       status = 'confirmado', 
+                       payment_confirmed_at = NOW() 
+                       WHERE id = $1""",
+                    order_uuid
+                )
+                logger.info(f"Pedido {order_id} atualizado via Webhook: payment_status = 'pago', status = 'confirmado'.")
+                return {"status": "success", "event": event, "payment_status": "pago"}
+
+            elif event in ["PAYMENT_OVERDUE"]:
+                await conn.execute(
+                    "UPDATE orders SET payment_status = 'falhou' WHERE id = $1",
+                    order_uuid
+                )
+                logger.info(f"Pedido {order_id} atualizado via Webhook: payment_status = 'falhou'.")
+                return {"status": "success", "event": event, "payment_status": "falhou"}
+
+            elif event in ["PAYMENT_REFUNDED", "PAYMENT_DELETED"]:
+                await conn.execute(
+                    "UPDATE orders SET payment_status = 'estornado' WHERE id = $1",
+                    order_uuid
+                )
+                logger.info(f"Pedido {order_id} atualizado via Webhook: payment_status = 'estornado'.")
+                return {"status": "success", "event": event, "payment_status": "estornado"}
+
+            return {"status": "ignored", "event": event}
+
+    except Exception as e:
+        logger.error(f"Erro inesperado no Webhook Asaas: {e}", exc_info=True)
+        return {"status": "error", "detail": str(e)}
 
 
 # ============================================

@@ -1,44 +1,55 @@
-import { Salad, Leaf, UtensilsCrossed, Coffee } from "lucide-react";
+import React from "react";
+import { Utensils, Flame, Cookie, Package, CupSoda, Sparkles, Snowflake } from "lucide-react";
 
-const categoryIcons = {
-    "Monte sua Salada": Salad,
-    "Saladas Prontas": Leaf,
-    "Lanches Frios": UtensilsCrossed,
-    "Bebidas": Coffee
+const categoryIconMap = {
+    "salgados": Utensils,
+    "assados": Flame,
+    "doces / cucas": Cookie,
+    "doces": Cookie,
+    "combos": Package,
+    "congelados": Snowflake,
+    "bebidas": CupSoda
 };
 
-export function CategoryPills({ categories, selectedCategory, onSelectCategory, productCounts = {} }) {
+export function CategoryPills({ categories = [], selectedCategory, onSelectCategory, productCounts = {} }) {
     return (
-        <div className="flex flex-wrap gap-3 md:gap-4 justify-center py-4">
-            {categories.map(category => {
-                const Icon = categoryIcons[category.name] || Salad;
-                const isActive = selectedCategory === category.id;
-                const count = productCounts[category.id] || 0;
+        <div className="w-full overflow-x-auto py-3 no-scrollbar">
+            <div className="flex gap-3 min-w-max pb-2 px-2 md:justify-center">
+                {categories.map((category) => {
+                    const catKey = (category.name || "").toLowerCase().trim();
+                    const Icon = categoryIconMap[catKey] || Sparkles;
+                    const isActive = selectedCategory === category.id;
+                    const count = productCounts[category.id] || 0;
 
-                return (
-                    <button
-                        key={category.id}
-                        onClick={() => onSelectCategory(category.id)}
-                        className={`
-                            flex flex-col items-center justify-center
-                            min-w-[120px] md:min-w-[140px] px-6 py-4 rounded-full
-                            border-2 transition-all duration-200
-                            ${isActive 
-                                ? 'bg-primary border-primary text-white scale-105 shadow-lg' 
-                                : 'bg-white border-border text-foreground hover:border-primary/50 hover:shadow-md'
-                            }
-                        `}
-                    >
-                        <Icon className={`h-7 w-7 md:h-8 md:w-8 mb-2 ${isActive ? 'text-white' : 'text-primary'}`} />
-                        <span className="font-semibold text-sm md:text-base font-heading">
-                            {category.name}
-                        </span>
-                        <span className={`text-xs mt-1 ${isActive ? 'text-white/90' : 'text-muted-foreground'}`}>
-                            {count} {count === 1 ? 'opção' : 'opções'}
-                        </span>
-                    </button>
-                );
-            })}
+                    return (
+                        <button
+                            key={category.id}
+                            onClick={() => onSelectCategory(category.id)}
+                            className={`
+                                inline-flex items-center gap-2.5 px-5 py-3 rounded-full
+                                border transition-all duration-300 whitespace-nowrap text-xs sm:text-sm font-medium tracking-wider uppercase
+                                ${
+                                    isActive
+                                        ? "bg-[#F4B544] text-[#050505] border-[#F4B544] font-bold shadow-md gold-glow-sm scale-105"
+                                        : "bg-[#10100F] border-[#F4B544]/20 text-[#B8B1A3] hover:text-[#FFFAF0] hover:border-[#F4B544]/50 hover:bg-[#171612]"
+                                }
+                            `}
+                        >
+                            <Icon className={`w-4 h-4 ${isActive ? "text-[#050505]" : "text-[#F4B544]"}`} />
+                            <span>{category.name}</span>
+                            {count > 0 && (
+                                <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        isActive ? "bg-[#050505] text-[#F4B544]" : "bg-[#171612] text-[#B8B1A3] border border-[#F4B544]/20"
+                                    }`}
+                                >
+                                    {count}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
         </div>
     );
 }

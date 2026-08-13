@@ -12,12 +12,12 @@ AuthProvider.propTypes = {
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [token, setTokenState] = useState(() => localStorage.getItem("salada-soul-admin-token"));
+    const [token, setTokenState] = useState(() => localStorage.getItem("johb-admin-token"));
 
     const setToken = (t) => {
         setTokenState(t);
-        if (t) localStorage.setItem("salada-soul-admin-token", t);
-        else localStorage.removeItem("salada-soul-admin-token");
+        if (t) localStorage.setItem("johb-admin-token", t);
+        else localStorage.removeItem("johb-admin-token");
     };
 
     useEffect(() => {

@@ -5,8 +5,10 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                heading: ["Outfit", "sans-serif"],
-                body: ["DM Sans", "sans-serif"]
+                serif: ["Cormorant Garamond", "Georgia", "serif"],
+                sans: ["Inter", "sans-serif"],
+                heading: ["Cormorant Garamond", "Georgia", "serif"],
+                body: ["Inter", "sans-serif"]
             },
             borderRadius: {
                 lg: 'var(--radius)',
@@ -14,6 +16,20 @@ module.exports = {
                 sm: 'calc(var(--radius) - 4px)'
             },
             colors: {
+                johb: {
+                    bg: '#050505',
+                    surface: '#10100f',
+                    elevated: '#171612',
+                    hover: '#22201a',
+                    gold: '#f4b544',
+                    'gold-light': '#ffc85c',
+                    'gold-dark': '#c88a24',
+                    text: '#fffaf0',
+                    secondary: '#b8b1a3',
+                    muted: '#807a6e',
+                    border: 'rgba(244, 181, 68, 0.16)',
+                    'border-strong': 'rgba(244, 181, 68, 0.35)',
+                },
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',
                 card: { DEFAULT: 'hsl(var(--card))', foreground: 'hsl(var(--card-foreground))' },
@@ -30,11 +46,13 @@ module.exports = {
             },
             keyframes: {
                 'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },
-                'accordion-up': { from: { height: 'var(--radix-accordion-content-height)' }, to: { height: '0' } }
+                'accordion-up': { from: { height: 'var(--radix-accordion-content-height)' }, to: { height: '0' } },
+                'fade-in': { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } }
             },
             animation: {
                 'accordion-down': 'accordion-down 0.2s ease-out',
-                'accordion-up': 'accordion-up 0.2s ease-out'
+                'accordion-up': 'accordion-up 0.2s ease-out',
+                'fade-in': 'fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards'
             }
         }
     },

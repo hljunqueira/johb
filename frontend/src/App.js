@@ -58,27 +58,20 @@ function ProtectedRoute({ children }) {
     return children;
 }
 
-// Modo do aplicativo: 'cliente' ou 'admin'
-const APP_MODE = process.env.REACT_APP_MODE || 'cliente';
+function AppRouter() {
+    const location = useLocation();
+    if (location.hash?.includes("session_id=")) return <AuthCallback />;
 
-function ClientRouter() {
     return (
         <Routes>
+            {/* Rotas do Cliente */}
             <Route path="/" element={<MenuPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/pedido/:id" element={<OrderConfirmationPage />} />
             <Route path="/historico" element={<OrderHistoryPage />} />
             <Route path="/favoritos" element={<FavoritesPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-    );
-}
 
-function AdminRouter() {
-    const location = useLocation();
-    if (location.hash?.includes("session_id=")) return <AuthCallback />;
-    return (
-        <Routes>
+            {/* Rotas de Administração */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/admin/pedidos" replace />} />
@@ -88,13 +81,11 @@ function AdminRouter() {
                 <Route path="relatorios" element={<AdminReportsPage />} />
                 <Route path="entrega" element={<AdminDeliveryPage />} />
             </Route>
-            <Route path="*" element={<Navigate to="/admin/login" replace />} />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
-}
-
-function AppRouter() {
-    return APP_MODE === 'admin' ? <AdminRouter /> : <ClientRouter />;
 }
 
 function App() {
