@@ -197,21 +197,24 @@ function MenusTabRefactored({ headers, setConfirmModal }) {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-6">
                 <div>
-                    <p className="text-sm text-muted-foreground">Crie menus para organizar seu cardápio.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Os menus agrupam categorias no cardápio público.</p>
+                    <p className="text-sm font-semibold text-gray-300">Crie menus para organizar seu cardápio.</p>
+                    <p className="text-xs text-gray-500 mt-1">Os menus agrupam categorias no cardápio público.</p>
                 </div>
-                <Button onClick={handleNew} className="bg-primary text-white rounded-full" data-testid="add-menu-btn"><Plus className="h-4 w-4 mr-1" />Novo Menu</Button>
+                <Button onClick={handleNew} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all" data-testid="add-menu-btn"><Plus className="h-4 w-4 mr-1" />Novo Menu</Button>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {menus.map(m => (
-                    <div key={m.id} className="bg-white dark:bg-card rounded-2xl border border-border p-5">
-                        <div className="flex justify-between items-start mb-2">
-                            <div><h3 className="font-semibold font-heading">{m.name}</h3><p className="text-xs text-muted-foreground">{m.description}</p></div>
-                            <div className="flex gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => handleEdit(m)}><Pencil className="h-4 w-4" /></Button>
-                                <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setConfirmModal({
+                    <div key={m.id} className="bg-[#141414] text-white rounded-2xl border border-white/10 p-5 shadow-lg flex flex-col justify-between hover:border-[#D4AF37]/40 transition-all">
+                        <div className="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 className="font-extrabold text-white text-lg">{m.name}</h3>
+                                <p className="text-xs text-gray-400 mt-1">{m.description}</p>
+                            </div>
+                            <div className="flex gap-1.5">
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg" onClick={() => handleEdit(m)}><Pencil className="h-4 w-4" /></Button>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg" onClick={() => setConfirmModal({
                                     isOpen: true,
                                     title: "Excluir Menu",
                                     description: `Deseja realmente excluir o menu "${m.name}"?`,
@@ -219,20 +222,21 @@ function MenusTabRefactored({ headers, setConfirmModal }) {
                                 })}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                         </div>
-                        <div className="flex items-center justify-between mt-3">
-                            <Badge className={`rounded-full text-xs ${m.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>{m.active ? "Ativo" : "Inativo"}</Badge>
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10">
+                            <Badge className={`rounded-md px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${m.active ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-gray-500/20 text-gray-400 border border-gray-500/30"}`}>{m.active ? "Ativo" : "Inativo"}</Badge>
                         </div>
                     </div>
                 ))}
             </div>
-            {menus.length === 0 && <div className="text-center py-12"><Layers className="h-10 w-10 text-muted-foreground mx-auto mb-3" /><p className="text-muted-foreground">Nenhum menu criado</p></div>}
+            {menus.length === 0 && <div className="text-center py-12 bg-[#141414] border border-dashed border-white/10 rounded-2xl"><Layers className="h-10 w-10 text-gray-500 mx-auto mb-3" /><p className="text-gray-300 font-bold">Nenhum menu criado</p></div>}
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="rounded-2xl"><DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Menu" : "Novo Menu"}</DialogTitle></DialogHeader>
+                <DialogContent className="rounded-2xl bg-[#141414] text-white border border-[#D4AF37]/30">
+                    <DialogHeader><DialogTitle className="font-extrabold text-white text-lg">{editing ? "Editar Menu" : "Novo Menu"}</DialogTitle></DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="menu-name" /></div>
-                        <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="menu-desc" /></div>
-                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm">Ativo</span></div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full" data-testid="save-menu-btn">{editing ? "Atualizar" : "Criar"}</Button>
+                        <div><Label className="text-gray-300">Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required data-testid="menu-name" /></div>
+                        <div><Label className="text-gray-300">Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="menu-desc" /></div>
+                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm font-semibold text-gray-300">Ativo</span></div>
+                        <Button type="submit" className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20" data-testid="save-menu-btn">{editing ? "Atualizar" : "Criar"}</Button>
                     </form>
                 </DialogContent>
             </Dialog>

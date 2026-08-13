@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const login = async (email, password) => {
-        const res = await axios.post(`${API}/auth/login`, { email, password });
+        const res = await axios.post(`${API}/auth/login`, { email, password }, { timeout: 20000 });
         setToken(res.data.token);
         setUser(res.data.user);
         return res.data;
