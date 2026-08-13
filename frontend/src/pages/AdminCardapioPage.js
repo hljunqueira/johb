@@ -308,36 +308,36 @@ function CategoriesTab({ headers, setConfirmModal }) {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-6">
                 <div>
-                    <p className="text-sm text-muted-foreground">Gerencie todas as categorias.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Vincule categorias a menus para organizar o cardápio.</p>
+                    <p className="text-sm font-semibold text-gray-300">Gerencie todas as categorias.</p>
+                    <p className="text-xs text-gray-500 mt-1">Vincule categorias a menus para organizar o cardápio.</p>
                 </div>
-                <Button onClick={() => { setEditing(null); setForm({ name: "", description: "", icon: "", menu_id: "", active: true }); setShowForm(true); }} className="bg-primary text-white rounded-full" data-testid="add-category-btn"><Plus className="h-4 w-4 mr-1" />Nova Categoria</Button>
+                <Button onClick={() => { setEditing(null); setForm({ name: "", description: "", icon: "", menu_id: "", active: true }); setShowForm(true); }} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all" data-testid="add-category-btn"><Plus className="h-4 w-4 mr-1" />Nova Categoria</Button>
             </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {categories.map(c => (
                     <div key={c.id} 
-                         className={`bg-white dark:bg-card rounded-2xl border border-border p-4 flex items-center justify-between ${!c.active ? "opacity-50" : ""}`} 
+                         className={`bg-[#141414] text-white rounded-2xl border border-white/10 p-5 flex items-center justify-between shadow-lg transition-all hover:border-[#D4AF37]/40 ${!c.active ? "opacity-40" : ""}`} 
                          data-testid={`category-${c.id}`}>
                         <div>
-                            <h3 className="font-semibold font-heading text-sm">{c.name}</h3>
-                            <p className="text-xs text-muted-foreground">{c.description}</p>
-                            <p className="text-xs text-primary mt-1">Menu: {getMenuName(c.menu_id)}</p>
+                            <h3 className="font-extrabold text-white text-base">{c.name}</h3>
+                            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{c.description}</p>
+                            <p className="text-xs text-[#F4B544] font-semibold mt-2">Menu: {getMenuName(c.menu_id)}</p>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5 ml-4">
                             <Switch checked={c.active} onCheckedChange={() => toggleActive(c)} />
-                            <Button size="icon" variant="ghost" onClick={() => edit(c)}><Pencil className="h-4 w-4" /></Button>
-                            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => del(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg" onClick={() => edit(c)}><Pencil className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg" onClick={() => del(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                     </div>
                 ))}
             </div>
             {categories.length === 0 && (
-                <div className="text-center py-12 bg-muted/30 rounded-2xl">
-                    <Grid3X3 className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nenhuma categoria neste menu</p>
-                    <p className="text-xs text-muted-foreground mt-1">Crie uma categoria para começar</p>
+                <div className="text-center py-12 bg-[#141414] border border-dashed border-white/10 rounded-2xl">
+                    <Grid3X3 className="h-10 w-10 text-gray-500 mx-auto mb-3" />
+                    <p className="text-gray-300 font-bold">Nenhuma categoria encontrada</p>
+                    <p className="text-xs text-gray-500 mt-1">Crie uma categoria para começar</p>
                 </div>
             )}
             <Dialog open={showForm} onOpenChange={setShowForm}>
@@ -369,12 +369,12 @@ function ConfirmDialog({ open, title, description, onConfirm, onCancel, confirmL
 /* ==================== SKELETON ==================== */
 function ProductCardSkeleton() {
     return (
-        <div className="bg-white dark:bg-card rounded-2xl border border-border overflow-hidden animate-pulse">
-            <div className="h-32 bg-muted w-full" />
+        <div className="bg-[#141414] rounded-2xl border border-white/10 overflow-hidden animate-pulse">
+            <div className="h-36 bg-[#1E1E1E] w-full" />
             <div className="p-4 space-y-3">
-                <div className="flex justify-between"><div className="space-y-1.5"><div className="h-4 w-32 bg-muted rounded" /><div className="h-3 w-20 bg-muted rounded" /></div><div className="h-4 w-16 bg-muted rounded" /></div>
-                <div className="flex gap-2"><div className="h-5 w-16 bg-muted rounded-full" /><div className="h-5 w-20 bg-muted rounded-full" /></div>
-                <div className="flex justify-between items-center pt-2 border-t"><div className="h-5 w-12 bg-muted rounded-full" /><div className="flex gap-1"><div className="h-8 w-8 bg-muted rounded-lg" /><div className="h-8 w-8 bg-muted rounded-lg" /><div className="h-8 w-8 bg-muted rounded-lg" /></div></div>
+                <div className="flex justify-between"><div className="space-y-1.5"><div className="h-4 w-32 bg-white/10 rounded" /><div className="h-3 w-20 bg-[#F4B544]/20 rounded" /></div><div className="h-4 w-16 bg-[#F4B544]/20 rounded" /></div>
+                <div className="flex gap-2"><div className="h-5 w-16 bg-white/10 rounded-full" /><div className="h-5 w-20 bg-white/10 rounded-full" /></div>
+                <div className="flex justify-between items-center pt-2 border-t border-white/10"><div className="h-5 w-12 bg-white/10 rounded-full" /><div className="flex gap-1"><div className="h-8 w-8 bg-white/10 rounded-lg" /><div className="h-8 w-8 bg-white/10 rounded-lg" /><div className="h-8 w-8 bg-white/10 rounded-lg" /></div></div>
             </div>
         </div>
     );
@@ -592,28 +592,28 @@ function ProductsTab({ headers, setConfirmModal }) {
     return (
         <div>
             {/* Header */}
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-5">
                 <div>
-                    <p className="text-sm font-medium">{products.length} produtos</p>
-                    <p className="text-xs text-muted-foreground"><span className="text-green-600">{totalActive} ativos</span>{" · "}<span className="text-gray-400">{totalInactive} inativos</span></p>
+                    <p className="text-sm font-bold text-gray-200">{products.length} produtos cadastrados</p>
+                    <p className="text-xs text-gray-400 mt-0.5"><span className="text-emerald-400 font-semibold">{totalActive} ativos</span>{" · "}<span className="text-gray-500">{totalInactive} inativos</span></p>
                 </div>
-                <Button onClick={openNew} className="bg-primary text-white rounded-full" data-testid="add-product-btn"><Plus className="h-4 w-4 mr-1" />Novo Produto</Button>
+                <Button onClick={openNew} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all" data-testid="add-product-btn"><Plus className="h-4 w-4 mr-1" />Novo Produto</Button>
             </div>
 
             {/* Filtros */}
-            <div className="flex flex-wrap gap-2 mb-5">
-                <div className="relative flex-1 min-w-[180px]">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-input bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            <div className="flex flex-wrap gap-3 mb-6">
+                <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto por nome..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/10 bg-[#141414] text-white text-sm focus:outline-none focus:border-[#F4B544] placeholder-gray-500" />
                 </div>
-                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="rounded-lg border border-input bg-white px-3 py-2 text-sm min-w-[140px] focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option value="">Todas categorias</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="rounded-xl border border-white/10 bg-[#141414] text-white px-4 py-2.5 text-sm min-w-[160px] focus:outline-none focus:border-[#F4B544]">
+                    <option value="" className="bg-[#141414] text-white">Todas categorias</option>
+                    {categories.map(c => <option key={c.id} value={c.id} className="bg-[#141414] text-white">{c.name}</option>)}
                 </select>
-                <div className="flex rounded-lg border border-input overflow-hidden bg-white text-sm">
+                <div className="flex rounded-xl border border-white/10 overflow-hidden bg-[#141414] text-sm p-1 gap-1">
                     {[["all","Todos"],["active","Ativos"],["inactive","Inativos"]].map(([val, label]) => (
                         <button key={val} type="button" onClick={() => setFilterStatus(val)}
-                            className={`px-3 py-2 transition-colors ${filterStatus === val ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/50"}`}>{label}</button>
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterStatus === val ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-sm" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>{label}</button>
                     ))}
                 </div>
             </div>
@@ -627,27 +627,27 @@ function ProductsTab({ headers, setConfirmModal }) {
                         const hasZeroPrice = !p.price || p.price === 0 || parseFloat(p.price) === 0;
                         return (
                             <div key={p.id}
-                                className={`bg-white dark:bg-card rounded-2xl border border-border overflow-hidden ${!p.active ? "opacity-50" : ""}`}
+                                className={`bg-[#141414] text-white rounded-2xl border border-white/10 overflow-hidden shadow-lg transition-all hover:border-[#D4AF37]/40 ${!p.active ? "opacity-40" : ""}`}
                                 data-testid={`admin-product-${p.id}`}>
                                 {p.image_url
-                                    ? <img src={getImageUrl(p.image_url)} alt={p.name} className="h-32 w-full object-cover" />
-                                    : <div className="h-32 w-full bg-muted/40 flex items-center justify-center"><Package className="h-10 w-10 text-muted-foreground/30" /></div>
+                                    ? <img src={getImageUrl(p.image_url)} alt={p.name} className="h-36 w-full object-cover" />
+                                    : <div className="h-36 w-full bg-[#1E1E1E] flex items-center justify-center border-b border-white/5"><Package className="h-10 w-10 text-gray-600" /></div>
                                 }
                                 <div className="p-4">
-                                    <div className="flex justify-between items-start mb-1">
+                                    <div className="flex justify-between items-start mb-1.5">
                                         <div className="flex-1 min-w-0 pr-2">
-                                            <h3 className="font-semibold font-heading text-sm truncate">{p.name}</h3>
-                                            <p className="text-xs text-muted-foreground">{getCategoryName(p.category_id)}</p>
+                                            <h3 className="font-extrabold text-white text-base truncate">{p.name}</h3>
+                                            <p className="text-xs text-[#F4B544] font-semibold mt-0.5">{getCategoryName(p.category_id)}</p>
                                         </div>
                                         <div className="flex flex-col items-end gap-0.5">
-                                            <span className={`font-bold text-sm ${hasZeroPrice ? "text-amber-500" : "text-primary"}`}>R$ {p.price?.toFixed(2)}</span>
-                                            {hasZeroPrice && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">sob consulta</span>}
+                                            <span className={`font-black text-base ${hasZeroPrice ? "text-amber-400" : "text-[#F4B544]"}`}>R$ {p.price?.toFixed(2)}</span>
+                                            {hasZeroPrice && <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-500/30">sob consulta</span>}
                                         </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-1 my-2">
-                                        {p.tags?.map(t => <Badge key={t} variant="secondary" className="text-xs rounded-full">{t}</Badge>)}
-                                        {optCount > 0 && <Badge className="bg-accent/10 text-accent text-xs rounded-full">{optCount} opcionais</Badge>}
-                                        {p.stock === 0 && <Badge variant="destructive" className="text-xs rounded-full">Sem estoque</Badge>}
+                                    <div className="flex flex-wrap gap-1.5 my-3">
+                                        {p.tags?.map(t => <Badge key={t} variant="secondary" className="text-[10px] rounded-md bg-[#1E1E1E] text-gray-300 border-white/10">{t}</Badge>)}
+                                        {optCount > 0 && <Badge className="bg-[#F4B544]/20 text-[#F4B544] border border-[#D4AF37]/30 text-[10px] rounded-md font-bold">{optCount} adicionais</Badge>}
+                                        {p.stock === 0 && <Badge variant="destructive" className="text-[10px] rounded-md bg-red-500/20 text-red-400 border border-red-500/30">Sem estoque</Badge>}
                                     </div>
                                     <div className="flex items-center justify-between pt-2 border-t">
                                         <div className="flex items-center gap-2">
