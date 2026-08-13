@@ -1,7 +1,7 @@
 import React from "react";
-import { ArrowRight, Heart, Utensils, MapPin } from "lucide-react";
+import { ArrowRight, Heart } from "lucide-react";
 
-export function HeroSection({ onVerCardapio, onVerCombos }) {
+export function HeroSection({ onVerCardapio }) {
     return (
         <section className="relative overflow-hidden bg-[#050505] text-[#FFFAF0] pt-8 pb-16 md:py-20 lg:py-24 border-b border-[#F4B544]/15">
             {/* Elementos Decorativos de Fundo */}
@@ -13,12 +13,6 @@ export function HeroSection({ onVerCardapio, onVerCombos }) {
                     
                     {/* Coluna de Texto & Composição Tipográfica */}
                     <div className="lg:col-span-7 space-y-6 text-left">
-                        
-                        {/* Tagline de Localização */}
-                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#10100F] border border-[#F4B544]/30 text-xs font-medium tracking-widest text-[#F4B544] uppercase gold-glow-sm">
-                            <MapPin className="w-3.5 h-3.5 text-[#F4B544]" />
-                            <span>Balneário Arroio do Silva — SC</span>
-                        </div>
 
                         {/* Título Principal Editorial */}
                         <div className="space-y-1">
@@ -44,60 +38,49 @@ export function HeroSection({ onVerCardapio, onVerCombos }) {
                         </p>
 
                         {/* Destaques com Emojis */}
-                        <div className="flex flex-wrap gap-3 pt-1">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                        <div className="flex flex-wrap gap-2.5 pt-1">
+                            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
                                 🥐 Joelhos
                             </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
                                 🍕 Mini Pizzas
                             </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
                                 🥟 Esfirras & Coxinhas
                             </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
                                 🥧 Empadinhas
                             </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
                                 🍰 Cucas
                             </span>
                         </div>
 
-                        {/* CTAs de Ação */}
-                        <div className="pt-4 flex flex-col sm:flex-row gap-4 sm:items-center">
+                        {/* CTA de Ação */}
+                        <div className="pt-4">
                             <button
                                 onClick={onVerCardapio || (() => {
                                     const el = document.getElementById("cardapio");
                                     if (el) el.scrollIntoView({ behavior: "smooth" });
                                 })}
-                                className="group inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-[#F4B544] text-[#050505] font-bold text-sm uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5"
+                                className="group inline-flex items-center justify-center gap-3 px-9 py-4 rounded-full bg-[#F4B544] text-[#050505] font-bold text-sm uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5 gold-glow"
                             >
                                 <span>Ver Cardápio</span>
                                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                            </button>
-
-                            <button
-                                onClick={onVerCombos || (() => {
-                                    const el = document.getElementById("combos");
-                                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                                })}
-                                className="inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-full bg-[#10100F] border border-[#F4B544]/30 text-[#FFFAF0] font-semibold text-sm uppercase tracking-wider hover:border-[#F4B544] hover:text-[#F4B544] transition-all"
-                            >
-                                <Utensils className="w-4 h-4 text-[#F4B544]" />
-                                <span>Ver Combos JOHB</span>
                             </button>
                         </div>
 
                     </div>
 
-                    {/* Coluna Fotográfica — Grid de Fotos Reais de Salgados e Cucas */}
+                    {/* Coluna Fotográfica — 4 Fotos 100% Salgados, Assados, Mini Pizzas e Cucas */}
                     <div className="lg:col-span-5 relative">
                         <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
                             
-                            {/* Coxinhas / Esfirras */}
+                            {/* Coxinhas & Salgados Fritos Dourados */}
                             <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
                                 <img
-                                    src="https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=500&q=80"
-                                    alt="Coxinhas & Salgados JOHB"
+                                    src="https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80"
+                                    alt="Coxinhas e Salgados Fritos JOHB"
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
@@ -106,11 +89,11 @@ export function HeroSection({ onVerCardapio, onVerCombos }) {
                                 </span>
                             </div>
 
-                            {/* Joelhos / Folhados */}
+                            {/* Joelhos & Folhados Dourados */}
                             <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
                                 <img
-                                    src="https://images.unsplash.com/photo-1541529086526-db283c563270?auto=format&fit=crop&w=500&q=80"
-                                    alt="Joelhos e Folhados JOHB"
+                                    src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=600&auto=format&fit=crop&q=80"
+                                    alt="Joelhos e Folhados Assados JOHB"
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
@@ -119,11 +102,11 @@ export function HeroSection({ onVerCardapio, onVerCombos }) {
                                 </span>
                             </div>
 
-                            {/* Mini Pizzas */}
+                            {/* Mini Pizzas com Queijo Derretido */}
                             <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
                                 <img
-                                    src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=500&q=80"
-                                    alt="Mini Pizzas JOHB"
+                                    src="https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&auto=format&fit=crop&q=80"
+                                    alt="Mini Pizzas Artesanais JOHB"
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
@@ -135,8 +118,8 @@ export function HeroSection({ onVerCardapio, onVerCombos }) {
                             {/* Cucas & Empadinhas */}
                             <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
                                 <img
-                                    src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&q=80"
-                                    alt="Cucas e Empadinhas JOHB"
+                                    src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=80"
+                                    alt="Cucas e Bolos Artesanais JOHB"
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />

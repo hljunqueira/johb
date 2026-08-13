@@ -1,11 +1,11 @@
 import React from "react";
-import { Plus, Heart, Sparkles } from "lucide-react";
+import { Plus, Heart } from "lucide-react";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 
 const getImageUrl = (url, backendUrl) => {
-    if (!url) return "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500&auto=format&fit=crop&q=80";
+    if (!url) return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80";
     if (url.startsWith("http")) return url;
     return `${backendUrl || ''}${url}`;
 };
@@ -19,10 +19,8 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
     const handleQuickAdd = (e) => {
         e.stopPropagation();
         if (hasAdditionals) {
-            // Se possui adicionais, abre os detalhes para personalização
             onClick(product);
         } else {
-            // Adição direta ao carrinho
             addToCart({
                 ...product,
                 quantity: 1,
@@ -71,7 +69,7 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
                 {hasAdditionals && (
                     <div className="absolute top-2.5 left-2.5">
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-[#050505]/85 backdrop-blur-md text-[#F4B544] border border-[#F4B544]/30">
-                            <Sparkles className="w-2.5 h-2.5" /> Opções
+                            Opções
                         </span>
                     </div>
                 )}

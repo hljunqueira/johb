@@ -5,7 +5,7 @@ export const API = `${API_URL}/api`;
 
 // Helper to get full image URL
 export const getImageUrl = (url) => {
-    if (!url) return "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=400";
+    if (!url) return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80";
     if (url.startsWith("http")) return url;
     return `${API_URL}${url}`;
 };

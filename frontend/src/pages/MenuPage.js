@@ -641,105 +641,6 @@ export default function MenuPage() {
                 )}
             </section>
 
-            {/* Seção de Combos Promocionais com Fotos Reais de Salgados */}
-            <section id="combos" className="bg-[#10100F] border-y border-[#F4B544]/15 py-16">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
-                        <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold">
-                            Combinações Especiais
-                        </span>
-                        <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#FFFAF0]">
-                            Combos para Acompanhar Seu Momento
-                        </h2>
-                        <p className="text-[#B8B1A3] text-sm sm:text-base font-light">
-                            Combine seus salgados artesanais favoritos com uma bebida bem geladinha.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Combo 1 — Coxinhas e Salgados */}
-                        <div className="bg-[#171612] rounded-2xl p-6 sm:p-8 border border-[#F4B544]/20 flex flex-col sm:flex-row items-center gap-6 gold-glow-sm hover:border-[#F4B544]/50 transition-all">
-                            <img
-                                src="https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80"
-                                alt="Combo Individual JOHB"
-                                className="w-32 h-32 rounded-xl object-cover border border-[#F4B544]/30"
-                            />
-                            <div className="space-y-2 text-center sm:text-left flex-1">
-                                <span className="inline-block text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-[#F4B544]/10 text-[#F4B544] border border-[#F4B544]/30">
-                                    Combo Individual
-                                </span>
-                                <h3 className="font-serif text-xl font-bold text-[#FFFAF0]">Combo JOHB Individual</h3>
-                                <p className="text-xs text-[#B8B1A3]">
-                                    2 Salgados artesanais à sua escolha + 1 Bebida 350ml trincando de gelada.
-                                </p>
-                                <div className="pt-2 flex items-center justify-between">
-                                    <span className="text-xl font-bold text-[#F4B544]">R$ 17,90</span>
-                                    <button
-                                        onClick={() => {
-                                            addItem(
-                                                {
-                                                    id: "p-cmb-1",
-                                                    name: "Combo JOHB Individual",
-                                                    price: 17.90,
-                                                    image_url: "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500"
-                                                },
-                                                1,
-                                                [],
-                                                ""
-                                            );
-                                            toast.success("Combo JOHB Individual adicionado ao carrinho!");
-                                        }}
-                                        className="px-4 py-2 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-wider hover:bg-[#FFC85C] transition-all"
-                                    >
-                                        Pedir Combo
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Combo 2 — Assados Folhados */}
-                        <div className="bg-[#171612] rounded-2xl p-6 sm:p-8 border border-[#F4B544]/20 flex flex-col sm:flex-row items-center gap-6 gold-glow-sm hover:border-[#F4B544]/50 transition-all">
-                            <img
-                                src="https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&auto=format&fit=crop&q=80"
-                                alt="Combo Pra Dois JOHB"
-                                className="w-32 h-32 rounded-xl object-cover border border-[#F4B544]/30"
-                            />
-                            <div className="space-y-2 text-center sm:text-left flex-1">
-                                <span className="inline-block text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-[#F4B544]/10 text-[#F4B544] border border-[#F4B544]/30">
-                                    Para Compartilhar
-                                </span>
-                                <h3 className="font-serif text-xl font-bold text-[#FFFAF0]">Combo Pra Dois</h3>
-                                <p className="text-xs text-[#B8B1A3]">
-                                    4 Salgados artesanais à sua escolha + 2 Bebidas 350ml à sua escolha.
-                                </p>
-                                <div className="pt-2 flex items-center justify-between">
-                                    <span className="text-xl font-bold text-[#F4B544]">R$ 34,90</span>
-                                    <button
-                                        onClick={() => {
-                                            addItem(
-                                                {
-                                                    id: "p-cmb-2",
-                                                    name: "Combo Pra Dois",
-                                                    price: 34.90,
-                                                    image_url: "https://images.unsplash.com/photo-1541529086526-db283c563270?w=500"
-                                                },
-                                                1,
-                                                [],
-                                                ""
-                                            );
-                                            toast.success("Combo Pra Dois adicionado ao carrinho!");
-                                        }}
-                                        className="px-4 py-2 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-wider hover:bg-[#FFC85C] transition-all"
-                                    >
-                                        Pedir Combo
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             {/* Seção Sobre / Experiência JOHB */}
             <section id="sobre" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -768,7 +669,7 @@ export default function MenuPage() {
                     <div className="relative">
                         <div className="rounded-2xl overflow-hidden border border-[#F4B544]/30 gold-glow">
                             <img
-                                src="https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=800&auto=format&fit=crop&q=80"
+                                src="https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800&auto=format&fit=crop&q=80"
                                 alt="Salgados e Café JOHB"
                                 className="w-full h-96 object-cover"
                             />
@@ -780,13 +681,12 @@ export default function MenuPage() {
             {/* Footer Artesanal JOHB */}
             <footer className="bg-[#10100F] border-t border-[#F4B544]/20 py-12 text-center text-xs text-[#B8B1A3]">
                 <div className="max-w-7xl mx-auto px-4 space-y-6">
-                    <img src="/logo-semfundo.png" alt="JOHB Café & Salgados" className="h-16 w-auto mx-auto object-contain" />
+                    <img src="/logo.png" alt="JOHB Café & Salgados" className="h-16 w-auto mx-auto object-contain" />
                     <p className="font-serif text-lg text-[#FFFAF0] italic max-w-md mx-auto">
                         "O aroma de um bom café é o primeiro abraço do dia."
                     </p>
                     <div className="flex justify-center gap-6 text-[#F4B544] uppercase tracking-wider font-semibold text-[11px]">
                         <a href="#cardapio" className="hover:underline">Cardápio</a>
-                        <a href="#combos" className="hover:underline">Combos</a>
                         <a href="#sobre" className="hover:underline">Sobre Nós</a>
                         <a href="https://wa.me/message/FUNP4LBHYBA3O1" target="_blank" rel="noreferrer" className="hover:underline">WhatsApp</a>
                     </div>

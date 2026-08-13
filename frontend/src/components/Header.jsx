@@ -12,7 +12,6 @@ export default function Header({ onOpenCart }) {
     const navLinks = [
         { name: "Início", path: "/" },
         { name: "Cardápio", path: "#cardapio" },
-        { name: "Combos", path: "#combos" },
         { name: "Sobre Nós", path: "#sobre" },
     ];
 
@@ -23,7 +22,7 @@ export default function Header({ onOpenCart }) {
 
     return (
         <header className="sticky top-0 z-40 w-full bg-[#050505]/95 backdrop-blur-md border-b border-[#F4B544]/20 transition-all">
-            {/* Topbar informativo de localização e especialidade */}
+            {/* Topbar informativo */}
             <div className="bg-[#10100F] border-b border-[#F4B544]/10 py-1.5 px-4 text-xs text-[#B8B1A3]">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-4">
@@ -48,14 +47,13 @@ export default function Header({ onOpenCart }) {
                 </div>
             </div>
 
-            {/* Header Principal */}
+            {/* Header Principal com a logo oficial */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-                {/* Logo JOHB sem fundo */}
                 <Link to="/" className="flex items-center gap-3 group">
                     <img
-                        src="/logo-semfundo.png"
+                        src="/logo.png"
                         alt="JOHB Café & Salgados"
-                        className="h-14 w-auto object-contain transition-transform group-hover:scale-105"
+                        className="h-16 w-auto object-contain transition-transform group-hover:scale-105"
                     />
                 </Link>
 
