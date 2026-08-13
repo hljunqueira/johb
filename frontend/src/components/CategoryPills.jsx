@@ -17,7 +17,7 @@ export function CategoryPills({ categories = [], selectedCategory, onSelectCateg
             <div className="flex gap-3 min-w-max pb-2 px-2 md:justify-center">
                 {categories.map((category) => {
                     const catKey = (category.name || "").toLowerCase().trim();
-                    const Icon = categoryIconMap[catKey] || Sparkles;
+                    const Icon = categoryIconMap[catKey] || Utensils;
                     const isActive = selectedCategory === category.id;
                     const count = productCounts[category.id] || 0;
 
