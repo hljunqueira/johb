@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Search, ShoppingCart, Plus, Minus, Clock, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2, Coffee, Sparkles, MapPin, PhoneCall } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Clock, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2, Coffee, MapPin, PhoneCall } from "lucide-react";
 import Header from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { CategoryPills } from "@/components/CategoryPills";
@@ -19,6 +19,15 @@ import { EnhancedProductCard } from "@/components/EnhancedProductCard";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+
+// Categorias padrão JOHB para exibição contínua
+const DEFAULT_JOHB_CATEGORIES = [
+    { id: "cat-salgados", name: "Salgados", description: "Salgados fritos e assados artesanais quentinhos", order: 0 },
+    { id: "cat-assados", name: "Assados", description: "Folhados e assados dourados saindo do forno", order: 1 },
+    { id: "cat-doces", name: "Doces / Cucas", description: "Cucas tradicionais e bolos fofinhos artesanais", order: 2 },
+    { id: "cat-combos", name: "Combos", description: "Combinações perfeitas de salgados + bebida", order: 3 },
+    { id: "cat-bebidas", name: "Bebidas", description: "Refrigerantes e sucos naturais bem gelados", order: 4 }
+];
 
 const getImageUrl = (url) => {
     if (!url) return "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=400";
@@ -35,7 +44,7 @@ const tagLabels = {
 };
 const getTagStyle = (tag) => tagLabels[tag] || { label: tag, color: "bg-gray-100 text-gray-700" };
 
-// Complement category labels and order para Salgados, Assados e Combos JOHB
+// Complement category labels e order para Salgados e Assados JOHB
 const complementCategories = {
     sabor_salgado: { label: "Escolha o Salgado / Assado", order: 0, icon: "🥟" },
     molhos: { label: "Molhos & Acompanhamentos", order: 1, icon: "🥫" },
@@ -58,24 +67,13 @@ function useStoreStatus() {
     }, []);
 
     const checkStatus = (settings) => {
-        // Verificar flags especiais primeiro
         if (settings?.always_open) {
-            setStatus({ 
-                isOpen: true, 
-                message: "Aberto 24 horas", 
-                nextOpen: null,
-                alwaysOpen: true 
-            });
+            setStatus({ isOpen: true, message: "Aberto 24 horas", nextOpen: null, alwaysOpen: true });
             return;
         }
 
         if (settings?.temporarily_closed) {
-            setStatus({ 
-                isOpen: false, 
-                message: "Fechado temporariamente", 
-                nextOpen: null,
-                temporarilyClosed: true 
-            });
+            setStatus({ isOpen: false, message: "Fechado temporariamente", nextOpen: null, temporarilyClosed: true });
             return;
         }
 
@@ -107,7 +105,6 @@ function useStoreStatus() {
             setStatus({ isOpen: false, message: "Fechado agora", nextOpen: findNextOpen(businessHours, now) });
         } else {
             const minutesUntilClose = closeMinutes - currentTime;
-            const hoursUntil = Math.floor(minutesUntilClose / 60);
             const minsUntil = minutesUntilClose % 60;
             const closingSoon = minutesUntilClose <= 60;
             setStatus({
@@ -136,22 +133,16 @@ function useStoreStatus() {
     return { ...status, deliverySettings };
 }
 
-// ============ SKELETON COMPONENTS ============
 function ProductCardSkeleton() {
     return (
-        <div className="bg-white rounded-2xl border border-border overflow-hidden">
-            <div className="aspect-[4/3] bg-muted animate-pulse" />
+        <div className="bg-[#10100F] rounded-2xl border border-[#F4B544]/15 overflow-hidden">
+            <div className="aspect-[4/3] bg-[#171612] animate-pulse" />
             <div className="p-4 space-y-3">
                 <div className="flex justify-between">
-                    <div className="h-5 bg-muted rounded w-2/3 animate-pulse" />
-                    <div className="h-5 bg-muted rounded w-16 animate-pulse" />
+                    <div className="h-5 bg-[#171612] rounded w-2/3 animate-pulse" />
+                    <div className="h-5 bg-[#171612] rounded w-16 animate-pulse" />
                 </div>
-                <div className="h-4 bg-muted rounded w-full animate-pulse" />
-                <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
-                <div className="flex gap-1">
-                    <div className="h-5 bg-muted rounded w-16 animate-pulse" />
-                    <div className="h-5 bg-muted rounded w-16 animate-pulse" />
-                </div>
+                <div className="h-4 bg-[#171612] rounded w-full animate-pulse" />
             </div>
         </div>
     );
@@ -159,208 +150,188 @@ function ProductCardSkeleton() {
 
 function CategorySkeleton() {
     return (
-        <div className="flex gap-2 overflow-x-auto pb-2">
-            {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-10 w-32 bg-muted rounded-full animate-pulse flex-shrink-0" />
+        <div className="flex gap-2 overflow-x-auto py-2 scrollbar-none">
+            {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-10 w-28 bg-[#10100F] rounded-full animate-pulse border border-[#F4B544]/10 shrink-0" />
             ))}
         </div>
     );
 }
 
-/* ============ PRODUCT DETAIL MODAL ============ */
+function StoreStatusBanner({ status }) {
+    if (status.alwaysOpen) return null;
+    if (status.isOpen && !status.closingSoon) return null;
+
+    return (
+        <div className={`py-2 px-4 text-center text-xs font-semibold tracking-wider ${
+            status.isOpen 
+                ? "bg-[#F4B544]/20 text-[#F4B544] border-b border-[#F4B544]/30" 
+                : "bg-red-500/20 text-red-300 border-b border-red-500/30"
+        }`}>
+            <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+                <Clock className="w-3.5 h-3.5" />
+                <span>{status.message}</span>
+                {status.nextOpen && <span className="opacity-80">({status.nextOpen})</span>}
+            </div>
+        </div>
+    );
+}
+
 const ProductDetailModal = memo(function ProductDetailModal({ product, open, onClose, onAdd, storeOpen }) {
-    const [selectedAdditionals, setSelectedAdditionals] = useState([]);
     const [quantity, setQuantity] = useState(1);
+    const [selectedAdditionals, setSelectedAdditionals] = useState([]);
     const [observation, setObservation] = useState("");
     const [validationErrors, setValidationErrors] = useState({});
 
     useEffect(() => {
-        if (open) { 
-            setSelectedAdditionals([]); 
-            setQuantity(1); 
-            setObservation(""); 
+        if (product) {
+            setQuantity(1);
+            setSelectedAdditionals([]);
+            setObservation("");
             setValidationErrors({});
         }
-    }, [open]);
-
-    const toggleAdditional = useCallback((add, catKey, catRule) => {
-        setValidationErrors(prev => ({ ...prev, [catKey]: null }));
-        setSelectedAdditionals(prev => {
-            const isSelected = prev.find(a => a.name === add.name);
-            if (isSelected) return prev.filter(a => a.name !== add.name);
-            const max = catRule?.max_select || 1;
-            const countInCat = prev.filter(a => a.category === catKey).length;
-            if (countInCat >= max) {
-                if (max === 1) {
-                    return [...prev.filter(a => a.category !== catKey), add];
-                }
-                setValidationErrors(p => ({ ...p, [catKey]: `Máximo de ${max} itens para esta categoria` }));
-                return prev;
-            }
-            return [...prev, add];
-        });
-    }, []);
-
-    const addPrice = selectedAdditionals.reduce((s, a) => s + a.price, 0);
-    const unitTotal = product ? product.price + addPrice : 0;
-    const totalPrice = unitTotal * quantity;
-
-    const validateAndAdd = useCallback(() => {
-        if (!product) return;
-        if (!storeOpen) {
-            toast.error("Loja fechada no momento");
-            return;
-        }
-        const additionals = Array.isArray(product.additionals) ? product.additionals : [];
-        if (additionals.length === 0) {
-            onAdd(product, quantity, selectedAdditionals, observation);
-            onClose();
-            return;
-        }
-        const catRules = {};
-        additionals.forEach(add => {
-            const k = add.category || "outros";
-            if (!catRules[k]) catRules[k] = { required: add.required, min_select: add.min_select || 0, max_select: add.max_select || 1, label: k };
-        });
-        const errors = {};
-        let hasError = false;
-        Object.entries(catRules).forEach(([catKey, rule]) => {
-            const countInCat = selectedAdditionals.filter(a => a.category === catKey).length;
-            if (rule.required && countInCat === 0) {
-                const label = complementCategories[catKey]?.label || catKey;
-                errors[catKey] = `É obrigatório selecionar pelo menos 1 item de "${label}"`;
-                hasError = true;
-            } else if (rule.min_select > 0 && countInCat < rule.min_select) {
-                const label = complementCategories[catKey]?.label || catKey;
-                errors[catKey] = `Selecione no mínimo ${rule.min_select} item${rule.min_select > 1 ? "s" : ""} de "${label}"`;
-                hasError = true;
-            }
-        });
-        if (hasError) {
-            setValidationErrors(errors);
-            const firstErrKey = Object.keys(errors)[0];
-            document.getElementById(`cat-section-${firstErrKey}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
-        }
-        onAdd(product, quantity, selectedAdditionals, observation);
-        onClose();
-    }, [product, quantity, selectedAdditionals, observation, onAdd, onClose, storeOpen]);
+    }, [product]);
 
     if (!product) return null;
 
-    const groupedAdditionals = {};
-    const additionals = Array.isArray(product.additionals) ? product.additionals : [];
-    if (additionals.length > 0) {
-        additionals.forEach(add => {
-            const cat = add.category || "outros";
-            if (!groupedAdditionals[cat]) groupedAdditionals[cat] = { items: [], rule: { required: add.required, min_select: add.min_select || 0, max_select: add.max_select || 1 } };
-            groupedAdditionals[cat].items.push(add);
-        });
-    }
-    const sortedCategories = Object.keys(groupedAdditionals).sort((a, b) => 
-        (complementCategories[a]?.order ?? 99) - (complementCategories[b]?.order ?? 99)
-    );
+    const additionalsList = Array.isArray(product.additionals) ? product.additionals : [];
+    const groupedAdditionals = additionalsList.reduce((acc, add) => {
+        const catKey = add.category || "outros";
+        if (!acc[catKey]) {
+            acc[catKey] = {
+                items: [],
+                rule: {
+                    required: add.required || false,
+                    min_select: add.min_select || 0,
+                    max_select: add.max_select || 1
+                }
+            };
+        }
+        acc[catKey].items.push(add);
+        return acc;
+    }, {});
 
-    const isCustomizable = product.tags?.includes("personalizavel") || additionals.length > 0;
+    const sortedCatKeys = Object.keys(groupedAdditionals).sort((a, b) => {
+        const orderA = complementCategories[a]?.order ?? 99;
+        const orderB = complementCategories[b]?.order ?? 99;
+        return orderA - orderB;
+    });
+
+    const additionalsTotal = selectedAdditionals.reduce((sum, add) => sum + (add.price || 0), 0);
+    const unitPrice = (product.price || 0) + additionalsTotal;
+    const totalPrice = unitPrice * quantity;
+
+    const toggleAdditional = (add, catKey, rule) => {
+        const exists = selectedAdditionals.find(a => a.name === add.name);
+        if (exists) {
+            setSelectedAdditionals(selectedAdditionals.filter(a => a.name !== add.name));
+            if (validationErrors[catKey]) {
+                setValidationErrors(prev => { const n = { ...prev }; delete n[catKey]; return n; });
+            }
+        } else {
+            const countInCat = selectedAdditionals.filter(a => a.category === catKey).length;
+            if (countInCat >= (rule.max_select || 1)) {
+                if (rule.max_select === 1) {
+                    const filtered = selectedAdditionals.filter(a => a.category !== catKey);
+                    setSelectedAdditionals([...filtered, { ...add, category: catKey }]);
+                }
+                return;
+            }
+            setSelectedAdditionals([...selectedAdditionals, { ...add, category: catKey }]);
+            if (validationErrors[catKey]) {
+                setValidationErrors(prev => { const n = { ...prev }; delete n[catKey]; return n; });
+            }
+        }
+    };
+
+    const validateAndAdd = () => {
+        const errors = {};
+        let isValid = true;
+
+        Object.keys(groupedAdditionals).forEach(catKey => {
+            const { rule } = groupedAdditionals[catKey];
+            if (rule.required) {
+                const count = selectedAdditionals.filter(a => a.category === catKey).length;
+                const minReq = rule.min_select || 1;
+                if (count < minReq) {
+                    const catLabel = complementCategories[catKey]?.label || catKey;
+                    errors[catKey] = `Selecione pelo menos ${minReq} opção em "${catLabel}"`;
+                    isValid = false;
+                }
+            }
+        });
+
+        if (!isValid) {
+            setValidationErrors(errors);
+            toast.error("Por favor, selecione as opções obrigatórias.");
+            return;
+        }
+
+        onAdd(product, quantity, selectedAdditionals, observation);
+        onClose();
+    };
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="p-0 rounded-2xl overflow-hidden max-w-lg max-h-[90vh] overflow-y-auto !block !gap-0 bg-[#10100F] text-[#FFFAF0] border border-[#F4B544]/30 shadow-2xl gold-glow" data-testid="product-detail-modal">
-                <DialogTitle className="sr-only">{product?.name || "Detalhes do produto"}</DialogTitle>
-                <div className="relative w-full aspect-[16/9] overflow-hidden bg-[#050505] max-h-[220px] flex-shrink-0 border-b border-[#F4B544]/15">
-                    <img 
-                        src={getImageUrl(product.image_url)} 
-                        alt={product.name} 
+            <DialogContent className="max-w-lg bg-[#10100F] border border-[#F4B544]/20 p-0 text-[#FFFAF0] rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                <div className="relative aspect-[16/9] bg-[#050505]">
+                    <img
+                        src={getImageUrl(product.image_url)}
+                        alt={product.name}
                         className="w-full h-full object-cover"
-                        onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=600"; }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#10100F] via-transparent to-transparent opacity-80" />
+                    <button
+                        onClick={onClose}
+                        className="absolute top-3 right-3 h-8 w-8 rounded-full bg-[#050505]/80 text-[#FFFAF0] hover:text-[#F4B544] flex items-center justify-center border border-[#F4B544]/20"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
                 </div>
 
-                <div className="p-5 space-y-4">
+                <div className="p-6 overflow-y-auto flex-1 space-y-5">
                     <div>
-                        <div className="flex justify-between items-start gap-2">
-                            <h2 className="text-xl font-bold font-serif text-[#FFFAF0] flex-1">{product.name}</h2>
-                            <span className="text-xl font-bold font-serif text-[#F4B544] whitespace-nowrap bg-[#171612] px-3 py-1 rounded-lg border border-[#F4B544]/20">
-                                {product.price > 0 ? `R$ ${product.price.toFixed(2).replace(".", ",")}` : "A partir de R$ 0,00"}
-                            </span>
-                        </div>
-                        <p className="text-sm text-[#B8B1A3] mt-1 font-light">{product.description}</p>
+                        <DialogTitle className="font-serif text-2xl font-bold text-[#FFFAF0] mb-1">
+                            {product.name}
+                        </DialogTitle>
+                        <p className="text-xs text-[#B8B1A3] leading-relaxed">{product.description}</p>
                     </div>
 
-                    {isCustomizable && sortedCategories.length > 0 && (
-                        <div className="space-y-5 pt-2">
-                            <div className="h-[1px] w-full bg-[#F4B544]/15" />
-                            <h3 className="font-serif font-bold text-lg text-[#FFFAF0] flex items-center gap-2">
-                                <span>Monte do seu jeito</span>
-                            </h3>
-                            
-                            {sortedCategories.map(catKey => {
-                                const catInfo = complementCategories[catKey] || { label: catKey, icon: "✨" };
+                    {sortedCatKeys.length > 0 && (
+                        <div className="space-y-4 pt-2">
+                            {sortedCatKeys.map(catKey => {
+                                const catInfo = complementCategories[catKey] || { label: catKey, icon: "🔹" };
                                 const { items, rule } = groupedAdditionals[catKey];
                                 const selectedInCat = selectedAdditionals.filter(a => a.category === catKey).length;
                                 const catError = validationErrors[catKey];
-                                
+
                                 return (
-                                    <div key={catKey} id={`cat-section-${catKey}`} className="space-y-2.5">
+                                    <div key={catKey} className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-sm font-medium">
-                                                <span>{catInfo.icon}</span>
-                                                <span className="text-[#FFFAF0] font-serif font-bold">{catInfo.label}</span>
-                                                {rule.required && (
-                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${catError ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-[#F4B544]/20 text-[#F4B544] border border-[#F4B544]/30"}`}>Obrigatório</span>
-                                                )}
-                                                {!rule.required && rule.max_select > 1 && (
-                                                    <span className="text-[10px] bg-[#171612] text-[#B8B1A3] border border-[#F4B544]/20 px-2 py-0.5 rounded-full">Até {rule.max_select}</span>
-                                                )}
-                                            </div>
-                                            <span className={`text-xs font-bold ${rule.required && selectedInCat === 0 ? "text-[#F4B544]" : selectedInCat > 0 ? "text-emerald-400" : "text-[#B8B1A3]"}`}>
+                                            <span className="text-xs font-bold uppercase tracking-wider text-[#F4B544] flex items-center gap-1.5">
+                                                <span>{catInfo.icon}</span> {catInfo.label}
+                                            </span>
+                                            <span className="text-[11px] text-[#B8B1A3]">
                                                 {selectedInCat}/{rule.max_select || 1}
                                             </span>
                                         </div>
-                                        {catError && (
-                                            <div className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-                                                <svg className="h-3.5 w-3.5 shrink-0 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-                                                {catError}
-                                            </div>
-                                        )}
-                                        <div className="grid grid-cols-1 gap-2">
+                                        <div className="space-y-1.5">
                                             {items.map(add => {
                                                 const isSelected = !!selectedAdditionals.find(a => a.name === add.name);
-                                                const countInCat = selectedAdditionals.filter(a => a.category === catKey).length;
-                                                const isAtMax = !isSelected && countInCat >= (rule.max_select || 1);
                                                 return (
-                                                    <button key={add.name} type="button"
+                                                    <button
+                                                        key={add.name}
+                                                        type="button"
                                                         onClick={() => toggleAdditional(add, catKey, rule)}
-                                                        disabled={isAtMax}
-                                                        data-testid={`additional-${add.name.replace(/\s+/g, '-').toLowerCase()}`}
-                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left ${
-                                                            isSelected 
-                                                                ? "border-[#F4B544] bg-[#171612] gold-glow-sm" 
-                                                                : isAtMax 
-                                                                    ? "border-[#F4B544]/10 bg-[#050505]/50 opacity-40 cursor-not-allowed" 
-                                                                    : catError 
-                                                                        ? "border-red-500/30 bg-red-500/5 hover:border-[#F4B544]/40" 
-                                                                        : rule.required 
-                                                                            ? "border-[#F4B544]/20 bg-[#050505] hover:border-[#F4B544]/50" 
-                                                                            : "border-[#F4B544]/15 bg-[#050505] hover:border-[#F4B544]/40"
-                                                        }`}>
-                                                        <div className="flex items-center gap-3">
-                                                            {add.image_url ? (
-                                                                <img src={getImageUrl(add.image_url)} alt={add.name} className="h-10 w-10 rounded-lg object-cover border border-[#F4B544]/20" />
-                                                            ) : (
-                                                                <div className={`h-10 w-10 rounded-lg border flex items-center justify-center ${isSelected ? "bg-[#F4B544] border-[#F4B544]" : "border-[#F4B544]/20 bg-[#171612]"}`}>
-                                                                    {isSelected && <svg className="h-5 w-5 text-[#050505]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                                                                </div>
-                                                            )}
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-medium text-[#FFFAF0]">{add.name}</span>
-                                                                {rule.max_select > 1 && (
-                                                                    <span className="text-xs text-[#B8B1A3]">{isSelected ? "Selecionado" : isAtMax ? `Limite de ${rule.max_select} atingido` : "Toque para selecionar"}</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <span className="text-sm font-bold text-[#F4B544]">{add.price > 0 ? `+ R$ ${add.price.toFixed(2).replace(".", ",")}` : "Grátis"}</span>
+                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                                                            isSelected
+                                                                ? "border-[#F4B544] bg-[#171612] text-[#F4B544]"
+                                                                : "border-[#F4B544]/15 bg-[#050505] text-[#FFFAF0] hover:border-[#F4B544]/40"
+                                                        }`}
+                                                    >
+                                                        <span className="text-xs font-medium">{add.name}</span>
+                                                        <span className="text-xs font-bold text-[#F4B544]">
+                                                            {add.price > 0 ? `+ R$ ${add.price.toFixed(2)}` : "Grátis"}
+                                                        </span>
                                                     </button>
                                                 );
                                             })}
@@ -371,22 +342,22 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         </div>
                     )}
 
-                    <div className="pt-2">
-                        <div className="h-[1px] w-full bg-[#F4B544]/15 mb-3" />
-                        <h3 className="font-serif font-bold text-sm text-[#FFFAF0] mb-2">Alguma observação para o preparo?</h3>
-                        <textarea value={observation} onChange={e => setObservation(e.target.value)}
-                            placeholder="Ex: Sem cebola, molho de pimenta à parte, mandar bem quentinho..."
-                            className="w-full rounded-xl border border-[#F4B544]/20 bg-[#050505] p-3 text-sm text-[#FFFAF0] placeholder:text-[#B8B1A3]/50 resize-none h-20 focus:outline-none focus:border-[#F4B544]"
-                            data-testid="product-observation" />
+                    <div className="pt-2 border-t border-[#F4B544]/15">
+                        <textarea
+                            value={observation}
+                            onChange={e => setObservation(e.target.value)}
+                            placeholder="Alguma observação para o preparo? Ex: Mandar bem quentinho..."
+                            className="w-full rounded-xl border border-[#F4B544]/20 bg-[#050505] p-3 text-xs text-[#FFFAF0] placeholder:text-[#B8B1A3]/50 h-16 focus:outline-none focus:border-[#F4B544]"
+                        />
                     </div>
 
-                    <div className="flex items-center gap-4 pt-3 border-t border-[#F4B544]/15">
-                        <div className="flex items-center gap-2 bg-[#050505] border border-[#F4B544]/20 rounded-full px-1.5 py-1">
-                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-8 w-8 rounded-full bg-[#171612] text-[#FFFAF0] hover:text-[#F4B544] border border-[#F4B544]/30 flex items-center justify-center transition-colors" data-testid="modal-qty-minus">
+                    <div className="flex items-center gap-4 pt-3">
+                        <div className="flex items-center gap-2 bg-[#050505] border border-[#F4B544]/20 rounded-full px-2 py-1">
+                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-1 text-[#FFFAF0] hover:text-[#F4B544]">
                                 <Minus className="h-3.5 w-3.5" />
                             </button>
-                            <span className="w-8 text-center font-bold text-sm text-[#F4B544]" data-testid="modal-qty">{quantity}</span>
-                            <button onClick={() => setQuantity(q => q + 1)} className="h-8 w-8 rounded-full bg-[#171612] text-[#FFFAF0] hover:text-[#F4B544] border border-[#F4B544]/30 flex items-center justify-center transition-colors" data-testid="modal-qty-plus">
+                            <span className="w-6 text-center font-bold text-xs text-[#F4B544]">{quantity}</span>
+                            <button onClick={() => setQuantity(q => q + 1)} className="p-1 text-[#FFFAF0] hover:text-[#F4B544]">
                                 <Plus className="h-3.5 w-3.5" />
                             </button>
                         </div>
@@ -394,8 +365,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         <button
                             type="button"
                             onClick={validateAndAdd}
-                            className="flex-1 py-3.5 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-between gold-glow"
-                            data-testid="add-to-cart-btn"
+                            className="flex-1 py-3 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-between gold-glow"
                         >
                             <span>Adicionar ao Pedido</span>
                             <span>R$ {totalPrice.toFixed(2).replace(".", ",")}</span>
@@ -407,403 +377,155 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
     );
 });
 
-/* ============ PRODUCT CARD ============ */
-function ProductCard({ product, onClick, backendUrl }) {
-    const { toggleFavorite, isFavorite } = useFavorites();
-    const favorite = isFavorite(product.id);
-
-    const getImageUrl = (url) => {
-        if (!url) return "https://images.unsplash.com/photo-1547261434-a2ab96e6ae5c?w=400";
-        if (url.startsWith("http")) return url;
-        return `${backendUrl}${url}`;
-    };
-
-    const hasOpcionais = (Array.isArray(product.additionals) && product.additionals.length > 0) || 
-                             (Array.isArray(product.complement_ids) && product.complement_ids.length > 0);
-    
-    const minPrice = hasOpcionais && product.price === 0
-        ? (Array.isArray(product.additionals) ? Math.min(...product.additionals.map(a => a.price || 0)) : 0)
-        : product.price;
-
-    const handleFavoriteClick = (e) => {
-        e.stopPropagation();
-        toggleFavorite(product);
-    };
+function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout }) {
+    if (items.length === 0) {
+        return (
+            <div className="text-center py-12 space-y-4">
+                <ShoppingCart className="h-12 w-12 text-[#F4B544]/40 mx-auto" />
+                <p className="text-sm text-[#B8B1A3]">Seu carrinho está vazio</p>
+            </div>
+        );
+    }
 
     return (
-        <div 
-            onClick={() => onClick(product)}
-            className="bg-white rounded-xl border border-border/60 p-3 sm:p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-200 flex flex-row gap-3 sm:gap-4 group items-center"
-            data-testid={`product-${product.id}`}
-        >
-            <div className="flex-1 flex flex-col justify-between min-w-0 py-1">
-                <div>
-                    <h3 className="font-semibold font-heading text-foreground text-[15px] sm:text-base leading-snug mb-1 line-clamp-2 pr-2">{product.name}</h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-3">{product.description}</p>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-foreground">
-                        {product.price > 0 ? `R$ ${product.price.toFixed(2)}` : minPrice > 0 ? `A partir de R$ ${minPrice.toFixed(2)}` : "Monte seu preço"}
-                    </span>
-                    {hasOpcionais && (
-                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide">Personalizável</span>
-                    )}
-                </div>
+        <div className="space-y-4">
+            <div className="space-y-3">
+                {items.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-[#050505] border border-[#F4B544]/15">
+                        <div className="flex-1 min-w-0 pr-3">
+                            <h4 className="text-xs font-bold text-[#FFFAF0] truncate">{item.name}</h4>
+                            <p className="text-[11px] text-[#F4B544] font-semibold mt-0.5">
+                                R$ {(item.price * item.quantity).toFixed(2)}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => updateQuantity(idx, item.quantity - 1)} className="p-1 text-[#B8B1A3] hover:text-[#FFFAF0]">
+                                <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="text-xs font-bold text-[#F4B544]">{item.quantity}</span>
+                            <button onClick={() => updateQuantity(idx, item.quantity + 1)} className="p-1 text-[#B8B1A3] hover:text-[#FFFAF0]">
+                                <Plus className="h-3 w-3" />
+                            </button>
+                            <button onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-300 ml-1">
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 bg-muted rounded-lg overflow-hidden shadow-sm">
-                <img 
-                    src={getImageUrl(product.image_url)} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                />
-                {product.tags?.includes("mais_pedido") && (
-                    <div className="absolute top-1 right-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
-                        <Flame className="h-2 w-2" /> Pop
-                    </div>
-                )}
-                {product.tags?.includes("novo") && (
-                    <div className="absolute top-1 right-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg">
-                        Novo
-                    </div>
-                )}
+
+            <div className="pt-4 border-t border-[#F4B544]/15 space-y-3">
+                <div className="flex items-center justify-between text-sm font-bold">
+                    <span className="text-[#FFFAF0]">Subtotal:</span>
+                    <span className="text-[#F4B544] font-serif text-lg">R$ {total.toFixed(2)}</span>
+                </div>
                 <button
-                    onClick={handleFavoriteClick}
-                    className={`absolute bottom-1 right-1 p-1.5 rounded-full backdrop-blur-md transition-all shadow-md ${
-                        favorite ? "bg-red-500 text-white" : "bg-white/80 text-muted-foreground hover:bg-white hover:text-red-500"
-                    }`}
+                    onClick={onCheckout}
+                    className="w-full py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all gold-glow"
                 >
-                    <Heart className={`h-3.5 w-3.5 ${favorite ? "fill-current" : ""}`} />
+                    Finalizar Pedido
                 </button>
             </div>
         </div>
     );
 }
 
-/* ============ CART CONTENT ============ */
-function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout }) {
-    if (itemCount === 0) return (
-        <div className="text-center py-8">
-            <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">Seu carrinho está vazio</p>
-        </div>
-    );
-    return (
-        <div className="flex flex-col">
-            <div className="space-y-3 max-h-[40vh] overflow-auto pr-1">
-                {items.map(item => (
-                    <div key={item.cart_id} className="flex items-start gap-3" data-testid={`cart-item-${item.cart_id}`}>
-                        <img src={getImageUrl(item.image_url)} alt={item.product_name} className="h-14 w-14 rounded-xl object-cover flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{item.product_name}</p>
-                            {item.additionals?.length > 0 && (
-                                <p className="text-xs text-accent">+ {item.additionals.map(a => a.name).join(", ")}</p>
-                            )}
-                            {item.observation && <p className="text-xs text-muted-foreground italic">"{item.observation}"</p>}
-                            <p className="text-sm text-muted-foreground">R$ {item.price.toFixed(2)}</p>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                            <button onClick={() => updateQuantity(item.cart_id, Math.max(1, item.quantity - 1))} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted"><Minus className="h-3 w-3" /></button>
-                            <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.cart_id, item.quantity + 1)} className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted"><Plus className="h-3 w-3" /></button>
-                            <button onClick={() => removeItem(item.cart_id)} className="h-7 w-7 rounded-full text-destructive hover:bg-destructive/10 flex items-center justify-center ml-1"><Trash2 className="h-3 w-3" /></button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <div className="border-t pt-4 mt-4">
-                <div className="flex justify-between items-center mb-4">
-                    <span className="font-medium">Total</span>
-                    <span className="text-xl font-bold text-primary">R$ {total.toFixed(2)}</span>
-                </div>
-                <Button onClick={onCheckout} className="w-full bg-accent hover:bg-accent/90 text-white rounded-full py-5 font-semibold">
-                    Finalizar Pedido ({itemCount} {itemCount === 1 ? "item" : "itens"})
-                </Button>
-            </div>
-        </div>
-    );
-}
-
-/* ============ LOGIN MODAL ============ */
 function LoginModal({ open, onClose, onLogin }) {
     const [phone, setPhone] = useState("");
     const [name, setName] = useState("");
-    const [step, setStep] = useState("phone");
-    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-    const formatPhone = (value) => {
-        const numbers = value.replace(/\D/g, "");
-        if (numbers.length <= 2) return numbers;
-        if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-        return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
-    };
+    if (!open) return null;
 
-    const handlePhoneSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const cleanPhone = phone.replace(/\D/g, "");
-        if (cleanPhone.length < 10) {
-            toast.error("Digite um telefone válido");
+        if (!phone.trim() || !name.trim()) {
+            toast.error("Preencha nome e WhatsApp.");
             return;
         }
-        setStep("name");
-    };
-
-    const handleNameSubmit = async (e) => {
-        e.preventDefault();
-        if (!name.trim()) {
-            toast.error("Digite seu nome");
-            return;
-        }
-        setLoading(true);
-        const result = await onLogin(phone.replace(/\D/g, ""), name.trim());
-        setLoading(false);
-        if (result.success) {
-            toast.success(result.isNew ? "Bem-vindo!" : "Bem-vindo de volta!");
-            onClose();
-        } else {
-            toast.error("Erro ao fazer login");
-        }
-    };
-
-    const handleClose = () => {
-        setPhone("");
-        setName("");
-        setStep("phone");
+        setSubmitting(true);
+        await onLogin(phone, name);
+        setSubmitting(false);
         onClose();
     };
 
     return (
-        <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-md bg-white">
-                <DialogTitle className="sr-only">{step === "phone" ? "Identifique-se" : "Como podemos te chamar?"}</DialogTitle>
-                <div className="text-center py-4">
-                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <User className="h-8 w-8 text-primary" />
+        <Dialog open={open} onOpenChange={onClose}>
+            <DialogContent className="max-w-sm bg-[#10100F] border border-[#F4B544]/20 p-6 text-[#FFFAF0] rounded-2xl">
+                <DialogTitle className="font-serif text-xl font-bold text-[#FFFAF0] text-center mb-4">
+                    Identifique-se para pedir
+                </DialogTitle>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="text-xs text-[#B8B1A3] block mb-1">Seu Nome</label>
+                        <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Maria Silva" className="bg-[#050505] border-[#F4B544]/30 text-[#FFFAF0]" />
                     </div>
-                    <h2 className="text-xl font-bold font-heading mb-2">{step === "phone" ? "Identifique-se" : "Como podemos te chamar?"}</h2>
-                    <p className="text-sm text-muted-foreground">{step === "phone" ? "Digite seu telefone para acessar seus favoritos e histórico" : "Digite seu nome para personalizar sua experiência"}</p>
-                </div>
-                {step === "phone" ? (
-                    <form onSubmit={handlePhoneSubmit} className="space-y-4">
-                        <Input type="tel" placeholder="(11) 99999-9999" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} maxLength={15} className="text-center text-lg" autoFocus />
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full">Continuar</Button>
-                        <Button type="button" variant="ghost" className="w-full" onClick={handleClose}>Pular por enquanto</Button>
-                    </form>
-                ) : (
-                    <form onSubmit={handleNameSubmit} className="space-y-4">
-                        <Input type="text" placeholder="Seu nome" value={name} onChange={e => setName(e.target.value)} className="text-center" autoFocus />
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</Button>
-                        <Button type="button" variant="ghost" className="w-full" onClick={() => setStep("phone")}>Voltar</Button>
-                    </form>
-                )}
+                    <div>
+                        <label className="text-xs text-[#B8B1A3] block mb-1">Seu WhatsApp</label>
+                        <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(48) 99999-9999" className="bg-[#050505] border-[#F4B544]/30 text-[#FFFAF0]" />
+                    </div>
+                    <Button type="submit" disabled={submitting} className="w-full bg-[#F4B544] text-[#050505] font-bold uppercase tracking-wider">
+                        Entrar e Continuar
+                    </Button>
+                </form>
             </DialogContent>
         </Dialog>
     );
 }
 
-/* ============ REORDER SECTION ============ */
-function ReorderSection({ suggestions, onReorder }) {
-    if (!suggestions || suggestions.length === 0) return null;
-    return (
-        <div className="mb-8 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl p-5 border border-primary/10">
-            <div className="flex items-center gap-2 mb-4">
-                <RotateCcw className="h-5 w-5 text-primary" />
-                <h2 className="font-bold font-heading text-lg">Pedir Novamente</h2>
-                <span className="text-xs text-muted-foreground ml-auto">Baseado nos seus pedidos</span>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {suggestions.map(product => (
-                    <button key={product.product_id} onClick={() => onReorder(product)}
-                        className="flex-shrink-0 w-36 bg-white rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow text-left">
-                        <div className="h-24 bg-muted">
-                            <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover" />
-                        </div>
-                        <div className="p-3">
-                            <p className="font-medium text-sm line-clamp-1">{product.name}</p>
-                            <p className="text-xs text-muted-foreground mt-1">Pedido {product.times_ordered}x</p>
-                            <p className="font-bold text-primary text-sm mt-1">R$ {product.price?.toFixed(2)}</p>
-                        </div>
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-/* ============ STORE STATUS BANNER ============ */
-function StoreStatusBanner({ status }) {
-    // Loja sempre aberta (24 horas)
-    if (status.alwaysOpen) {
-        return (
-            <div className="px-4 py-2 flex items-center justify-center gap-2 text-sm bg-blue-50 text-blue-700 border-b border-blue-200">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="font-medium">{status.message}</span>
-            </div>
-        );
-    }
-
-    // Loja fechada temporariamente
-    if (status.temporarilyClosed) {
-        return (
-            <div className="px-4 py-3 bg-red-50 text-red-700 border-b border-red-200 flex items-center justify-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span className="font-medium">{status.message}</span>
-                <span className="text-sm">· Voltamos em breve</span>
-            </div>
-        );
-    }
-
-    if (status.isOpen) {
-        return (
-            <div className={`px-4 py-2 flex items-center justify-center gap-2 text-sm ${status.closingSoon ? "bg-amber-50 text-amber-700 border-b border-amber-200" : "bg-green-50 text-green-700 border-b border-green-200"}`}>
-                <span className={`w-2 h-2 rounded-full ${status.closingSoon ? "bg-amber-500 animate-pulse" : "bg-green-500"}`} />
-                <Store className="h-4 w-4" />
-                <span className="font-medium">{status.message}</span>
-            </div>
-        );
-    }
-    return (
-        <div className="px-4 py-3 bg-red-50 text-red-700 border-b border-red-200 flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            <Store className="h-4 w-4" />
-            <span className="font-medium">{status.message}</span>
-            {status.nextOpen && <span className="text-sm">· Abre {status.nextOpen}</span>}
-        </div>
-    );
-}
-
-/* ============ MAIN MENU PAGE ============ */
 export default function MenuPage() {
     const [menus, setMenus] = useState([]);
     const [selectedMenu, setSelectedMenu] = useState(null);
-    const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [categories, setCategories] = useState(DEFAULT_JOHB_CATEGORIES);
+    const [selectedCategory, setSelectedCategory] = useState("cat-salgados");
     const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [isProductLoading, setProductLoading] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
     const [search, setSearch] = useState("");
     const [cartOpen, setCartOpen] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
-    const [cartAnimating, setCartAnimating] = useState(false);
     const [pendingAddItem, setPendingAddItem] = useState(null);
-    const [isProductLoading, setProductLoading] = useState(false);
+    const [cartAnimating, setCartAnimating] = useState(false);
 
-    const categoriesCache = useRef({});
-    const productsCache = useRef({});
-    
-    const { items, addItem, removeItem, updateQuantity, total, itemCount, clearCart } = useCart();
+    const { items, addItem, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
     const { favorites, clearFavorites } = useFavorites();
-    const { customer, isLoggedIn, login, logout, reorderSuggestions } = useCustomer();
+    const { customer, isLoggedIn, login, logout } = useCustomer();
     const { isOpen: storeOpen, ...storeStatus } = useStoreStatus();
     const navigate = useNavigate();
 
-    // Load menus and categories on mount (Pure API driven)
+    // Carregar categorias no mount ou usar padrão JOHB se estiver sem itens
     useEffect(() => {
-        const fetchMenus = async () => {
-            try {
-                setLoading(true);
-                const res = await axios.get(`${API}/menus`);
-                const menusData = Array.isArray(res.data) ? res.data : [];
-                setMenus(menusData);
-                if (menusData.length > 0) {
-                    const activeMenu = menusData.find(m => m.active) || menusData[0];
-                    setSelectedMenu(activeMenu.id);
-                } else {
-                    // Se não houver menus cadastrados, busca direto as categorias gerais
-                    const catRes = await axios.get(`${API}/categories`);
-                    const cats = Array.isArray(catRes.data) ? catRes.data : [];
-                    setCategories(cats);
-                    if (cats.length > 0) setSelectedCategory(cats[0].id);
-                }
-            } catch (err) {
-                // Fallback para categorias da API geral
-                try {
-                    const catRes = await axios.get(`${API}/categories`);
-                    const cats = Array.isArray(catRes.data) ? catRes.data : [];
-                    setCategories(cats);
-                    if (cats.length > 0) setSelectedCategory(cats[0].id);
-                } catch {
-                    setCategories([]);
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchMenus();
-    }, []);
-
-    // Load categories when menu is selected
-    useEffect(() => {
-        if (!selectedMenu) return;
-        
         const fetchCategories = async () => {
             try {
-                const res = await axios.get(`${API}/menus/${selectedMenu}/categories`);
-                const cats = Array.isArray(res.data) ? res.data : [];
-                if (cats.length > 0) {
-                    setCategories(cats);
-                    setSelectedCategory(cats[0].id);
-                } else {
-                    const catRes = await axios.get(`${API}/categories`);
-                    const allCats = Array.isArray(catRes.data) ? catRes.data : [];
-                    setCategories(allCats);
-                    if (allCats.length > 0) setSelectedCategory(allCats[0].id);
-                }
+                const catRes = await axios.get(`${API}/categories`);
+                const cats = Array.isArray(catRes.data) && catRes.data.length > 0 ? catRes.data : DEFAULT_JOHB_CATEGORIES;
+                setCategories(cats);
+                if (cats.length > 0) setSelectedCategory(cats[0].id);
             } catch {
-                try {
-                    const catRes = await axios.get(`${API}/categories`);
-                    const allCats = Array.isArray(catRes.data) ? catRes.data : [];
-                    setCategories(allCats);
-                    if (allCats.length > 0) setSelectedCategory(allCats[0].id);
-                } catch {
-                    setCategories([]);
-                }
+                setCategories(DEFAULT_JOHB_CATEGORIES);
+                setSelectedCategory("cat-salgados");
             }
         };
         fetchCategories();
-    }, [selectedMenu]);
+    }, []);
 
-    // Load products when category is selected
+    // Carregar produtos da categoria selecionada
     useEffect(() => {
-        if (!selectedCategory) { setProducts([]); return; }
-
+        if (!selectedCategory) return;
         const fetchProducts = async () => {
             try {
                 setProductLoading(true);
-                const res = await axios.get(`${API}/categories/${selectedCategory}/products`);
-                const prods = Array.isArray(res.data) ? res.data : [];
-                if (prods.length > 0) {
-                    setProducts(prods);
-                } else {
-                    const allProdsRes = await axios.get(`${API}/products?category_id=${selectedCategory}`);
-                    setProducts(Array.isArray(allProdsRes.data) ? allProdsRes.data : []);
-                }
+                const res = await axios.get(`${API}/products?category_id=${selectedCategory}`);
+                setProducts(Array.isArray(res.data) ? res.data : []);
             } catch {
-                try {
-                    const allProdsRes = await axios.get(`${API}/products?category_id=${selectedCategory}`);
-                    setProducts(Array.isArray(allProdsRes.data) ? allProdsRes.data : []);
-                } catch {
-                    setProducts([]);
-                }
+                setProducts([]);
             } finally {
                 setProductLoading(false);
             }
         };
         fetchProducts();
     }, [selectedCategory]);
-
-    // Animate cart when item added
-    useEffect(() => {
-        if (itemCount > 0) {
-            setCartAnimating(true);
-            setTimeout(() => setCartAnimating(false), 300);
-        }
-    }, [itemCount]);
 
     const filteredProducts = useMemo(() => {
         if (!search) return products;
@@ -814,52 +536,9 @@ export default function MenuPage() {
     }, [products, search]);
 
     const handleAddItem = (product, quantity, additionals, observation) => {
-        // Verifica se está logado antes de adicionar ao carrinho
-        if (!isLoggedIn) {
-            setPendingAddItem({ product, quantity, additionals, observation });
-            setLoginModalOpen(true);
-            return;
-        }
         addItem(product, quantity, additionals, observation);
         toast.success("Item adicionado ao carrinho!");
     };
-
-    // Callback após login bem-sucedido para adicionar item pendente
-    const handleLoginSuccess = () => {
-        if (pendingAddItem) {
-            const { product, quantity, additionals, observation } = pendingAddItem;
-            addItem(product, quantity, additionals, observation);
-            toast.success("Item adicionado ao carrinho!");
-            setPendingAddItem(null);
-        }
-    };
-
-    // Logout do usuário
-    const handleLogout = () => {
-        logout();
-        clearCart();
-        clearFavorites();
-        toast.success("Você saiu da conta");
-    };
-
-    const currentMenu = menus.find(m => m.id === selectedMenu);
-    const currentCategory = categories.find(c => c.id === selectedCategory);
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-background">
-                <div className="h-16 bg-white border-b" />
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <CategorySkeleton />
-                    <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-6">
-                        {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Exibir o layout completo da loja JOHB mesmo se o banco estiver sem menus no momento
 
     return (
         <div className="min-h-screen bg-[#050505] text-[#FFFAF0] font-sans antialiased selection:bg-[#F4B544]/30" data-testid="menu-page">
@@ -884,11 +563,11 @@ export default function MenuPage() {
             {/* Conteúdo Principal — Cardápio */}
             <section id="cardapio" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 
-                {/* Barra de Pesquisa e Título da Seção */}
+                {/* Barra de Pesquisa e Título da Seção sem estrelas AI */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#F4B544]/15 mb-8">
                     <div>
                         <div className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#F4B544] font-semibold mb-1">
-                            <Sparkles className="w-3.5 h-3.5" /> Nosso Cardápio
+                            Nosso Cardápio
                         </div>
                         <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#FFFAF0]">
                             Sabores Feitos no Capricho
@@ -899,7 +578,7 @@ export default function MenuPage() {
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#F4B544]" />
                         <Input
-                            placeholder="Buscar espresso, coxinha, bolo..."
+                            placeholder="Buscar coxinha, assado, bolo..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="pl-10 pr-10 rounded-full bg-[#10100F] border-[#F4B544]/30 text-[#FFFAF0] placeholder:text-[#B8B1A3]/60 focus-visible:ring-[#F4B544] h-11 text-sm"
@@ -915,7 +594,7 @@ export default function MenuPage() {
                     </div>
                 </div>
 
-                {/* Categorias Pílula */}
+                {/* Categorias Pílula — Exibição constante */}
                 <div className="mb-8">
                     <CategoryPills
                         categories={categories}
@@ -945,9 +624,9 @@ export default function MenuPage() {
                 ) : (
                     <div className="text-center py-16 bg-[#10100F] rounded-2xl border border-[#F4B544]/15">
                         <Coffee className="h-12 w-12 text-[#F4B544] mx-auto mb-4 opacity-50" />
-                        <p className="text-lg font-serif font-bold text-[#FFFAF0]">Nenhum item encontrado</p>
+                        <p className="text-lg font-serif font-bold text-[#FFFAF0]">Nenhum item cadastrado nesta categoria</p>
                         <p className="text-[#B8B1A3] text-sm mt-1">
-                            {search ? "Tente buscar por outro termo" : "Nenhum produto cadastrado nesta categoria"}
+                            {search ? "Tente buscar por outro termo" : "Cadastre produtos através do painel admin /admin/login"}
                         </p>
                         {search && (
                             <Button
@@ -962,7 +641,7 @@ export default function MenuPage() {
                 )}
             </section>
 
-            {/* Seção de Combos */}
+            {/* Seção de Combos Promocionais com Fotos Reais de Salgados */}
             <section id="combos" className="bg-[#10100F] border-y border-[#F4B544]/15 py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
@@ -978,7 +657,7 @@ export default function MenuPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Combo 1 */}
+                        {/* Combo 1 — Coxinhas e Salgados */}
                         <div className="bg-[#171612] rounded-2xl p-6 sm:p-8 border border-[#F4B544]/20 flex flex-col sm:flex-row items-center gap-6 gold-glow-sm hover:border-[#F4B544]/50 transition-all">
                             <img
                                 src="https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80"
@@ -1018,7 +697,7 @@ export default function MenuPage() {
                             </div>
                         </div>
 
-                        {/* Combo 2 */}
+                        {/* Combo 2 — Assados Folhados */}
                         <div className="bg-[#171612] rounded-2xl p-6 sm:p-8 border border-[#F4B544]/20 flex flex-col sm:flex-row items-center gap-6 gold-glow-sm hover:border-[#F4B544]/50 transition-all">
                             <img
                                 src="https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&auto=format&fit=crop&q=80"
@@ -1089,8 +768,8 @@ export default function MenuPage() {
                     <div className="relative">
                         <div className="rounded-2xl overflow-hidden border border-[#F4B544]/30 gold-glow">
                             <img
-                                src="https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=800&auto=format&fit=crop&q=80"
-                                alt="Salgados Artesanais JOHB"
+                                src="https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=800&auto=format&fit=crop&q=80"
+                                alt="Salgados e Café JOHB"
                                 className="w-full h-96 object-cover"
                             />
                         </div>
@@ -1101,7 +780,7 @@ export default function MenuPage() {
             {/* Footer Artesanal JOHB */}
             <footer className="bg-[#10100F] border-t border-[#F4B544]/20 py-12 text-center text-xs text-[#B8B1A3]">
                 <div className="max-w-7xl mx-auto px-4 space-y-6">
-                    <img src="/logo.png" alt="JOHB Café & Salgados" className="h-14 w-auto mx-auto object-contain" />
+                    <img src="/logo-semfundo.png" alt="JOHB Café & Salgados" className="h-16 w-auto mx-auto object-contain" />
                     <p className="font-serif text-lg text-[#FFFAF0] italic max-w-md mx-auto">
                         "O aroma de um bom café é o primeiro abraço do dia."
                     </p>
@@ -1117,7 +796,7 @@ export default function MenuPage() {
                 </div>
             </footer>
 
-            {/* Drawer / Sheet de Carrinho Mobile/Desktop */}
+            {/* Sheet de Carrinho */}
             <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                 <SheetContent side="right" className="w-full sm:max-w-md bg-[#10100F] border-l border-[#F4B544]/20 p-0 text-[#FFFAF0] flex flex-col">
                     <SheetHeader className="p-5 border-b border-[#F4B544]/15 bg-[#050505]">
@@ -1198,7 +877,6 @@ export default function MenuPage() {
                     if (result.success) {
                         handleLoginSuccess();
                     }
-                    return result;
                 }}
             />
         </div>

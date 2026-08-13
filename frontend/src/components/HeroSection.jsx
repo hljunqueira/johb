@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, Sparkles, Heart, Utensils } from "lucide-react";
+import { ArrowRight, Heart, Utensils, MapPin } from "lucide-react";
 
 export function HeroSection({ onVerCardapio, onVerCombos }) {
     return (
@@ -14,9 +14,9 @@ export function HeroSection({ onVerCardapio, onVerCombos }) {
                     {/* Coluna de Texto & Composição Tipográfica */}
                     <div className="lg:col-span-7 space-y-6 text-left">
                         
-                        {/* Tagline / Insígnia da Marca */}
+                        {/* Tagline de Localização */}
                         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#10100F] border border-[#F4B544]/30 text-xs font-medium tracking-widest text-[#F4B544] uppercase gold-glow-sm">
-                            <Sparkles className="w-3.5 h-3.5 text-[#F4B544]" />
+                            <MapPin className="w-3.5 h-3.5 text-[#F4B544]" />
                             <span>Balneário Arroio do Silva — SC</span>
                         </div>
 
@@ -35,10 +35,32 @@ export function HeroSection({ onVerCardapio, onVerCombos }) {
                             <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#F4B544]/40 to-transparent" />
                         </div>
 
-                        {/* Descrição Narrativa */}
-                        <p className="text-base sm:text-lg md:text-xl text-[#B8B1A3] max-w-xl font-light leading-relaxed">
-                            Salgados artesanais assados e fritos em pequenos lotes ao longo do dia. Massa leve, recheios bem temperados e o sabor que chega quentinho na sua porta.
+                        {/* Texto Oficial JOHB Solicitado pelo Cliente */}
+                        <p className="text-base sm:text-lg text-[#FFFAF0] font-serif italic max-w-xl leading-relaxed">
+                            "Cada um tem o seu favorito... mas escolher só um não é tarefa fácil!"
                         </p>
+                        <p className="text-sm sm:text-base text-[#B8B1A3] max-w-xl font-light leading-relaxed">
+                            Aqui na <strong className="text-[#F4B544] font-semibold">JOHB</strong>, cada produto é preparado com ingredientes selecionados, muito sabor e aquele carinho especial que faz toda a diferença.
+                        </p>
+
+                        {/* Destaques com Emojis */}
+                        <div className="flex flex-wrap gap-3 pt-1">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                                🥐 Joelhos
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                                🍕 Mini Pizzas
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                                🥟 Esfirras & Coxinhas
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                                🥧 Empadinhas
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
+                                🍰 Cucas
+                            </span>
+                        </div>
 
                         {/* CTAs de Ação */}
                         <div className="pt-4 flex flex-col sm:flex-row gap-4 sm:items-center">
@@ -65,50 +87,64 @@ export function HeroSection({ onVerCardapio, onVerCombos }) {
                             </button>
                         </div>
 
-                        {/* Destaques Rápidos */}
-                        <div className="pt-6 grid grid-cols-3 gap-4 border-t border-[#F4B544]/15 max-w-md">
-                            <div>
-                                <span className="block font-serif text-2xl font-bold text-[#F4B544]">100%</span>
-                                <span className="text-[11px] text-[#B8B1A3] uppercase tracking-wider">Artesanal</span>
-                            </div>
-                            <div>
-                                <span className="block font-serif text-2xl font-bold text-[#F4B544]">Forno</span>
-                                <span className="text-[11px] text-[#B8B1A3] uppercase tracking-wider">Sempre Quente</span>
-                            </div>
-                            <div>
-                                <span className="block font-serif text-2xl font-bold text-[#F4B544]">Entrega</span>
-                                <span className="text-[11px] text-[#B8B1A3] uppercase tracking-wider">Rápida e Local</span>
-                            </div>
-                        </div>
-
                     </div>
 
-                    {/* Coluna Fotográfica — Foco em Salgados */}
+                    {/* Coluna Fotográfica — Grid de Fotos Reais de Salgados e Cucas */}
                     <div className="lg:col-span-5 relative">
-                        <div className="relative mx-auto max-w-md lg:max-w-none">
-                            {/* Moldura de Salgado Destaque */}
-                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] shadow-2xl gold-glow">
+                        <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+                            
+                            {/* Coxinhas / Esfirras */}
+                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
                                 <img
-                                    src="https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=1000&q=80"
-                                    alt="Salgados Artesanais JOHB"
-                                    className="w-full h-[380px] sm:h-[450px] object-cover object-center transform hover:scale-105 transition-transform duration-700"
+                                    src="https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=500&q=80"
+                                    alt="Coxinhas & Salgados JOHB"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-75" />
-                                
-                                {/* Badge Flutuante no Canto */}
-                                <div className="absolute bottom-6 left-6 right-6 p-4 rounded-xl bg-[#050505]/90 backdrop-blur-md border border-[#F4B544]/30 flex items-center justify-between">
-                                    <div>
-                                        <span className="block text-xs uppercase tracking-wider text-[#F4B544] font-semibold">Mais Pedido</span>
-                                        <span className="block text-sm font-serif font-bold text-[#FFFAF0]">Coxinha Cremosa de Frango</span>
-                                    </div>
-                                    <span className="text-sm font-bold text-[#F4B544] bg-[#171612] px-3 py-1.5 rounded-lg border border-[#F4B544]/20">
-                                        R$ 9,90
-                                    </span>
-                                </div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
+                                <span className="absolute bottom-3 left-3 text-xs font-bold text-[#F4B544]">
+                                    🥟 Coxinhas & Esfirras
+                                </span>
                             </div>
 
-                            {/* Elemento Decorativo */}
-                            <div className="absolute -bottom-4 -right-4 w-full h-full rounded-2xl border border-[#F4B544]/15 -z-10 hidden sm:block" />
+                            {/* Joelhos / Folhados */}
+                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
+                                <img
+                                    src="https://images.unsplash.com/photo-1541529086526-db283c563270?auto=format&fit=crop&w=500&q=80"
+                                    alt="Joelhos e Folhados JOHB"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
+                                <span className="absolute bottom-3 left-3 text-xs font-bold text-[#F4B544]">
+                                    🥐 Joelhos & Folhados
+                                </span>
+                            </div>
+
+                            {/* Mini Pizzas */}
+                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
+                                <img
+                                    src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=500&q=80"
+                                    alt="Mini Pizzas JOHB"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
+                                <span className="absolute bottom-3 left-3 text-xs font-bold text-[#F4B544]">
+                                    🍕 Mini Pizzas
+                                </span>
+                            </div>
+
+                            {/* Cucas & Empadinhas */}
+                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
+                                <img
+                                    src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&q=80"
+                                    alt="Cucas e Empadinhas JOHB"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
+                                <span className="absolute bottom-3 left-3 text-xs font-bold text-[#F4B544]">
+                                    🍰 Cucas & Empadinhas
+                                </span>
+                            </div>
+
                         </div>
                     </div>
 

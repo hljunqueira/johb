@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ShoppingBag, Menu as MenuIcon, X, PhoneCall, MapPin, Sparkles } from "lucide-react";
+import { ShoppingBag, Menu as MenuIcon, X, PhoneCall, MapPin } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export default function Header({ onOpenCart }) {
@@ -40,7 +40,7 @@ export default function Header({ onOpenCart }) {
                         href="https://wa.me/message/FUNP4LBHYBA3O1"
                         target="_blank"
                         rel="noreferrer"
-                        className="hover:text-[#F4B544] transition-colors flex items-center gap-1 text-[11px] uppercase tracking-wider"
+                        className="hover:text-[#F4B544] transition-colors flex items-center gap-1 text-[11px] uppercase tracking-wider font-semibold"
                     >
                         <PhoneCall className="w-3 h-3 text-[#F4B544]" />
                         <span>Fale no WhatsApp</span>
@@ -50,21 +50,13 @@ export default function Header({ onOpenCart }) {
 
             {/* Header Principal */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-                {/* Logo JOHB */}
+                {/* Logo JOHB sem fundo */}
                 <Link to="/" className="flex items-center gap-3 group">
                     <img
-                        src="/logo.png"
+                        src="/logo-semfundo.png"
                         alt="JOHB Café & Salgados"
-                        className="h-12 w-auto object-contain transition-transform group-hover:scale-105"
+                        className="h-14 w-auto object-contain transition-transform group-hover:scale-105"
                     />
-                    <div className="hidden sm:block">
-                        <span className="block font-serif text-xl tracking-wider font-semibold text-[#FFFAF0] leading-none group-hover:text-[#F4B544] transition-colors">
-                            JOHB
-                        </span>
-                        <span className="block text-[9px] uppercase tracking-[0.25em] text-[#B8B1A3] font-medium mt-0.5">
-                            Café & Salgados
-                        </span>
-                    </div>
                 </Link>
 
                 {/* Navegação Desktop */}
