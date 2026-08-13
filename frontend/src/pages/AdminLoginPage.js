@@ -113,10 +113,15 @@ export default function AdminLoginPage() {
                         <Button 
                             type="submit" 
                             disabled={loading} 
-                            className="w-full bg-[#F4B544] hover:bg-[#FFC85C] text-[#050505] rounded-xl h-12 font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.98] mt-2" 
+                            className="w-full bg-[#F4B544] hover:bg-[#FFC85C] text-[#050505] rounded-xl h-12 font-extrabold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.98] mt-2 flex items-center justify-center gap-2" 
                             data-testid="admin-login-btn"
                         >
-                            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar no Painel"}
+                            {loading ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin text-black" />
+                                    <span>Entrando...</span>
+                                </>
+                            ) : "Entrar no Painel"}
                         </Button>
                     </form>
                 </div>
