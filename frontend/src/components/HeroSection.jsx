@@ -11,7 +11,7 @@ const getImageUrl = (url) => {
     return `${BACKEND_URL}${url}`;
 };
 
-export function HeroSection({ onVerCardapio }) {
+export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
     const [banners, setBanners] = useState([]);
     const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
 
@@ -41,6 +41,19 @@ export function HeroSection({ onVerCardapio }) {
             const el = document.getElementById("cardapio");
             if (el) el.scrollIntoView({ behavior: "smooth" });
         }
+    };
+
+    const getCtaLabel = () => {
+        if (deliverySettings?.temporarily_closed || storeStatus?.temporarilyClosed) {
+            return "Ver Cardápio (Pausado)";
+        }
+        if (deliverySettings?.allow_immediate_orders !== false && deliverySettings?.allow_scheduled_orders === false) {
+            return "Ver Cardápio & Pedir Agora";
+        }
+        if (deliverySettings?.allow_immediate_orders === false && deliverySettings?.allow_scheduled_orders !== false) {
+            return "Ver Cardápio & Agendar";
+        }
+        return "Ver Cardápio & Fazer Pedido";
     };
 
     // Se houver banners cadastrados no Admin, exibe o carrossel dinâmico
@@ -81,7 +94,7 @@ export function HeroSection({ onVerCardapio }) {
                                     onClick={scrollToMenu}
                                     className="group inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5 gold-glow"
                                 >
-                                    <span>{banner.cta_text || "Ver Cardápio & Agendar"}</span>
+                                    <span>{banner.cta_text || getCtaLabel()}</span>
                                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                                 </button>
                             </div>
@@ -177,7 +190,7 @@ export function HeroSection({ onVerCardapio }) {
                                 onClick={scrollToMenu}
                                 className="group inline-flex items-center justify-center gap-3 px-9 py-4 rounded-full bg-[#F4B544] text-[#050505] font-bold text-sm uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5 gold-glow"
                             >
-                                <span>Ver Cardápio & Agendar</span>
+                                <span>{getCtaLabel()}</span>
                                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                             </button>
                         </div>

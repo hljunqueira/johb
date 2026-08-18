@@ -60,30 +60,25 @@ const complementCategories = {
 
 // ============ STORE STATUS HELPER ============
 function useStoreStatus() {
-    const [status, setStatus] = useState({ isOpen: true, message: "", nextOpen: null });
+    const [status, setStatus] = useState({ isOpen: true, message: "", nextOpen: null, temporarilyClosed: false });
     const [deliverySettings, setDeliverySettings] = useState(null);
 
-    useEffect(() => {
-        axios.get(`${API}/delivery-settings`).then(r => {
-            setDeliverySettings(r.data);
-            checkStatus(r.data);
-        }).catch(() => { });
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
     const checkStatus = (settings) => {
-        if (settings?.always_open) {
-            setStatus({ isOpen: true, message: "Aberto 24 horas", nextOpen: null, alwaysOpen: true });
-            return;
-        }
+        if (!settings) return;
 
-        if (settings?.temporarily_closed) {
+        if (settings.temporarily_closed) {
             setStatus({ isOpen: false, message: "Fechado temporariamente", nextOpen: null, temporarilyClosed: true });
             return;
         }
 
-        const businessHours = settings?.business_hours;
-        if (!businessHours) {
-            setStatus({ isOpen: true, message: "Aberto agora", nextOpen: null });
+        if (settings.always_open) {
+            setStatus({ isOpen: true, message: "Aberto 24 horas", nextOpen: null, alwaysOpen: true, temporarilyClosed: false });
+            return;
+        }
+
+        const businessHours = parseBusinessHours(settings.business_hours);
+        if (!businessHours || Object.keys(businessHours).length === 0) {
+            setStatus({ isOpen: true, message: "Aberto agora", nextOpen: null, temporarilyClosed: false });
             return;
         }
 
@@ -92,8 +87,8 @@ function useStoreStatus() {
         const todayKey = dayMap[now.getDay()];
         const todayConfig = businessHours[todayKey];
 
-        if (!todayConfig || !todayConfig.open) {
-            setStatus({ isOpen: false, message: "Fechado hoje", nextOpen: findNextOpen(businessHours, now) });
+        if (!todayConfig || todayConfig.open === false) {
+            setStatus({ isOpen: false, message: "Fechado hoje", nextOpen: findNextOpen(businessHours, now), temporarilyClosed: false });
             return;
         }
 
@@ -104,9 +99,9 @@ function useStoreStatus() {
         const closeMinutes = closeH * 60 + closeM;
 
         if (currentTime < openMinutes) {
-            setStatus({ isOpen: false, message: `Abre às ${todayConfig.start}`, nextOpen: todayConfig.start });
+            setStatus({ isOpen: false, message: `Abre às ${todayConfig.start}`, nextOpen: todayConfig.start, temporarilyClosed: false });
         } else if (currentTime >= closeMinutes) {
-            setStatus({ isOpen: false, message: "Fechado agora", nextOpen: findNextOpen(businessHours, now) });
+            setStatus({ isOpen: false, message: "Fechado agora", nextOpen: findNextOpen(businessHours, now), temporarilyClosed: false });
         } else {
             const minutesUntilClose = closeMinutes - currentTime;
             const minsUntil = minutesUntilClose % 60;
@@ -115,10 +110,18 @@ function useStoreStatus() {
                 isOpen: true,
                 message: closingSoon ? `Fecha em ${minsUntil}min` : `Aberto até ${todayConfig.end}`,
                 nextOpen: null,
-                closingSoon
+                closingSoon,
+                temporarilyClosed: false
             });
         }
     };
+
+    useEffect(() => {
+        axios.get(`${API}/delivery-settings`).then(r => {
+            setDeliverySettings(r.data);
+            checkStatus(r.data);
+        }).catch(() => { });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const findNextOpen = (hours, now) => {
         const dayMap = { 0: "dom", 1: "seg", 2: "ter", 3: "qua", 4: "qui", 5: "sex", 6: "sab" };
@@ -163,19 +166,38 @@ function CategorySkeleton() {
 }
 
 function StoreStatusBanner({ status }) {
-    const isClosed = !status.isOpen || status.temporarilyClosed;
+    if (status.temporarilyClosed) {
+        return (
+            <div className="py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all bg-red-500/15 text-red-300 border border-red-500/30 shadow-lg shadow-red-500/10">
+                <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
+                    <Clock className="w-4 h-4 text-red-400 shrink-0" />
+                    <span>
+                        🔴 Loja Fechada Temporariamente — Pausamos os pedidos no momento. Retornaremos em breve!
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    if (!status.isOpen) {
+        return (
+            <div className="py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-lg shadow-amber-500/5">
+                <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
+                    <Clock className="w-4 h-4 text-[#F4B544] shrink-0" />
+                    <span>
+                        🔴 Atendimento Presencial Fechado — Aceitando Pedidos por Agendamento Prévio!
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className={`py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all ${isClosed
-                ? "bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-lg shadow-amber-500/5"
-                : "bg-[#F4B544]/15 text-[#F4B544] border border-[#F4B544]/30 shadow-lg shadow-[#F4B544]/5"
-            }`}>
+        <div className="py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-lg shadow-emerald-500/5">
             <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
-                <Clock className="w-4 h-4 text-[#F4B544] shrink-0" />
+                <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>
-                    {isClosed
-                        ? "🔴 Atendimento Presencial Fechado — Aceitando Pedidos por Agendamento Prévio!"
-                        : "🗓️ Pedidos por Agendamento Prévio"
-                    }
+                    🟢 Aberto Agora — Aceitando Pedidos Online!
                 </span>
             </div>
         </div>
@@ -857,6 +879,8 @@ export default function MenuPage() {
                     const el = document.getElementById("combos");
                     if (el) el.scrollIntoView({ behavior: "smooth" });
                 }}
+                deliverySettings={storeStatus.deliverySettings}
+                storeStatus={{ isOpen: storeOpen, ...storeStatus }}
             />
 
             {/* Conteúdo Principal — Cardápio em 2 Níveis Elegantes */}
