@@ -196,55 +196,26 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                         </div>
                     </div>
 
-                    {/* Coluna Fotográfica */}
-                    <div className="lg:col-span-5 relative">
-                        <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
-                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
-                                <img
-                                    src="https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80"
-                                    alt="Coxinhas e Salgados Fritos JOHB"
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
-                                <span className="absolute bottom-3 left-3 text-xs font-bold text-[#F4B544]">
-                                    🥟 Coxinhas & Esfirras
-                                </span>
-                            </div>
-
-                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
-                                <img
-                                    src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=600&auto=format&fit=crop&q=80"
-                                    alt="Joelhinhos e Folhados Assados JOHB"
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
-                                <span className="absolute bottom-3 left-3 text-xs font-bold text-[#F4B544]">
-                                    🥐 Joelhinhos & Folhados
-                                </span>
-                            </div>
-
-                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
-                                <img
-                                    src="https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&auto=format&fit=crop&q=80"
-                                    alt="Mini Pizzas Artesanais JOHB"
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
-                                <span className="absolute bottom-3 left-3 text-xs font-bold text-[#F4B544]">
-                                    🍕 Mini Pizzas
-                                </span>
-                            </div>
-
-                            <div className="relative rounded-2xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] group shadow-lg gold-glow-sm aspect-square">
-                                <img
-                                    src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=80"
-                                    alt="Cucas e Bolos Artesanais JOHB"
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-80" />
-                                <span className="absolute bottom-3 left-3 text-xs font-bold text-[#F4B544]">
-                                    🍰 Cucas & Empadinhas
-                                </span>
+                    {/* Coluna com Vídeo Institucional */}
+                    <div className="lg:col-span-5 relative flex justify-center items-center">
+                        <div className="relative w-full max-w-sm sm:max-w-md rounded-3xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] shadow-2xl gold-glow-sm">
+                            <video
+                                src="/johbcafeesalgados.mp4"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="w-full h-full object-cover max-h-[480px] sm:max-h-[520px] rounded-3xl transform transition-transform duration-700 hover:scale-105"
+                            />
+                            {/* Overlay com gradiente suave */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/80 via-transparent to-transparent pointer-events-none rounded-3xl" />
+                            
+                            {/* Badge elegante no rodapé do vídeo */}
+                            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none">
+                                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#10100F]/90 border border-[#F4B544]/30 backdrop-blur-md text-xs font-bold text-[#F4B544] shadow-lg">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <span>Salgados Frescos & Artesanais</span>
+                                </div>
                             </div>
                         </div>
                     </div>
