@@ -5,7 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 
 const getImageUrl = (url, backendUrl) => {
-    if (!url) return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80";
+    if (!url) return "/logo-semfundo.png";
     if (url.startsWith("http")) return url;
     return `${backendUrl || ''}${url}`;
 };
@@ -63,11 +63,11 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
             data-testid={`product-${product.id}`}
         >
             {/* Foto com overlay sutil */}
-            <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#171612]">
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#141414] flex items-center justify-center">
                 <img
                     src={getImageUrl(product.image_url, backendUrl)}
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className={`w-full h-full ${product.image_url ? 'object-cover group-hover:scale-105' : 'object-contain p-8 opacity-40'} transition-transform duration-500`}
                     loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#10100F] via-transparent to-transparent opacity-60" />

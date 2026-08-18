@@ -35,7 +35,7 @@ const DEFAULT_JOHB_CATEGORIES = [
 ];
 
 const getImageUrl = (url) => {
-    if (!url) return "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=400";
+    if (!url) return "/logo-semfundo.png";
     if (url.startsWith("http")) return url;
     return `${BACKEND_URL}${url}`;
 };
@@ -302,21 +302,37 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-lg bg-[#10100F] border border-[#F4B544]/20 p-0 text-[#FFFAF0] rounded-2xl overflow-hidden max-h-[90vh] flex flex-col [&>button]:hidden">
-                <div className="relative aspect-[16/9] bg-[#050505]">
-                    <img
-                        src={getImageUrl(product.image_url)}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                    />
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="absolute top-3.5 right-3.5 z-50 w-9 h-9 rounded-full bg-[#050505]/85 hover:bg-[#171612] text-[#FFFAF0] hover:text-[#F4B544] flex items-center justify-center border border-[#F4B544]/30 hover:border-[#F4B544] shadow-xl backdrop-blur-md transition-all active:scale-95 cursor-pointer"
-                        aria-label="Fechar modal"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
-                </div>
+                {product.image_url ? (
+                    <div className="relative aspect-[16/9] bg-[#050505] shrink-0">
+                        <img
+                            src={getImageUrl(product.image_url)}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                        />
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="absolute top-3.5 right-3.5 z-50 w-9 h-9 rounded-full bg-[#050505]/85 hover:bg-[#171612] text-[#FFFAF0] hover:text-[#F4B544] flex items-center justify-center border border-[#F4B544]/30 hover:border-[#F4B544] shadow-xl backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+                            aria-label="Fechar modal"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex justify-between items-center px-6 pt-6 pb-2 shrink-0">
+                        <span className="text-[11px] uppercase font-bold text-[#F4B544] bg-[#F4B544]/10 border border-[#F4B544]/25 px-2.5 py-1 rounded-full">
+                            JOHB Café & Salgados
+                        </span>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-full bg-[#141414] hover:bg-[#1E1E1E] text-[#FFFAF0] hover:text-[#F4B544] flex items-center justify-center border border-white/10 hover:border-[#F4B544] transition-all cursor-pointer"
+                            aria-label="Fechar modal"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                )}
 
                 <div className="p-6 overflow-y-auto flex-1 space-y-5">
                     <div>
@@ -326,6 +342,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         <p className="text-xs text-[#B8B1A3] leading-relaxed">{product.description}</p>
                     </div>
 
+                    {/* Complementos e Opcionais cadastrados no Produto pelo Admin */}
                     {sortedCatKeys.length > 0 && (
                         <div className="space-y-4 pt-2">
                             {sortedCatKeys.map(catKey => {
@@ -370,65 +387,6 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                             })}
                         </div>
                     )}
-
-                    {/* Sugestão Inteligente Cruzada (Bebida <-> Salgado) */}
-                    {(() => {
-                        const isBeverage = (product.category_id === 'c6666666-6666-6666-6666-666666666666' ||
-                            (product.name || '').toLowerCase().includes('coca') ||
-                            (product.name || '').toLowerCase().includes('café') ||
-                            (product.name || '').toLowerCase().includes('suco') ||
-                            (product.name || '').toLowerCase().includes('refrigerante') ||
-                            (product.name || '').toLowerCase().includes('água'));
-
-                        const suggestions = isBeverage ? [
-                            { name: "Coxinha Cremosa de Frango", price: 9.90, category: "salgados", icon: "🥟", label: "Coxinha Cremosa" },
-                            { name: "Joelhinho de Presunto e Queijo", price: 9.90, category: "salgados", icon: "🥐", label: "Joelhinho Assado" }
-                        ] : [
-                            { name: "Café Especial JOHB", price: 6.00, category: "bebidas", icon: "☕", label: "Café Especial" },
-                            { name: "Coca-Cola Lata Gelada", price: 6.50, category: "bebidas", icon: "🥤", label: "Coca-Cola Lata" }
-                        ];
-
-                        const suggestionTitle = isBeverage
-                            ? "🥐 Que tal um salgado quentinho para acompanhar?"
-                            : "☕ Que tal acompanhar uma bebida gelada?";
-
-                        return (
-                            <div className="p-3.5 rounded-xl bg-[#050505] border border-[#F4B544]/20 space-y-2.5">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#F4B544] flex items-center gap-1.5">
-                                        <span>{isBeverage ? "🥐" : "☕"}</span> {suggestionTitle}
-                                    </span>
-                                    <span className="text-[10px] text-[#B8B1A3] bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
-                                        Opcional
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {suggestions.map((sug) => {
-                                        const isSelected = !!selectedAdditionals.find(a => a.name === sug.name);
-                                        return (
-                                            <button
-                                                key={sug.name}
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedAdditionals(prev => {
-                                                        const exists = prev.find(a => a.name === sug.name);
-                                                        return exists ? prev.filter(a => a.name !== sug.name) : [...prev, { name: sug.name, price: sug.price, category: sug.category }];
-                                                    });
-                                                }}
-                                                className={`p-2.5 rounded-lg border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${isSelected
-                                                        ? "border-[#F4B544] bg-[#171612] text-[#F4B544] font-bold shadow-sm"
-                                                        : "border-[#F4B544]/15 bg-[#10100F] text-[#FFFAF0] hover:border-[#F4B544]/40"
-                                                    }`}
-                                            >
-                                                <span className="truncate">{sug.icon} {sug.label}</span>
-                                                <span className="font-bold shrink-0 text-[#F4B544]">+ R$ {sug.price.toFixed(2).replace(".", ",")}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    })()}
 
                     <div className="pt-2 border-t border-[#F4B544]/15">
                         <textarea
