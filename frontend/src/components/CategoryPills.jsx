@@ -1,23 +1,31 @@
 import React from "react";
-import { Utensils, Flame, Cookie, Package, CupSoda, Sparkles, Snowflake } from "lucide-react";
+import { Utensils, Flame, Cookie, Package, CupSoda, Sparkles, Snowflake, Pizza } from "lucide-react";
 
 const categoryIconMap = {
     "salgados": Utensils,
+    "salgados fritos & empadas": Utensils,
     "assados": Flame,
+    "assados & folhados": Flame,
+    "mini pizzas artesanais": Pizza,
+    "cucas tradicionais": Cookie,
+    "bolos & sobremesas": Cookie,
     "doces / cucas": Cookie,
     "doces": Cookie,
     "combos": Package,
     "congelados": Snowflake,
-    "bebidas": CupSoda
+    "bebidas": CupSoda,
+    "refrigerantes & gelados": CupSoda
 };
 
 export function CategoryPills({ categories = [], selectedCategory, onSelectCategory, productCounts = {} }) {
+    const allCategories = [{ id: "all", name: "✨ Ver Todos" }, ...categories];
+
     return (
-        <div className="w-full overflow-x-auto py-3 no-scrollbar">
-            <div className="flex gap-3 min-w-max pb-2 px-2 md:justify-center">
-                {categories.map((category) => {
+        <div className="w-full overflow-x-auto py-2 no-scrollbar">
+            <div className="flex gap-2.5 min-w-max pb-2 px-2 md:justify-center">
+                {allCategories.map((category) => {
                     const catKey = (category.name || "").toLowerCase().trim();
-                    const Icon = categoryIconMap[catKey] || Utensils;
+                    const Icon = category.id === "all" ? Sparkles : (categoryIconMap[catKey] || Utensils);
                     const isActive = selectedCategory === category.id;
                     const count = productCounts[category.id] || 0;
 
@@ -26,16 +34,16 @@ export function CategoryPills({ categories = [], selectedCategory, onSelectCateg
                             key={category.id}
                             onClick={() => onSelectCategory(category.id)}
                             className={`
-                                inline-flex items-center gap-2.5 px-5 py-3 rounded-full
-                                border transition-all duration-300 whitespace-nowrap text-xs sm:text-sm font-medium tracking-wider uppercase
+                                inline-flex items-center gap-2 px-4 py-2.5 rounded-full
+                                border transition-all duration-300 whitespace-nowrap text-xs font-bold tracking-wider uppercase
                                 ${
                                     isActive
-                                        ? "bg-[#F4B544] text-[#050505] border-[#F4B544] font-bold shadow-md gold-glow-sm scale-105"
+                                        ? "bg-[#F4B544] text-[#050505] border-[#F4B544] shadow-md gold-glow-sm scale-105"
                                         : "bg-[#10100F] border-[#F4B544]/20 text-[#B8B1A3] hover:text-[#FFFAF0] hover:border-[#F4B544]/50 hover:bg-[#171612]"
                                 }
                             `}
                         >
-                            <Icon className={`w-4 h-4 ${isActive ? "text-[#050505]" : "text-[#F4B544]"}`} />
+                            <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#050505]" : "text-[#F4B544]"}`} />
                             <span>{category.name}</span>
                             {count > 0 && (
                                 <span

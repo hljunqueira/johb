@@ -721,55 +721,39 @@ export default function MenuPage() {
         return filtered.length > 0 ? filtered : categories;
     }, [categories, selectedMenu]);
 
-    // Trocar de Menu e definir a primeira categoria correspondente
+    // Trocar de Menu e definir 'all' para ver todos os produtos do menu
     const handleSelectMenu = (menuId) => {
         setSelectedMenu(menuId);
-        const menuCats = categories.filter(c => c.menu_id === menuId);
-        if (menuCats.length > 0) {
-            setSelectedCategory(menuCats[0].id);
-        } else {
-            setSelectedCategory("all");
-        }
+        setSelectedCategory("all");
     };
 
-    // Filtrar produtos por busca, categoria, menu ativo e filtro rápido
+    // Filtrar produtos por busca, menu ativo e categoria selecionada
     const filteredProducts = useMemo(() => {
         let result = products;
 
         if (search) {
             const query = search.toLowerCase();
-            return result.filter(p => 
+            result = result.filter(p => 
                 p.name.toLowerCase().includes(query) ||
                 p.description?.toLowerCase().includes(query)
             );
-        }
-
-        if (quickTagFilter !== "all") {
-            if (quickTagFilter === "vegano") {
-                result = result.filter(p => {
-                    const tags = Array.isArray(p.tags) ? p.tags : (p.tag ? [p.tag] : []);
-                    return tags.some(t => t.toLowerCase().includes("vegan") || t.toLowerCase().includes("vegetari"));
-                });
-            } else if (quickTagFilter === "assados") {
-                result = result.filter(p => p.name.toLowerCase().includes("assado") || p.name.toLowerCase().includes("joelhinho") || p.name.toLowerCase().includes("joelho") || p.name.toLowerCase().includes("folhado") || p.name.toLowerCase().includes("empada"));
-            } else if (quickTagFilter === "fritos") {
-                result = result.filter(p => p.name.toLowerCase().includes("coxinha") || p.name.toLowerCase().includes("pastel") || p.name.toLowerCase().includes("risole") || p.name.toLowerCase().includes("kibe"));
-            } else if (quickTagFilter === "doces") {
-                result = result.filter(p => p.name.toLowerCase().includes("cuca") || p.name.toLowerCase().includes("bolo") || p.name.toLowerCase().includes("doce") || p.name.toLowerCase().includes("torta"));
-            } else if (quickTagFilter === "bebidas") {
-                result = result.filter(p => p.name.toLowerCase().includes("café") || p.name.toLowerCase().includes("coca") || p.name.toLowerCase().includes("suco") || p.name.toLowerCase().includes("refrigerante"));
-            }
-        }
-
-        if (selectedCategory && selectedCategory !== "all") {
+        } else if (selectedCategory && selectedCategory !== "all") {
             result = result.filter(p => p.category_id === selectedCategory);
         } else if (activeCategories.length > 0) {
             const activeCatIds = activeCategories.map(c => c.id);
             result = result.filter(p => activeCatIds.includes(p.category_id));
         }
 
-        return result;
-    }, [products, search, selectedCategory, activeCategories, quickTagFilter]);
+        // Deduplicação estrita por ID
+        const uniqueMap = new Map();
+        result.forEach(p => {
+            if (p && p.id && !uniqueMap.has(p.id)) {
+                uniqueMap.set(p.id, p);
+            }
+        });
+
+        return Array.from(uniqueMap.values());
+    }, [products, search, selectedCategory, activeCategories]);
 
     const handleAddItem = (product, quantity, additionals, observation) => {
         addItem(product, quantity, additionals, observation);
@@ -793,7 +777,7 @@ export default function MenuPage() {
                 }}
             />
 
-            {/* Conteúdo Principal — Cardápio em 3 Níveis */}
+            {/* Conteúdo Principal — Cardápio em 2 Níveis Elegantes */}
             <section id="cardapio" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 {/* Banner de Status da Loja / Agendamento */}
                 <StoreStatusBanner status={{ isOpen: storeOpen, ...storeStatus }} />
@@ -847,30 +831,6 @@ export default function MenuPage() {
                     </div>
                 </div>
 
-                {/* Filtros Rápidos de Preferência */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-6">
-                    {[
-                        { key: "all", label: "✨ Todos os Itens" },
-                        { key: "assados", label: "🥐 Assados & Folhados" },
-                        { key: "fritos", label: "🔥 Fritos Dourados" },
-                        { key: "doces", label: "🍰 Cucas & Bolos" },
-                        { key: "vegano", label: "🌱 Veganos & Vegetarianos" },
-                        { key: "bebidas", label: "🥤 Cafés & Bebidas" }
-                    ].map(f => (
-                        <button
-                            key={f.key}
-                            onClick={() => setQuickTagFilter(f.key)}
-                            className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap border ${
-                                quickTagFilter === f.key
-                                    ? "bg-[#F4B544] text-[#050505] border-[#F4B544] shadow-md shadow-[#F4B544]/20"
-                                    : "bg-[#10100F] text-[#B8B1A3] border-[#F4B544]/20 hover:border-[#F4B544]/50 hover:text-[#FFFAF0]"
-                            }`}
-                        >
-                            {f.label}
-                        </button>
-                    ))}
-                </div>
-
                 {/* Nível 1: Abas de Menus Principais */}
                 {menus.length > 0 && (
                     <div className="flex items-center justify-start md:justify-center gap-3 overflow-x-auto pb-4 scrollbar-none mb-6">
@@ -893,7 +853,7 @@ export default function MenuPage() {
                     </div>
                 )}
 
-                {/* Nível 2: Pílulas de Categorias do Menu Ativo */}
+                {/* Nível 2: Pílulas de Subcategorias do Menu Ativo */}
                 <div className="mb-8">
                     <CategoryPills
                         categories={activeCategories}
