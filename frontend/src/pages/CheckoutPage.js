@@ -23,20 +23,6 @@ const getImageUrl = (url) => {
     return `${BACKEND_URL}${url}`;
 };
 
-// Bairros padrão de Balneário Arroio do Silva
-const DEFAULT_NEIGHBORHOODS = [
-    { name: "Centro", fee: 5.00 },
-    { name: "Praia dos Golfinhos", fee: 6.00 },
-    { name: "Jardim Atlântico", fee: 6.00 },
-    { name: "Areias Brancas", fee: 7.00 },
-    { name: "Morro dos Conventos", fee: 8.00 },
-    { name: "Zona Nova", fee: 5.00 },
-    { name: "Erechim", fee: 6.00 },
-    { name: "Meta", fee: 6.00 },
-    { name: "Castelo", fee: 7.00 },
-    { name: "Outro Bairro (Balneário Arroio do Silva)", fee: 6.00 }
-];
-
 export default function CheckoutPage() {
     const { items, total, clearCart, scheduledDate, scheduledTime, setScheduleInfo } = useCart();
     const navigate = useNavigate();
@@ -56,7 +42,7 @@ export default function CheckoutPage() {
     
     const [deliveryType, setDeliveryType] = useState("entrega"); // 'entrega' ou 'retirada'
     const [address, setAddress] = useState(() => localStorage.getItem("johb-address") || "");
-    const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("johb-neighborhood") || "Centro");
+    const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("johb-neighborhood") || "");
     const [observation, setObservation] = useState("");
     
     // Formas de pagamento: 'asaas' (online), 'cartao_maquininha', 'dinheiro'
@@ -96,6 +82,12 @@ export default function CheckoutPage() {
                     setPaymentMethod("cartao_maquininha");
                 } else if (data.accept_cash !== false) {
                     setPaymentMethod("dinheiro");
+                }
+                if (data.areas && Array.isArray(data.areas) && data.areas.length > 0) {
+                    setNeighborhood(prev => {
+                        if (prev && data.areas.some(a => a.name === prev)) return prev;
+                        return data.areas[0].name;
+                    });
                 }
             })
             .catch(err => {
@@ -140,10 +132,10 @@ export default function CheckoutPage() {
 
     // Lista de Bairros
     const neighborhoodsList = useMemo(() => {
-        if (deliverySettings?.areas && Array.isArray(deliverySettings.areas) && deliverySettings.areas.length > 0) {
+        if (deliverySettings?.areas && Array.isArray(deliverySettings.areas)) {
             return deliverySettings.areas;
         }
-        return DEFAULT_NEIGHBORHOODS;
+        return [];
     }, [deliverySettings]);
 
     // Datas disponíveis
@@ -537,18 +529,32 @@ export default function CheckoutPage() {
                                 <div className="space-y-4 pt-2 border-t border-[#F4B544]/15">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <Label className="text-xs text-[#B8B1A3]">Bairro (Balneário Arroio do Silva) *</Label>
-                                            <select
-                                                value={neighborhood}
-                                                onChange={e => setNeighborhood(e.target.value)}
-                                                className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
-                                            >
-                                                {neighborhoodsList.map(n => (
-                                                    <option key={n.name} value={n.name} className="bg-[#10100F] text-white">
-                                                        {n.name} {n.fee ? `(Taxa: R$ ${Number(n.fee).toFixed(2)})` : ""}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <Label className="text-xs text-[#B8B1A3]">Bairro *</Label>
+                                            {neighborhoodsList.length > 0 ? (
+                                                <select
+                                                    value={neighborhood}
+                                                    onChange={e => setNeighborhood(e.target.value)}
+                                                    className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
+                                                    required
+                                                >
+                                                    {neighborhoodsList.map(n => {
+                                                        const isFree = minFree > 0 && total >= minFree;
+                                                        return (
+                                                            <option key={n.name} value={n.name} className="bg-[#10100F] text-white">
+                                                                {n.name} — {isFree ? "Frete Grátis!" : `Taxa: R$ ${Number(n.fee || 0).toFixed(2)}`}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
+                                            ) : (
+                                                <Input
+                                                    placeholder="Digite seu bairro..."
+                                                    value={neighborhood}
+                                                    onChange={e => setNeighborhood(e.target.value)}
+                                                    className="bg-[#050505] border-[#F4B544]/30 text-[#FFFAF0] text-xs focus:border-[#F4B544]"
+                                                    required
+                                                />
+                                            )}
                                         </div>
 
                                         <div className="space-y-1.5">

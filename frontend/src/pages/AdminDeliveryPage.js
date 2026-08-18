@@ -346,170 +346,204 @@ export default function AdminDeliveryPage() {
                     handleQrUpload={handleQrUpload}
                 />
             )}
-        </div>
-    );
-}
-
-/* ==================== DELIVERY TAB ==================== */
+    /* ==================== DELIVERY TAB ==================== */
 function DeliveryTab({ 
     settings, 
     setSettings, 
     newArea, 
     setNewArea, 
-    newRate, 
-    setNewRate,
-    loading,
-    saveDelivery,
-    addArea,
-    removeArea,
-    addRate,
-    removeRate,
-    resetToDefaultRates
+    loading, 
+    saveDelivery, 
+    addArea, 
+    removeArea 
 }) {
+    const defaultNeighborhoodSuggestions = [
+        { name: "Centro", fee: 5.0 },
+        { name: "Praia dos Golfinhos", fee: 6.0 },
+        { name: "Jardim Atlântico", fee: 6.0 },
+        { name: "Areias Brancas", fee: 7.0 },
+        { name: "Morro dos Conventos", fee: 8.0 },
+        { name: "Zona Nova", fee: 5.0 },
+        { name: "Erechim", fee: 6.0 },
+        { name: "Meta", fee: 6.0 },
+        { name: "Castelo", fee: 7.0 }
+    ];
+
+    const loadSuggestions = () => {
+        const existingNames = new Set((settings.areas || []).map(a => a.name.toLowerCase().trim()));
+        const toAdd = defaultNeighborhoodSuggestions.filter(s => !existingNames.has(s.name.toLowerCase().trim()));
+        if (toAdd.length === 0) {
+            toast.info("Todos os bairros sugeridos já estão na sua lista!");
+            return;
+        }
+        setSettings(s => ({
+            ...s,
+            areas: [...(s.areas || []), ...toAdd]
+        }));
+        toast.success(`${toAdd.length} bairros sugeridos adicionados! Não esqueça de Salvar.`);
+    };
+
     return (
         <div className="bg-[#141414] text-white rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl">
-            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
-                <Truck className="h-6 w-6 text-[#F4B544]" />
-                <h2 className="font-extrabold text-white text-xl">Configurações de Entrega</h2>
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                    <Truck className="h-6 w-6 text-[#F4B544]" />
+                    <div>
+                        <h2 className="font-extrabold text-white text-xl">Configurações de Entrega & Bairros</h2>
+                        <p className="text-xs text-gray-400">Cadastre os bairros atendidos e as respectivas taxas de entrega</p>
+                    </div>
+                </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+            {/* Switch de Ativação */}
+            <div className="flex items-center justify-between bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+                <div className="space-y-0.5">
+                    <span className="text-sm font-extrabold text-white">Disponibilidade de Entrega</span>
+                    <p className="text-xs text-gray-400">
+                        {settings.active ? "O cardápio permite pedidos de Entrega e Retirada." : "Entregas pausadas. Apenas Retirada no Balcão fica disponível."}
+                    </p>
+                </div>
                 <Switch checked={settings.active} onCheckedChange={v => setSettings(s => ({ ...s, active: v }))} data-testid="delivery-active" />
-                <span className="text-sm font-extrabold text-white">{settings.active ? "Entregas ativas" : "Entregas desativadas"}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label className="text-sm font-semibold text-gray-300">Taxa padrão (R$)</Label>
-                    <div className="relative mt-1.5">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                        <Input type="number" step="0.01" min="0" value={settings.delivery_fee}
+            {/* Valores Gerais */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+                    <Label className="text-xs font-bold text-gray-300">Taxa Padrão de Entrega (R$)</Label>
+                    <div className="relative mt-2">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">R$</span>
+                        <Input 
+                            type="number" 
+                            step="0.50" 
+                            min="0" 
+                            value={settings.delivery_fee}
                             onChange={e => setSettings(s => ({ ...s, delivery_fee: parseFloat(e.target.value) || 0 }))}
-                            className="rounded-xl bg-[#1E1E1E] text-white border-white/10 pl-10 focus:border-[#F4B544]" data-testid="default-fee" />
+                            className="rounded-xl bg-[#141414] text-white border-white/10 pl-10 focus:border-[#F4B544] font-bold" 
+                            data-testid="default-fee" 
+                        />
                     </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5">Taxa base usada quando o bairro não tiver valor específico.</p>
                 </div>
-                <div>
-                    <Label className="text-sm font-semibold text-gray-300">Mínimo para frete grátis (R$)</Label>
-                    <div className="relative mt-1.5">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                        <Input type="number" step="0.01" min="0" value={settings.min_free_delivery}
+
+                <div className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+                    <Label className="text-xs font-bold text-gray-300">Mínimo para Frete Grátis (R$)</Label>
+                    <div className="relative mt-2">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">R$</span>
+                        <Input 
+                            type="number" 
+                            step="5.00" 
+                            min="0" 
+                            value={settings.min_free_delivery}
                             onChange={e => setSettings(s => ({ ...s, min_free_delivery: parseFloat(e.target.value) || 0 }))}
-                            className="rounded-xl bg-[#1E1E1E] text-white border-white/10 pl-10 focus:border-[#F4B544]" data-testid="min-free" />
+                            className="rounded-xl bg-[#141414] text-white border-white/10 pl-10 focus:border-[#F4B544] font-bold" 
+                            data-testid="min-free" 
+                        />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Use 0 para nunca oferecer grátis</p>
+                    <p className="text-[10px] text-gray-400 mt-1.5">Defina 0 se não quiser oferecer frete grátis.</p>
                 </div>
             </div>
 
             <Separator className="bg-white/10" />
 
-            {/* Endereço do Restaurante */}
-            <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                    <Navigation className="h-5 w-5 text-[#F4B544]" />
-                    <p className="text-base font-extrabold text-white">Endereço do Restaurante</p>
-                </div>
-                <p className="text-xs text-gray-400">Usado para calcular a distância exata até o cliente</p>
-                <Input 
-                    value={settings.restaurant_address || ""} 
-                    onChange={e => setSettings(s => ({ ...s, restaurant_address: e.target.value }))}
-                    placeholder="Ex: Rua das Flores, 123, Centro, Balneário Arroio do Silva - SC"
-                    className="rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544] mt-1"
-                />
-            </div>
-
-            <Separator className="bg-white/10" />
-
-            {/* Taxas por Distância */}
-            <div className="space-y-3">
+            {/* Gerenciamento de Bairros */}
+            <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <MapPin className="h-5 w-5 text-[#F4B544]" />
-                        <p className="text-base font-extrabold text-white">Taxas por Distância (km)</p>
+                        <div>
+                            <p className="text-base font-extrabold text-white">Bairros Atendidos & Taxas</p>
+                            <p className="text-xs text-gray-400">O cliente escolhe o bairro no Checkout e a taxa é calculada automaticamente</p>
+                        </div>
                     </div>
                     <Button 
                         type="button" 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm" 
-                        onClick={resetToDefaultRates}
-                        className="text-xs text-[#F4B544] hover:text-white hover:bg-white/10"
+                        onClick={loadSuggestions}
+                        className="text-xs border-[#F4B544]/30 text-[#F4B544] hover:bg-[#F4B544]/10 hover:text-white"
                     >
-                        Restaurar padrão
+                        + Sugerir Bairros Locais
                     </Button>
                 </div>
-                <p className="text-xs text-gray-400">Configure a taxa para cada faixa de distância</p>
-                
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {(settings.distance_rates || []).length === 0 && (
-                        <p className="text-xs text-gray-500 italic py-3 text-center border border-dashed border-white/10 rounded-xl">
-                            Nenhuma taxa cadastrada
-                        </p>
-                    )}
-                    {(settings.distance_rates || []).map((rate, i) => (
-                        <div key={i} className="flex items-center gap-3 bg-[#1E1E1E] border border-white/10 rounded-xl px-4 py-2.5">
-                            <span className="text-xs text-gray-400 w-16 font-semibold">Até</span>
-                            <span className="text-sm font-extrabold text-white flex-1">{rate.max_distance} km</span>
-                            <span className="text-sm font-black text-[#F4B544]">
-                                R$ {Number(rate.fee).toFixed(2)}
-                            </span>
-                            <Button size="icon" variant="ghost" onClick={() => removeRate(i)} className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg">
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+
+                {/* Lista de Bairros Cadastrados */}
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {(settings.areas || []).length === 0 ? (
+                        <div className="text-center py-6 border border-dashed border-white/10 rounded-2xl bg-[#1E1E1E]/50 space-y-2">
+                            <MapPin className="h-8 w-8 text-gray-500 mx-auto" />
+                            <p className="text-xs text-gray-400 font-semibold">Nenhum bairro específico cadastrado ainda.</p>
+                            <p className="text-[11px] text-gray-500">Adicione os bairros abaixo ou clique em "Sugerir Bairros Locais" para preencher.</p>
                         </div>
-                    ))}
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {(settings.areas || []).map((area, i) => (
+                                <div key={i} className="flex items-center justify-between bg-[#1E1E1E] border border-white/10 rounded-xl p-3.5 hover:border-[#F4B544]/30 transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-[#F4B544]/10 flex items-center justify-center text-[#F4B544]">
+                                            <MapPin className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <span className="font-extrabold text-sm text-white block">{area.name}</span>
+                                            <span className="text-xs font-black text-[#F4B544]">
+                                                Taxa: R$ {Number(area.fee || 0).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        onClick={() => removeArea(i)} 
+                                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
-                
-                <div className="flex gap-3 mt-3">
-                    <div className="relative flex-1">
-                        <Input 
-                            type="number" 
-                            step="0.1" 
-                            min="0" 
-                            value={newRate.max_distance}
-                            onChange={e => setNewRate(r => ({ ...r, max_distance: e.target.value }))}
-                            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRate(); } }}
-                            placeholder="Km máx" 
-                            className="rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" 
-                        />
-                    </div>
-                    <div className="relative w-32">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                        <Input 
-                            type="number" 
-                            step="0.01" 
-                            min="0" 
-                            value={newRate.fee}
-                            onChange={e => setNewRate(r => ({ ...r, fee: e.target.value }))}
-                            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRate(); } }}
-                            className="rounded-xl bg-[#1E1E1E] text-white border-white/10 pl-9 focus:border-[#F4B544]" 
-                        />
-                    </div>
-                    <Button size="icon" onClick={addRate} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-10 w-10 shrink-0">
-                        <Plus className="h-5 w-5" />
-                    </Button>
-                </div>
-            </div>
 
-            <Separator className="bg-white/10" />
-
-            {/* Distância Máxima */}
-            <div className="space-y-2">
-                <p className="text-sm font-extrabold text-white">Distância Máxima de Entrega</p>
-                <div className="relative">
-                    <Input 
-                        type="number" 
-                        step="0.1" 
-                        min="0" 
-                        value={settings.max_delivery_distance || 10.5}
-                        onChange={e => setSettings(s => ({ ...s, max_delivery_distance: parseFloat(e.target.value) || 10.5 }))}
-                        className="rounded-xl bg-[#1E1E1E] text-white border-white/10 pr-12 focus:border-[#F4B544]"
-                    />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">km</span>
+                {/* Formulário para Adicionar Bairro */}
+                <div className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10 space-y-3">
+                    <p className="text-xs font-bold text-gray-300">+ Adicionar Novo Bairro</p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex-1">
+                            <Input 
+                                type="text" 
+                                placeholder="Nome do Bairro (Ex: Centro)"
+                                value={newArea.name}
+                                onChange={e => setNewArea(a => ({ ...a, name: e.target.value }))}
+                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addArea(); } }}
+                                className="rounded-xl bg-[#141414] text-white border-white/10 focus:border-[#F4B544]" 
+                            />
+                        </div>
+                        <div className="relative sm:w-36">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">R$</span>
+                            <Input 
+                                type="number" 
+                                step="0.50" 
+                                min="0" 
+                                placeholder="Taxa"
+                                value={newArea.fee}
+                                onChange={e => setNewArea(a => ({ ...a, fee: e.target.value }))}
+                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addArea(); } }}
+                                className="rounded-xl bg-[#141414] text-white border-white/10 pl-9 focus:border-[#F4B544] font-bold" 
+                            />
+                        </div>
+                        <Button 
+                            type="button" 
+                            onClick={addArea} 
+                            className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl px-5 h-10 shadow-md shadow-[#F4B544]/20 hover:scale-[1.01] transition-all"
+                        >
+                            <Plus className="h-4 w-4 mr-1.5" /> Adicionar
+                        </Button>
+                    </div>
                 </div>
-                <p className="text-xs text-gray-400">Pedidos além desta distância não serão aceitos no carrinho público</p>
             </div>
 
             <Button onClick={saveDelivery} disabled={loading} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all" data-testid="save-delivery-btn">
-                <Save className="h-5 w-5 mr-2" /> Salvar Configurações de Entrega
+                <Save className={`h-5 w-5 mr-2 ${loading ? 'animate-spin' : ''}`} /> 
+                {loading ? "Salvando Bairros e Taxas..." : "Salvar Bairros e Taxas de Entrega"}
             </Button>
         </div>
     );
