@@ -66,7 +66,7 @@ const isDelayed = (order) => {
     return (now - created) > (order.estimated_time || 30) * 60 * 1000;
 };
 
-const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm, setSelectedPrintOrder }) => {
+const OrderCard = ({ order, index, markPaid, updateStatus, setConfirmModal, setDeleteConfirm, setSelectedPrintOrder }) => {
     const isToday = (() => {
         if (!order.scheduled_date) return false;
         const now = new Date();
@@ -90,7 +90,7 @@ const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm, 
                 >
                     <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-2">
-                            <GripVertical className="h-4 w-4 text-gray-500" />
+                            <GripVertical className="h-4 w-4 text-gray-500 cursor-grab" />
                             <span className="text-lg font-black text-[#F4B544] leading-none">#{order.order_number}</span>
                         </div>
                         
@@ -111,33 +111,66 @@ const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm, 
                                         <MoreVertical className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-2xl bg-[#1A1A1A] border-white/10 text-white">
-                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-2">Ações</DropdownMenuLabel>
+                                <DropdownMenuContent align="end" className="w-60 rounded-xl p-2 shadow-2xl bg-[#1A1A1A] border-white/10 text-white">
+                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-1.5">Mover Status</DropdownMenuLabel>
+                                    <DropdownMenuItem 
+                                        onClick={() => updateStatus(order.id, "aguardando")}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-amber-400 focus:bg-amber-500/20 cursor-pointer"
+                                    >
+                                        <CircleEllipsis className="h-3.5 w-3.5" /> Pendente
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => updateStatus(order.id, "confirmado")}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-purple-400 focus:bg-purple-500/20 cursor-pointer"
+                                    >
+                                        <ThumbsUp className="h-3.5 w-3.5" /> Aceito
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => updateStatus(order.id, "preparando")}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-orange-400 focus:bg-orange-500/20 cursor-pointer"
+                                    >
+                                        <Timer className="h-3.5 w-3.5" /> Em Preparo
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => updateStatus(order.id, "saiu_entrega")}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-blue-400 focus:bg-blue-500/20 cursor-pointer"
+                                    >
+                                        <Truck className="h-3.5 w-3.5" /> Saiu para Entrega
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => updateStatus(order.id, "entregue")}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-400 focus:bg-emerald-500/20 cursor-pointer"
+                                    >
+                                        <CheckCircle2 className="h-3.5 w-3.5" /> Concluído
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => updateStatus(order.id, "cancelado")}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-red-400 focus:bg-red-500/20 cursor-pointer"
+                                    >
+                                        <XCircle className="h-3.5 w-3.5" /> Cancelar Pedido
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator className="my-1 mx-2 bg-white/10" />
+
+                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-1.5">Ações Rápidas</DropdownMenuLabel>
                                     <DropdownMenuItem 
                                         disabled={order.payment_status === "pago"}
                                         onClick={() => markPaid(order.id)}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-emerald-500/20 text-emerald-400 cursor-pointer"
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold focus:bg-emerald-500/20 text-emerald-400 cursor-pointer"
                                     >
                                         <DollarSign className="h-4 w-4" /> Marcar como Pago
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 
                                         onClick={() => setSelectedPrintOrder(order)}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-[#F4B544]/20 text-[#F4B544] cursor-pointer"
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold focus:bg-[#F4B544]/20 text-[#F4B544] cursor-pointer"
                                     >
-                                        <Printer className="h-4 w-4" /> Visualizar Comanda
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator className="my-1 mx-2 bg-white/10" />
-                                    <DropdownMenuItem 
-                                        onClick={() => setConfirmModal({ isOpen: true, orderId: order.id })}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-red-500/20 text-red-400 cursor-pointer"
-                                    >
-                                        <XCircle className="h-4 w-4" /> Recusar Pedido
+                                        <Printer className="h-4 w-4" /> Imprimir Comanda
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 
                                         onClick={() => setDeleteConfirm({ isOpen: true, orderId: order.id })}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-red-500/30 text-red-300 cursor-pointer"
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold focus:bg-red-500/30 text-red-300 cursor-pointer"
                                     >
-                                        <Package className="h-4 w-4" /> Excluir Pedido
+                                        <Package className="h-4 w-4" /> Excluir Registro
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -193,7 +226,7 @@ const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm, 
                         ))}
                     </div>
 
-                    <div className="flex justify-between items-center pt-4 border-t border-white/10 mt-auto">
+                    <div className="flex justify-between items-center pt-3 border-t border-white/10 mt-auto">
                         <span className="text-lg font-black text-[#F4B544] tracking-tighter">R$ {order.total?.toFixed(2)}</span>
                         <Badge className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border-none ${
                             order.payment_status === "pago" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
@@ -201,6 +234,44 @@ const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm, 
                             {order.payment_status === "pago" ? "PGTO PAGO" : "PGTO PENDENTE"}
                         </Badge>
                     </div>
+
+                    {/* Botão de Avanço Rápido de Status */}
+                    {order.status === "aguardando" && (
+                        <button
+                            type="button"
+                            onClick={() => updateStatus(order.id, "confirmado")}
+                            className="w-full mt-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                            <ThumbsUp className="h-3.5 w-3.5" /> Aceitar Pedido
+                        </button>
+                    )}
+                    {order.status === "confirmado" && (
+                        <button
+                            type="button"
+                            onClick={() => updateStatus(order.id, "preparando")}
+                            className="w-full mt-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                            <Timer className="h-3.5 w-3.5" /> Iniciar Preparo
+                        </button>
+                    )}
+                    {order.status === "preparando" && (
+                        <button
+                            type="button"
+                            onClick={() => updateStatus(order.id, "saiu_entrega")}
+                            className="w-full mt-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                            <Truck className="h-3.5 w-3.5" /> Despachar / Saiu p/ Entrega
+                        </button>
+                    )}
+                    {order.status === "saiu_entrega" && (
+                        <button
+                            type="button"
+                            onClick={() => updateStatus(order.id, "entregue")}
+                            className="w-full mt-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Concluir Pedido
+                        </button>
+                    )}
                 </div>
             )}
         </Draggable>
@@ -209,7 +280,7 @@ const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm, 
 
 export default function AdminOrdersPage() {
     const [columns, setColumns] = useState({});
-    const [activeTab, setActiveTab] = useState("aguardando");
+    const [activeTab, setActiveTab] = useState("all"); // Modo Kanban completo como padrão
     const [scheduleFilter, setScheduleFilter] = useState("all"); // 'all', 'today', 'future'
     const [loading, setLoading] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(true);
@@ -369,6 +440,19 @@ export default function AdminOrdersPage() {
                 {/* Filtros de Status */}
                 <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
                     <div className="flex flex-wrap gap-2">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setActiveTab("all")} 
+                            className={`rounded-xl px-4 h-9 font-bold text-xs gap-2 transition-all cursor-pointer ${
+                                activeTab === "all" 
+                                    ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 border-none scale-105" 
+                                    : "bg-[#141414] text-gray-300 border-white/10 hover:border-[#D4AF37]/40 hover:text-white"
+                            }`}
+                        >
+                            <GripVertical className="h-3.5 w-3.5" />
+                            Quadro Kanban Completo
+                        </Button>
+
                         {KANBAN_COLUMNS.map(colId => {
                             const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
                             const StatusIcon = config.icon || CircleEllipsis;
@@ -379,9 +463,9 @@ export default function AdminOrdersPage() {
                                     key={colId}
                                     variant="outline" 
                                     onClick={() => setActiveTab(colId)} 
-                                    className={`rounded-xl px-4 h-9 font-bold text-xs gap-2 transition-all ${
+                                    className={`rounded-xl px-4 h-9 font-bold text-xs gap-2 transition-all cursor-pointer ${
                                         isTabActive 
-                                            ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 border-none" 
+                                            ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 border-none scale-105" 
                                             : "bg-[#141414] text-gray-300 border-white/10 hover:border-[#D4AF37]/40 hover:text-white"
                                     }`}
                                 >
@@ -390,17 +474,6 @@ export default function AdminOrdersPage() {
                                 </Button>
                             );
                         })}
-                        <Button 
-                            variant="outline" 
-                            onClick={() => setActiveTab("all")} 
-                            className={`rounded-xl px-4 h-9 font-bold text-xs gap-2 transition-all ${
-                                activeTab === "all" 
-                                    ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 border-none" 
-                                    : "bg-[#141414] text-gray-300 border-white/10 hover:border-[#D4AF37]/40 hover:text-white"
-                            }`}
-                        >
-                            Todos
-                        </Button>
                     </div>
 
                     {/* Filtros de Agendamento */}
@@ -408,7 +481,7 @@ export default function AdminOrdersPage() {
                         <button
                             type="button"
                             onClick={() => setScheduleFilter("all")}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                                 scheduleFilter === "all" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
                             }`}
                         >
@@ -417,7 +490,7 @@ export default function AdminOrdersPage() {
                         <button
                             type="button"
                             onClick={() => setScheduleFilter("today")}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                                 scheduleFilter === "today" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
                             }`}
                         >
@@ -426,7 +499,7 @@ export default function AdminOrdersPage() {
                         <button
                             type="button"
                             onClick={() => setScheduleFilter("future")}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                                 scheduleFilter === "future" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
                             }`}
                         >
@@ -482,6 +555,7 @@ export default function AdminOrdersPage() {
                                                                 order={order} 
                                                                 index={index} 
                                                                 markPaid={markPaid} 
+                                                                updateStatus={updateStatus}
                                                                 setConfirmModal={setConfirmModal}
                                                                 setDeleteConfirm={setDeleteConfirm}
                                                                 setSelectedPrintOrder={setSelectedPrintOrder}
@@ -520,6 +594,7 @@ export default function AdminOrdersPage() {
                                                         order={order} 
                                                         index={index} 
                                                         markPaid={markPaid} 
+                                                        updateStatus={updateStatus}
                                                         setConfirmModal={setConfirmModal}
                                                         setDeleteConfirm={setDeleteConfirm}
                                                         setSelectedPrintOrder={setSelectedPrintOrder}
