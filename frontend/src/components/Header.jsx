@@ -22,16 +22,16 @@ export default function Header({ onOpenCart }) {
 
     return (
         <header className="sticky top-0 z-40 w-full bg-[#050505]/95 backdrop-blur-md border-b border-[#F4B544]/20 transition-all">
-            {/* Topbar informativo */}
+            {/* Topbar informativo centralizado */}
             <div className="bg-[#10100F] border-b border-[#F4B544]/10 py-1.5 px-4 text-xs text-[#B8B1A3]">
-                <div className="max-w-7xl mx-auto flex justify-end items-center">
+                <div className="max-w-7xl mx-auto flex justify-center items-center">
                     <a
                         href="https://wa.me/message/FUNP4LBHYBA3O1"
                         target="_blank"
                         rel="noreferrer"
-                        className="hover:text-[#F4B544] transition-colors flex items-center gap-1 text-[11px] uppercase tracking-wider font-semibold"
+                        className="hover:text-[#F4B544] text-[#FFFAF0]/90 transition-all flex items-center gap-1.5 text-xs uppercase tracking-wider font-bold hover:scale-105"
                     >
-                        <PhoneCall className="w-3 h-3 text-[#F4B544]" />
+                        <PhoneCall className="w-3.5 h-3.5 text-[#F4B544]" />
                         <span>Fale no WhatsApp</span>
                     </a>
                 </div>

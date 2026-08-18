@@ -65,7 +65,7 @@ export function ExperienceCarousel() {
         <div className="flex flex-col items-center w-full">
             {/* Card Principal Quadrado 1:1 Sem Cortes */}
             <div 
-                className="relative rounded-3xl overflow-hidden border border-[#F4B544]/35 bg-[#10100F] shadow-2xl gold-glow w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[400px] xl:max-w-[440px] aspect-square group"
+                className="relative rounded-3xl overflow-hidden border border-[#F4B544]/35 bg-[#10100F] shadow-2xl gold-glow w-full max-w-[390px] sm:max-w-[440px] lg:max-w-[470px] xl:max-w-[500px] aspect-square group"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onTouchStart={handleTouchStart}
