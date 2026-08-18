@@ -600,13 +600,13 @@ def format_relative_date(dt):
 
 @app.get("/api/reviews/summary")
 async def get_reviews_summary():
-    """Resumo de avaliações para prova social no cardápio"""
+    """Resumo de avaliações 100% reais para prova social no cardápio"""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         stats = await conn.fetchrow("""
             SELECT 
                 COUNT(*) as total_reviews,
-                COALESCE(AVG(rating), 5.0) as avg_rating
+                AVG(rating) as avg_rating
             FROM orders 
             WHERE rating IS NOT NULL AND rating > 0
         """)
@@ -614,49 +614,25 @@ async def get_reviews_summary():
         recent_comments = await conn.fetch("""
             SELECT customer_name, rating, rating_comment, created_at
             FROM orders 
-            WHERE rating IS NOT NULL AND rating_comment IS NOT NULL AND LENGTH(TRIM(rating_comment)) >= 3
+            WHERE rating IS NOT NULL AND rating_comment IS NOT NULL AND LENGTH(TRIM(rating_comment)) >= 2
             ORDER BY created_at DESC 
             LIMIT 9
         """)
 
-        # Processar avaliações reais
+        # Processar avaliações 100% reais
         real_testimonials = []
         for c in recent_comments:
             c_dict = dict(c)
             c_dict["created_at"] = format_relative_date(c_dict.get("created_at"))
             real_testimonials.append(c_dict)
 
-        # Fallback de depoimentos artesanais caso o banco ainda tenha poucas avaliações
-        testimonials = list(real_testimonials)
-        if len(testimonials) < 3:
-            testimonials.extend([
-                {
-                    "customer_name": "Mariana S.",
-                    "rating": 5,
-                    "rating_comment": "Os salgados assados são incríveis! Chegaram super quentinhos no horário agendado.",
-                    "created_at": "Hoje"
-                },
-                {
-                    "customer_name": "Carlos Eduardo",
-                    "rating": 5,
-                    "rating_comment": "Melhor empadão e café de Arroio do Silva. O atendimento é nota 10!",
-                    "created_at": "Ontem"
-                },
-                {
-                    "customer_name": "Fernanda Lima",
-                    "rating": 5,
-                    "rating_comment": "A cuca tradicional de banana com canela é surreal de tão fofinha. Super recomendo!",
-                    "created_at": "Há 2 dias"
-                }
-            ])
-
-        total_count = int(stats['total_reviews']) if stats and stats['total_reviews'] else 48
+        total_count = int(stats['total_reviews']) if stats and stats['total_reviews'] else 0
         avg_val = float(stats['avg_rating']) if stats and stats['avg_rating'] else 5.0
 
         return {
-            "avg_rating": round(avg_val, 1),
-            "total_reviews": max(48, total_count),
-            "testimonials": testimonials[:6]
+            "avg_rating": round(avg_val, 1) if total_count > 0 else 5.0,
+            "total_reviews": total_count,
+            "testimonials": real_testimonials
         }
 
 

@@ -891,17 +891,30 @@ export default function MenuPage() {
 
                 {/* Selo de Prova Social no Topo */}
                 <div className="flex items-center justify-between flex-wrap gap-4 p-4 rounded-2xl bg-[#10100F] border border-[#F4B544]/20 mb-8 shadow-lg">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 text-[#F4B544] font-extrabold text-sm sm:text-base">
-                            <span>⭐</span>
-                            <span>{reviewsData.avg_rating}</span>
-                            <span className="text-[#B8B1A3] font-normal text-xs">/ 5.0</span>
+                    {reviewsData.total_reviews > 0 ? (
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 text-[#F4B544] font-extrabold text-sm sm:text-base">
+                                <span>⭐</span>
+                                <span>{reviewsData.avg_rating}</span>
+                                <span className="text-[#B8B1A3] font-normal text-xs">/ 5.0</span>
+                            </div>
+                            <span className="text-white/20">|</span>
+                            <span className="text-xs text-[#FFFAF0] font-medium">
+                                <strong>{reviewsData.total_reviews}</strong> {reviewsData.total_reviews === 1 ? "avaliação real de cliente" : "avaliações de clientes"} em Balneário Arroio do Silva
+                            </span>
                         </div>
-                        <span className="text-white/20">|</span>
-                        <span className="text-xs text-[#FFFAF0] font-medium">
-                            <strong>{reviewsData.total_reviews}+</strong> clientes satisfeitos em Balneário Arroio do Silva
-                        </span>
-                    </div>
+                    ) : (
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 text-[#F4B544] font-bold text-xs sm:text-sm">
+                                <Sparkles className="w-4 h-4 text-[#F4B544]" />
+                                <span>Salgados Frescos & Artesanais</span>
+                            </div>
+                            <span className="text-white/20">|</span>
+                            <span className="text-xs text-[#FFFAF0] font-medium">
+                                Feitos sob encomenda com muito carinho em Balneário Arroio do Silva
+                            </span>
+                        </div>
+                    )}
                     <span className="text-[11px] font-bold text-[#F4B544] uppercase tracking-wider bg-[#F4B544]/10 px-3 py-1 rounded-full border border-[#F4B544]/30">
                         🏆 Tradição & Qualidade Artesanal
                     </span>
@@ -1010,17 +1023,17 @@ export default function MenuPage() {
             </section>
 
             {/* Seção de Depoimentos & Prova Social Reais */}
-            {reviewsData?.testimonials && reviewsData.testimonials.length > 0 && (
-                <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-[#F4B544]/15">
-                    <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-                        <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold">
-                            O Que Dizem Nossos Clientes
-                        </span>
-                        <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#FFFAF0]">
-                            Amor em Cada Mordida
-                        </h2>
-                    </div>
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-[#F4B544]/15">
+                <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
+                    <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold">
+                        O Que Dizem Nossos Clientes
+                    </span>
+                    <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#FFFAF0]">
+                        Amor em Cada Mordida
+                    </h2>
+                </div>
 
+                {reviewsData?.testimonials && reviewsData.testimonials.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {reviewsData.testimonials.map((t, idx) => (
                             <div key={idx} className="p-6 rounded-2xl bg-[#10100F] border border-[#F4B544]/20 space-y-4 shadow-lg gold-glow-sm flex flex-col justify-between">
@@ -1041,8 +1054,32 @@ export default function MenuPage() {
                             </div>
                         ))}
                     </div>
-                </section>
-            )}
+                ) : (
+                    <div className="max-w-xl mx-auto p-8 rounded-3xl bg-[#10100F] border border-[#F4B544]/30 text-center space-y-4 shadow-xl gold-glow-sm">
+                        <div className="w-12 h-12 rounded-full bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center mx-auto text-[#F4B544]">
+                            <Sparkles className="w-6 h-6 text-[#F4B544]" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <h3 className="font-serif text-xl font-bold text-[#FFFAF0]">Ainda não temos avaliações registradas</h3>
+                            <p className="text-xs sm:text-sm text-[#B8B1A3] font-light leading-relaxed max-w-md mx-auto">
+                                Faça seu pedido no cardápio, experimente nossos salgados artesanais e seja o primeiro a deixar seu feedback aqui!
+                            </p>
+                        </div>
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const el = document.getElementById("cardapio");
+                                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                                }}
+                                className="px-7 py-3 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg gold-glow cursor-pointer"
+                            >
+                                Fazer Primeiro Pedido & Avaliar
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </section>
 
             {/* Seção Sobre / Experiência JOHB */}
             <section id="sobre" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
