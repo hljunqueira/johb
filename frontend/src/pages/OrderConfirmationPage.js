@@ -217,6 +217,116 @@ export default function OrderConfirmationPage() {
                     </div>
                 </div>
 
+                {/* Card de Avaliação / Feedback do Cliente */}
+                <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/30 space-y-4 shadow-xl gold-glow-sm">
+                    <div className="flex items-center justify-between border-b border-[#F4B544]/15 pb-3">
+                        <div className="flex items-center gap-2">
+                            <Star className="w-5 h-5 text-[#F4B544] fill-[#F4B544]" />
+                            <h3 className="font-serif text-lg font-bold text-[#FFFAF0]">Como foi sua experiência?</h3>
+                        </div>
+                        <span className="text-[10px] uppercase font-bold text-[#F4B544] bg-[#F4B544]/10 px-2.5 py-0.5 rounded-full border border-[#F4B544]/30">
+                            Feedback Real
+                        </span>
+                    </div>
+
+                    {ratingSubmitted ? (
+                        <div className="text-center py-4 space-y-3 bg-[#171612] rounded-xl border border-[#F4B544]/20 p-4">
+                            <div className="flex justify-center gap-1.5 text-[#F4B544]">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                        key={star}
+                                        className={`w-6 h-6 ${star <= rating ? "text-[#F4B544] fill-[#F4B544]" : "text-gray-600"}`}
+                                    />
+                                ))}
+                            </div>
+                            <p className="text-sm font-serif text-[#FFFAF0] italic">
+                                "{comment || "Excelente experiência!"}"
+                            </p>
+                            <p className="text-xs text-emerald-400 font-medium flex items-center justify-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Obrigado pelo seu carinho! Sua avaliação foi compartilhada.</span>
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setRatingSubmitted(false)}
+                                className="text-[11px] text-[#B8B1A3] hover:text-[#F4B544] underline pt-1 cursor-pointer"
+                            >
+                                Alterar minha avaliação
+                            </button>
+                        </div>
+                    ) : (
+                        <form onSubmit={submitRating} className="space-y-4">
+                            <p className="text-xs text-[#B8B1A3]">
+                                Avalie os produtos e o atendimento do <strong>JOHB Café & Salgados</strong>:
+                            </p>
+
+                            {/* Seletor de Estrelas */}
+                            <div className="flex items-center justify-center gap-2 py-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setRating(star)}
+                                        className="p-1.5 rounded-lg hover:scale-125 transition-transform cursor-pointer focus:outline-none"
+                                    >
+                                        <Star
+                                            className={`w-8 h-8 transition-colors ${
+                                                star <= rating
+                                                    ? "text-[#F4B544] fill-[#F4B544] drop-shadow-[0_0_8px_rgba(244,181,68,0.5)]"
+                                                    : "text-[#333] hover:text-[#F4B544]/60"
+                                            }`}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Sugestões Rápidas de Elogio */}
+                            <div className="flex flex-wrap gap-1.5 justify-center">
+                                {[
+                                    "Salgados quentinhos e deliciosos!",
+                                    "Entrega super rápida e pontual!",
+                                    "Massa leve e recheio generoso!",
+                                    "Atendimento nota 10!"
+                                ].map((suggestion) => (
+                                    <button
+                                        key={suggestion}
+                                        type="button"
+                                        onClick={() => setComment(suggestion)}
+                                        className={`px-2.5 py-1 rounded-full text-[11px] border transition-all cursor-pointer ${
+                                            comment === suggestion
+                                                ? "bg-[#F4B544] text-black font-bold border-[#F4B544]"
+                                                : "bg-[#171612] text-[#B8B1A3] border-white/10 hover:border-[#F4B544]/40 hover:text-[#FFFAF0]"
+                                        }`}
+                                    >
+                                        {suggestion}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Campo de Comentário */}
+                            <div>
+                                <textarea
+                                    value={comment}
+                                    onChange={(e) => setComment(e.target.value)}
+                                    placeholder="Deixe uma mensagem para a equipe ou conte o que mais gostou..."
+                                    rows={3}
+                                    className="w-full bg-[#050505] border border-[#F4B544]/30 rounded-xl p-3 text-xs text-[#FFFAF0] placeholder:text-[#B8B1A3]/50 focus:outline-none focus:border-[#F4B544] resize-none"
+                                />
+                            </div>
+
+                            {/* Botão de Enviar */}
+                            <button
+                                type="submit"
+                                disabled={rating === 0}
+                                className="w-full py-3 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg gold-glow flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                <span>{rating > 0 ? "Enviar Minha Avaliação" : "Selecione as estrelas para avaliar"}</span>
+                            </button>
+                        </form>
+                    )}
+                </div>
+
                 {/* Botão de Suporte WhatsApp */}
                 <a
                     href={`https://wa.me/message/FUNP4LBHYBA3O1?text=${encodeURIComponent(

@@ -181,12 +181,27 @@ export default function OrderHistoryPage() {
                                         </span>
                                     </div>
 
-                                    <div className="flex gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                                        {order.rating ? (
+                                            <span className="text-xs text-[#F4B544] flex items-center gap-1 font-bold px-2 py-1 bg-[#F4B544]/10 rounded-full border border-[#F4B544]/20">
+                                                <span>⭐</span>
+                                                <span>{order.rating}/5</span>
+                                            </span>
+                                        ) : (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => navigate(`/pedido/${order.id}`)}
+                                                className="rounded-full text-xs border-[#F4B544]/40 text-[#F4B544] hover:bg-[#F4B544]/10"
+                                            >
+                                                ⭐ Avaliar
+                                            </Button>
+                                        )}
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={() => navigate(`/pedido/${order.id}`)}
-                                            className="rounded-full text-xs border-[#F4B544]/30 text-[#FFFAF0] hover:bg-[#F4B544]/10"
+                                            className="rounded-full text-xs border-white/20 text-[#FFFAF0] hover:bg-white/10"
                                         >
                                             Acompanhar
                                         </Button>

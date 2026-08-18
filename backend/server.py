@@ -578,6 +578,26 @@ async def validate_coupon(request: CouponValidateRequest):
         }
 
 
+def format_relative_date(dt):
+    if not dt:
+        return "Hoje"
+    if isinstance(dt, str):
+        return dt
+    try:
+        now = datetime.now()
+        diff = now.date() - dt.date()
+        if diff.days == 0:
+            return "Hoje"
+        elif diff.days == 1:
+            return "Ontem"
+        elif diff.days < 7:
+            return f"Há {diff.days} dias"
+        else:
+            return dt.strftime("%d/%m")
+    except Exception:
+        return "Hoje"
+
+
 @app.get("/api/reviews/summary")
 async def get_reviews_summary():
     """Resumo de avaliações para prova social no cardápio"""
@@ -586,7 +606,7 @@ async def get_reviews_summary():
         stats = await conn.fetchrow("""
             SELECT 
                 COUNT(*) as total_reviews,
-                COALESCE(AVG(rating), 4.9) as avg_rating
+                COALESCE(AVG(rating), 5.0) as avg_rating
             FROM orders 
             WHERE rating IS NOT NULL AND rating > 0
         """)
@@ -594,13 +614,20 @@ async def get_reviews_summary():
         recent_comments = await conn.fetch("""
             SELECT customer_name, rating, rating_comment, created_at
             FROM orders 
-            WHERE rating IS NOT NULL AND rating_comment IS NOT NULL AND LENGTH(rating_comment) > 3
+            WHERE rating IS NOT NULL AND rating_comment IS NOT NULL AND LENGTH(TRIM(rating_comment)) >= 3
             ORDER BY created_at DESC 
-            LIMIT 6
+            LIMIT 9
         """)
 
-        # Fallback de depoimentos artesanais se o banco ainda tiver poucas avaliações
-        testimonials = [dict(c) for c in recent_comments]
+        # Processar avaliações reais
+        real_testimonials = []
+        for c in recent_comments:
+            c_dict = dict(c)
+            c_dict["created_at"] = format_relative_date(c_dict.get("created_at"))
+            real_testimonials.append(c_dict)
+
+        # Fallback de depoimentos artesanais caso o banco ainda tenha poucas avaliações
+        testimonials = list(real_testimonials)
         if len(testimonials) < 3:
             testimonials.extend([
                 {
@@ -624,7 +651,7 @@ async def get_reviews_summary():
             ])
 
         total_count = int(stats['total_reviews']) if stats and stats['total_reviews'] else 48
-        avg_val = float(stats['avg_rating']) if stats and stats['avg_rating'] else 4.9
+        avg_val = float(stats['avg_rating']) if stats and stats['avg_rating'] else 5.0
 
         return {
             "avg_rating": round(avg_val, 1),
@@ -1253,21 +1280,46 @@ async def get_order(order_id: str):
 
 
 @app.post("/api/orders/{order_id}/rate")
-async def rate_order(order_id: str, rating: int = Form(...), comment: Optional[str] = Form(None)):
-    """Avaliar pedido"""
+async def rate_order(order_id: str, request: Request):
+    """Avaliar pedido com suporte flexivel a JSON ou Form Data"""
     if not db_pool:
         raise HTTPException(status_code=500, detail="Database not available")
 
-    if rating < 1 or rating > 5:
+    try:
+        order_uuid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    rating = None
+    comment = None
+
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            rating = int(body.get("rating", 0))
+            comment = body.get("comment", "")
+        except Exception:
+            pass
+    else:
+        try:
+            form = await request.form()
+            rating = int(form.get("rating", 0)) if form.get("rating") else None
+            comment = form.get("comment", "")
+        except Exception:
+            pass
+
+    if not rating or rating < 1 or rating > 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
+        clean_comment = comment.strip() if comment else None
         await conn.execute(
             "UPDATE orders SET rating = $1, rating_comment = $2 WHERE id = $3",
-            rating, comment, uuid.UUID(order_id)
+            rating, clean_comment, order_uuid
         )
-        return {"success": True}
+        return {"success": True, "rating": rating, "comment": clean_comment}
 
 
 # ============================================
