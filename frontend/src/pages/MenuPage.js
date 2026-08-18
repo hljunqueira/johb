@@ -67,7 +67,7 @@ function useStoreStatus() {
         axios.get(`${API}/delivery-settings`).then(r => {
             setDeliverySettings(r.data);
             checkStatus(r.data);
-        }).catch(() => {});
+        }).catch(() => { });
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const checkStatus = (settings) => {
@@ -165,16 +165,15 @@ function CategorySkeleton() {
 function StoreStatusBanner({ status }) {
     const isClosed = !status.isOpen || status.temporarilyClosed;
     return (
-        <div className={`py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all ${
-            isClosed
+        <div className={`py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all ${isClosed
                 ? "bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-lg shadow-amber-500/5"
                 : "bg-[#F4B544]/15 text-[#F4B544] border border-[#F4B544]/30 shadow-lg shadow-[#F4B544]/5"
-        }`}>
+            }`}>
             <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
                 <Clock className="w-4 h-4 text-[#F4B544] shrink-0" />
                 <span>
-                    {isClosed 
-                        ? "🔴 Atendimento Presencial Fechado — Aceitando Pedidos por Agendamento Prévio!" 
+                    {isClosed
+                        ? "🔴 Atendimento Presencial Fechado — Aceitando Pedidos por Agendamento Prévio!"
                         : "🗓️ Pedidos por Agendamento Prévio"
                     }
                 </span>
@@ -330,11 +329,10 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                                                         key={add.name}
                                                         type="button"
                                                         onClick={() => toggleAdditional(add, catKey, rule)}
-                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                                                            isSelected
+                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${isSelected
                                                                 ? "border-[#F4B544] bg-[#171612] text-[#F4B544]"
                                                                 : "border-[#F4B544]/15 bg-[#050505] text-[#FFFAF0] hover:border-[#F4B544]/40"
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <span className="text-xs font-medium">{add.name}</span>
                                                         <span className="text-xs font-bold text-[#F4B544]">
@@ -350,51 +348,64 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         </div>
                     )}
 
-                    {/* Compre Junto / Cross-sell Inteligente de Bebidas */}
-                    <div className="p-3 rounded-xl bg-[#050505] border border-[#F4B544]/20 space-y-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#F4B544] flex items-center gap-1.5">
-                            <span>☕</span> Que tal acompanhar uma bebida?
-                        </span>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const cafeItem = { name: "Café Especial JOHB", price: 6.00, category: "bebidas" };
-                                    setSelectedAdditionals(prev => {
-                                        const exists = prev.find(a => a.name === cafeItem.name);
-                                        return exists ? prev.filter(a => a.name !== cafeItem.name) : [...prev, cafeItem];
-                                    });
-                                }}
-                                className={`p-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${
-                                    selectedAdditionals.find(a => a.name === "Café Especial JOHB")
-                                        ? "border-[#F4B544] bg-[#171612] text-[#F4B544]"
-                                        : "border-[#F4B544]/15 bg-[#10100F] text-[#FFFAF0] hover:border-[#F4B544]/40"
-                                }`}
-                            >
-                                <span className="truncate">☕ Café Especial</span>
-                                <span className="font-bold shrink-0 text-[#F4B544]">+ R$ 6</span>
-                            </button>
+                    {/* Sugestão Inteligente Cruzada (Bebida <-> Salgado) */}
+                    {(() => {
+                        const isBeverage = (product.category_id === 'c6666666-6666-6666-6666-666666666666' ||
+                            (product.name || '').toLowerCase().includes('coca') ||
+                            (product.name || '').toLowerCase().includes('café') ||
+                            (product.name || '').toLowerCase().includes('suco') ||
+                            (product.name || '').toLowerCase().includes('refrigerante') ||
+                            (product.name || '').toLowerCase().includes('água'));
 
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const refriItem = { name: "Coca-Cola Lata Gelada", price: 6.50, category: "bebidas" };
-                                    setSelectedAdditionals(prev => {
-                                        const exists = prev.find(a => a.name === refriItem.name);
-                                        return exists ? prev.filter(a => a.name !== refriItem.name) : [...prev, refriItem];
-                                    });
-                                }}
-                                className={`p-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${
-                                    selectedAdditionals.find(a => a.name === "Coca-Cola Lata Gelada")
-                                        ? "border-[#F4B544] bg-[#171612] text-[#F4B544]"
-                                        : "border-[#F4B544]/15 bg-[#10100F] text-[#FFFAF0] hover:border-[#F4B544]/40"
-                                }`}
-                            >
-                                <span className="truncate">🥤 Coca-Cola Lata</span>
-                                <span className="font-bold shrink-0 text-[#F4B544]">+ R$ 6,50</span>
-                            </button>
-                        </div>
-                    </div>
+                        const suggestions = isBeverage ? [
+                            { name: "Coxinha Cremosa de Frango", price: 9.90, category: "salgados", icon: "🥟", label: "Coxinha Cremosa" },
+                            { name: "Joelhinho de Presunto e Queijo", price: 9.90, category: "salgados", icon: "🥐", label: "Joelhinho Assado" }
+                        ] : [
+                            { name: "Café Especial JOHB", price: 6.00, category: "bebidas", icon: "☕", label: "Café Especial" },
+                            { name: "Coca-Cola Lata Gelada", price: 6.50, category: "bebidas", icon: "🥤", label: "Coca-Cola Lata" }
+                        ];
+
+                        const suggestionTitle = isBeverage
+                            ? "🥐 Que tal um salgado quentinho para acompanhar?"
+                            : "☕ Que tal acompanhar uma bebida gelada?";
+
+                        return (
+                            <div className="p-3.5 rounded-xl bg-[#050505] border border-[#F4B544]/20 space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#F4B544] flex items-center gap-1.5">
+                                        <span>{isBeverage ? "🥐" : "☕"}</span> {suggestionTitle}
+                                    </span>
+                                    <span className="text-[10px] text-[#B8B1A3] bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                                        Opcional
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {suggestions.map((sug) => {
+                                        const isSelected = !!selectedAdditionals.find(a => a.name === sug.name);
+                                        return (
+                                            <button
+                                                key={sug.name}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedAdditionals(prev => {
+                                                        const exists = prev.find(a => a.name === sug.name);
+                                                        return exists ? prev.filter(a => a.name !== sug.name) : [...prev, { name: sug.name, price: sug.price, category: sug.category }];
+                                                    });
+                                                }}
+                                                className={`p-2.5 rounded-lg border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${isSelected
+                                                        ? "border-[#F4B544] bg-[#171612] text-[#F4B544] font-bold shadow-sm"
+                                                        : "border-[#F4B544]/15 bg-[#10100F] text-[#FFFAF0] hover:border-[#F4B544]/40"
+                                                    }`}
+                                            >
+                                                <span className="truncate">{sug.icon} {sug.label}</span>
+                                                <span className="font-bold shrink-0 text-[#F4B544]">+ R$ {sug.price.toFixed(2).replace(".", ",")}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     <div className="pt-2 border-t border-[#F4B544]/15">
                         <textarea
@@ -419,7 +430,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         <button
                             type="button"
                             onClick={validateAndAdd}
-                            className="flex-1 py-3 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-between gold-glow"
+                            className="flex-1 py-3 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-between gold-glow cursor-pointer"
                         >
                             <span>Adicionar ao Pedido</span>
                             <span>R$ {totalPrice.toFixed(2).replace(".", ",")}</span>
@@ -433,6 +444,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
 
 function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout, deliverySettings }) {
     const { scheduledDate, scheduledTime, setScheduleInfo } = useCart();
+    const [scheduleMode, setScheduleMode] = useState(scheduledDate ? "agendado" : "imediato");
 
     const minFreeDelivery = Number(deliverySettings?.min_free_delivery) || 0;
     const isFreeDelivery = minFreeDelivery > 0 && total >= minFreeDelivery;
@@ -454,6 +466,7 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
 
     // Slots de horário para a data selecionada
     const timeSlots = useMemo(() => {
+        if (!selDate) return [];
         return getAvailableTimeSlots(selDate, deliverySettings);
     }, [selDate, deliverySettings]);
 
@@ -464,6 +477,15 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
         }
         return timeSlots[0] || "";
     }, [scheduledTime, timeSlots]);
+
+    const handleAdvance = () => {
+        if (scheduleMode === "agendado" && selDate && selTime) {
+            setScheduleInfo(selDate, selTime);
+        } else {
+            setScheduleInfo("", "");
+        }
+        onCheckout();
+    };
 
     if (items.length === 0) {
         return (
@@ -497,11 +519,10 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
 
                     <div className="w-full h-2 bg-[#1A1A1A] rounded-full overflow-hidden border border-white/5">
                         <div
-                            className={`h-full transition-all duration-500 rounded-full ${
-                                isFreeDelivery 
-                                    ? "bg-gradient-to-r from-emerald-400 to-[#F4B544]" 
+                            className={`h-full transition-all duration-500 rounded-full ${isFreeDelivery
+                                    ? "bg-gradient-to-r from-emerald-400 to-[#F4B544]"
                                     : "bg-gradient-to-r from-[#F4B544] to-[#C88A24]"
-                            }`}
+                                }`}
                             style={{ width: `${progressPercent}%` }}
                         />
                     </div>
@@ -537,53 +558,105 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
                 })}
             </div>
 
-            {/* Bloco de Escolha do Horário de Agendamento */}
+            {/* Bloco de Escolha do Horário / Opção de Pular */}
             <div className="p-4 bg-[#050505] border border-[#F4B544]/30 rounded-2xl space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-[#F4B544] uppercase tracking-wider">
-                    <Clock className="w-4 h-4 text-[#F4B544]" />
-                    <span>Horário do Pedido Agendado</span>
-                </div>
-
-                {/* Seleção da Data */}
-                <div>
-                    <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Data Desejada:</label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                        {availableDates.slice(0, 3).map(d => (
-                            <button
-                                key={d.value}
-                                type="button"
-                                onClick={() => setScheduleInfo(d.value, selTime)}
-                                className={`py-2 px-2 text-[11px] font-extrabold rounded-xl border transition-all ${
-                                    selDate === d.value
-                                        ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black border-[#F4B544]"
-                                        : "bg-[#10100F] text-[#B8B1A3] border-white/10 hover:border-white/30"
-                                }`}
-                            >
-                                {d.label}
-                            </button>
-                        ))}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#F4B544] uppercase tracking-wider">
+                        <Clock className="w-4 h-4 text-[#F4B544]" />
+                        <span>Quando deseja receber?</span>
                     </div>
                 </div>
 
-                {/* Seleção da Faixa de Horário */}
-                <div>
-                    <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Horário de Entrega/Retirada:</label>
-                    {timeSlots.length > 0 ? (
-                        <select
-                            value={selTime}
-                            onChange={e => setScheduleInfo(selDate, e.target.value)}
-                            className="w-full bg-[#10100F] text-[#FFFAF0] border border-[#F4B544]/30 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#F4B544]"
-                        >
-                            {timeSlots.map(t => (
-                                <option key={t} value={t}>{t} hs</option>
-                            ))}
-                        </select>
-                    ) : (
-                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px]">
-                            Horários para hoje encerrados ou dentro da antecedência mínima. Por favor, selecione <strong>Amanhã</strong> ou outra data.
-                        </div>
-                    )}
+                {/* Abas Imediato vs Agendado */}
+                <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#10100F] border border-[#F4B544]/15">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setScheduleMode("imediato");
+                            setScheduleInfo("", "");
+                        }}
+                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${scheduleMode === "imediato"
+                                ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
+                                : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                            }`}
+                    >
+                        <span>⚡ O quanto antes</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setScheduleMode("agendado");
+                            setScheduleInfo(selDate, selTime);
+                        }}
+                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${scheduleMode === "agendado"
+                                ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
+                                : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                            }`}
+                    >
+                        <span>📅 Agendar Horário</span>
+                    </button>
                 </div>
+
+                {scheduleMode === "imediato" ? (
+                    <div className="p-3 rounded-xl bg-[#10100F] border border-[#F4B544]/15 text-xs text-[#B8B1A3] flex items-center justify-between">
+                        <span>Preparado e entregue na sequência.</span>
+                        <span className="text-[11px] font-bold text-[#F4B544]">Pular agendamento ✓</span>
+                    </div>
+                ) : (
+                    <div className="space-y-3 pt-1">
+                        {/* Seleção da Data */}
+                        <div>
+                            <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Data Desejada:</label>
+                            <div className="grid grid-cols-3 gap-1.5">
+                                {availableDates.slice(0, 3).map(d => (
+                                    <button
+                                        key={d.value}
+                                        type="button"
+                                        onClick={() => setScheduleInfo(d.value, selTime)}
+                                        className={`py-2 px-2 text-[11px] font-extrabold rounded-xl border transition-all cursor-pointer ${selDate === d.value
+                                                ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black border-[#F4B544]"
+                                                : "bg-[#10100F] text-[#B8B1A3] border-white/10 hover:border-white/30"
+                                            }`}
+                                    >
+                                        {d.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Seleção da Faixa de Horário */}
+                        <div>
+                            <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Horário de Entrega/Retirada:</label>
+                            {timeSlots.length > 0 ? (
+                                <select
+                                    value={selTime}
+                                    onChange={e => setScheduleInfo(selDate, e.target.value)}
+                                    className="w-full bg-[#10100F] text-[#FFFAF0] border border-[#F4B544]/30 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#F4B544] cursor-pointer"
+                                >
+                                    {timeSlots.map(t => (
+                                        <option key={t} value={t}>{t} hs</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] space-y-2">
+                                    <div>
+                                        Horários para hoje encerrados ou dentro da antecedência mínima. Por favor, selecione <strong>Amanhã</strong> ou clique abaixo para pedir agora.
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setScheduleMode("imediato");
+                                            setScheduleInfo("", "");
+                                        }}
+                                        className="text-xs font-bold text-[#F4B544] underline hover:text-[#FFC85C] block cursor-pointer"
+                                    >
+                                        👉 Pular agendamento e pedir o quanto antes
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Subtotal e Ação de Checkout */}
@@ -593,11 +666,9 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
                     <span className="text-[#F4B544] font-serif text-lg">R$ {total.toFixed(2)}</span>
                 </div>
                 <button
-                    onClick={() => {
-                        setScheduleInfo(selDate, selTime);
-                        onCheckout();
-                    }}
-                    className="w-full py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-extrabold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all gold-glow flex items-center justify-center gap-2"
+                    type="button"
+                    onClick={handleAdvance}
+                    className="w-full py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-extrabold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all gold-glow flex items-center justify-center gap-2 cursor-pointer shadow-lg"
                 >
                     <span>Avançar para Checkout</span>
                     <ChevronRight className="w-4 h-4" />
@@ -735,7 +806,7 @@ export default function MenuPage() {
 
         if (search) {
             const query = search.toLowerCase();
-            result = result.filter(p => 
+            result = result.filter(p =>
                 p.name.toLowerCase().includes(query) ||
                 p.description?.toLowerCase().includes(query)
             );
@@ -843,11 +914,10 @@ export default function MenuPage() {
                                 <button
                                     key={menu.id}
                                     onClick={() => handleSelectMenu(menu.id)}
-                                    className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap shadow-md ${
-                                        isSelected
+                                    className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap shadow-md ${isSelected
                                             ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-[#050505] shadow-[#F4B544]/20 scale-105"
                                             : "bg-[#10100F] text-[#B8B1A3] border border-[#F4B544]/20 hover:border-[#F4B544]/50 hover:text-[#FFFAF0] hover:bg-[#171612]"
-                                    }`}
+                                        }`}
                                 >
                                     <span>{cleanMenuName}</span>
                                 </button>
