@@ -559,105 +559,114 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
             </div>
 
             {/* Bloco de Escolha do Horário / Opção de Pular */}
-            <div className="p-4 bg-[#050505] border border-[#F4B544]/30 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#F4B544] uppercase tracking-wider">
-                        <Clock className="w-4 h-4 text-[#F4B544]" />
-                        <span>Quando deseja receber?</span>
+            {deliverySettings?.allow_immediate_orders !== false || deliverySettings?.allow_scheduled_orders !== false ? (
+                <div className="p-4 bg-[#050505] border border-[#F4B544]/30 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-[#F4B544] uppercase tracking-wider">
+                            <Clock className="w-4 h-4 text-[#F4B544]" />
+                            <span>Quando deseja receber?</span>
+                        </div>
                     </div>
-                </div>
 
-                {/* Abas Imediato vs Agendado */}
-                <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#10100F] border border-[#F4B544]/15">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setScheduleMode("imediato");
-                            setScheduleInfo("", "");
-                        }}
-                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${scheduleMode === "imediato"
-                                ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
-                                : "text-[#B8B1A3] hover:text-[#FFFAF0]"
-                            }`}
-                    >
-                        <span>⚡ O quanto antes</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setScheduleMode("agendado");
-                            setScheduleInfo(selDate, selTime);
-                        }}
-                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${scheduleMode === "agendado"
-                                ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
-                                : "text-[#B8B1A3] hover:text-[#FFFAF0]"
-                            }`}
-                    >
-                        <span>📅 Agendar Horário</span>
-                    </button>
-                </div>
+                    {/* Abas Imediato vs Agendado (se ambos permitidos) */}
+                    {deliverySettings?.allow_immediate_orders !== false && deliverySettings?.allow_scheduled_orders !== false && (
+                        <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#10100F] border border-[#F4B544]/15">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setScheduleMode("imediato");
+                                    setScheduleInfo("", "");
+                                }}
+                                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    scheduleMode === "imediato"
+                                        ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
+                                        : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                                }`}
+                            >
+                                <span>⚡ O quanto antes</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setScheduleMode("agendado");
+                                    setScheduleInfo(selDate, selTime);
+                                }}
+                                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    scheduleMode === "agendado"
+                                        ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
+                                        : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                                }`}
+                            >
+                                <span>📅 Agendar Horário</span>
+                            </button>
+                        </div>
+                    )}
 
-                {scheduleMode === "imediato" ? (
-                    <div className="p-3 rounded-xl bg-[#10100F] border border-[#F4B544]/15 text-xs text-[#B8B1A3] flex items-center justify-between">
-                        <span>Preparado e entregue na sequência.</span>
-                        <span className="text-[11px] font-bold text-[#F4B544]">Pular agendamento ✓</span>
-                    </div>
-                ) : (
-                    <div className="space-y-3 pt-1">
-                        {/* Seleção da Data */}
-                        <div>
-                            <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Data Desejada:</label>
-                            <div className="grid grid-cols-3 gap-1.5">
-                                {availableDates.slice(0, 3).map(d => (
-                                    <button
-                                        key={d.value}
-                                        type="button"
-                                        onClick={() => setScheduleInfo(d.value, selTime)}
-                                        className={`py-2 px-2 text-[11px] font-extrabold rounded-xl border transition-all cursor-pointer ${selDate === d.value
-                                                ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black border-[#F4B544]"
-                                                : "bg-[#10100F] text-[#B8B1A3] border-white/10 hover:border-white/30"
+                    {scheduleMode === "imediato" && deliverySettings?.allow_immediate_orders !== false ? (
+                        <div className="p-3 rounded-xl bg-[#10100F] border border-[#F4B544]/15 text-xs text-[#B8B1A3] flex items-center justify-between">
+                            <span>Preparado e entregue na sequência do pedido.</span>
+                            <span className="text-[11px] font-bold text-[#F4B544]">⚡ Envio imediato</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-3 pt-1">
+                            {/* Seleção da Data */}
+                            <div>
+                                <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Data Desejada:</label>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    {availableDates.slice(0, 3).map(d => (
+                                        <button
+                                            key={d.value}
+                                            type="button"
+                                            onClick={() => setScheduleInfo(d.value, selTime)}
+                                            className={`py-2 px-2 text-[11px] font-extrabold rounded-xl border transition-all cursor-pointer ${
+                                                selDate === d.value
+                                                    ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black border-[#F4B544]"
+                                                    : "bg-[#10100F] text-[#B8B1A3] border-white/10 hover:border-white/30"
                                             }`}
+                                        >
+                                            {d.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Seleção da Faixa de Horário */}
+                            <div>
+                                <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Horário de Entrega/Retirada:</label>
+                                {timeSlots.length > 0 ? (
+                                    <select
+                                        value={selTime}
+                                        onChange={e => setScheduleInfo(selDate, e.target.value)}
+                                        className="w-full bg-[#10100F] text-[#FFFAF0] border border-[#F4B544]/30 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#F4B544] cursor-pointer"
                                     >
-                                        {d.label}
-                                    </button>
-                                ))}
+                                        {timeSlots.map(t => (
+                                            <option key={t} value={t}>{t} hs</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] space-y-2">
+                                        <div>
+                                            Horários para hoje encerrados ou dentro da antecedência mínima. Por favor, selecione <strong>Amanhã</strong> ou clique abaixo para pedir agora.
+                                        </div>
+                                        {deliverySettings?.allow_immediate_orders !== false && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setScheduleMode("imediato");
+                                                    setScheduleInfo("", "");
+                                                }}
+                                                className="text-xs font-bold text-[#F4B544] underline hover:text-[#FFC85C] block cursor-pointer"
+                                            >
+                                                👉 Pular agendamento e pedir o quanto antes
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
-
-                        {/* Seleção da Faixa de Horário */}
-                        <div>
-                            <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Horário de Entrega/Retirada:</label>
-                            {timeSlots.length > 0 ? (
-                                <select
-                                    value={selTime}
-                                    onChange={e => setScheduleInfo(selDate, e.target.value)}
-                                    className="w-full bg-[#10100F] text-[#FFFAF0] border border-[#F4B544]/30 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#F4B544] cursor-pointer"
-                                >
-                                    {timeSlots.map(t => (
-                                        <option key={t} value={t}>{t} hs</option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] space-y-2">
-                                    <div>
-                                        Horários para hoje encerrados ou dentro da antecedência mínima. Por favor, selecione <strong>Amanhã</strong> ou clique abaixo para pedir agora.
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setScheduleMode("imediato");
-                                            setScheduleInfo("", "");
-                                        }}
-                                        className="text-xs font-bold text-[#F4B544] underline hover:text-[#FFC85C] block cursor-pointer"
-                                    >
-                                        👉 Pular agendamento e pedir o quanto antes
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            ) : null}
 
             {/* Subtotal e Ação de Checkout */}
             <div className="pt-2 border-t border-[#F4B544]/15 space-y-3">

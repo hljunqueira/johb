@@ -259,6 +259,10 @@ export default function AdminDeliveryPage() {
 
             {activeTab === "payment" && (
                 <PaymentTab 
+                    settings={settings}
+                    setSettings={setSettings}
+                    saveDelivery={saveDelivery}
+                    loading={loading}
                     pixSettings={pixSettings}
                     setPixSettings={setPixSettings}
                     uploadingQr={uploadingQr}
@@ -502,35 +506,83 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
                 </div>
             )}
 
-            {/* Configurações de Antecedência de Agendamento */}
-            <div className="p-5 bg-[#1E1E1E] border border-[#F4B544]/20 rounded-2xl space-y-4">
-                <p className="text-xs uppercase tracking-wider font-extrabold text-[#F4B544]">Regras de Agendamento Prévio</p>
+            {/* Configurações de Modos de Pedido e Agendamento */}
+            <div className="p-5 bg-[#1E1E1E] border border-[#F4B544]/20 rounded-2xl space-y-5">
+                <div>
+                    <p className="text-xs uppercase tracking-wider font-extrabold text-[#F4B544]">Modos de Pedido & Agendamento</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Defina como os clientes podem solicitar os pedidos no cardápio</p>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <Label className="text-xs font-bold text-gray-300">Antecedência Mínima (Horas)</Label>
-                        <Input 
-                            type="number" 
-                            min="1" 
-                            max="72"
-                            value={settings.min_lead_hours ?? 8}
-                            onChange={e => setSettings(s => ({ ...s, min_lead_hours: parseInt(e.target.value) || 8 }))}
-                            className="mt-1 rounded-xl bg-[#10100F] text-white border-white/10 focus:border-[#F4B544]"
+                    {/* Toggle Pedidos Imediatos */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-[#141414] border border-white/10">
+                        <div className="space-y-0.5 pr-2">
+                            <span className="text-sm font-bold text-white block">⚡ Pedidos Imediatos</span>
+                            <span className="text-[11px] text-gray-400 block">Opção "O quanto antes" para preparo e envio na sequência.</span>
+                        </div>
+                        <Switch 
+                            checked={settings.allow_immediate_orders !== false} 
+                            onCheckedChange={v => setSettings(s => ({ ...s, allow_immediate_orders: v }))} 
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">Tempo de antecedência mínimo exigido para o preparo (ex: 8h = 1 dia/noite antes)</p>
                     </div>
-                    <div>
-                        <Label className="text-xs font-bold text-gray-300">Limite de Dias no Futuro</Label>
-                        <Input 
-                            type="number" 
-                            min="1" 
-                            max="30"
-                            value={settings.max_schedule_days ?? 7}
-                            onChange={e => setSettings(s => ({ ...s, max_schedule_days: parseInt(e.target.value) || 7 }))}
-                            className="mt-1 rounded-xl bg-[#10100F] text-white border-white/10 focus:border-[#F4B544]"
+
+                    {/* Toggle Pedidos Agendados */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-[#141414] border border-white/10">
+                        <div className="space-y-0.5 pr-2">
+                            <span className="text-sm font-bold text-white block">📅 Pedidos Agendados</span>
+                            <span className="text-[11px] text-gray-400 block">Permite agendar data e horário futuro de entrega/retirada.</span>
+                        </div>
+                        <Switch 
+                            checked={settings.allow_scheduled_orders !== false} 
+                            onCheckedChange={v => setSettings(s => ({ ...s, allow_scheduled_orders: v }))} 
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">Até quantos dias pra frente o cliente pode escolher a data do pedido</p>
                     </div>
                 </div>
+
+                {settings.allow_scheduled_orders !== false && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/10">
+                        <div>
+                            <Label className="text-xs font-bold text-gray-300">Antecedência Mínima para Agendamento</Label>
+                            <div className="grid grid-cols-3 gap-1.5 mt-2">
+                                {[
+                                    { value: 0.5, label: "30 min" },
+                                    { value: 1.0, label: "1 hora" },
+                                    { value: 2.0, label: "2 horas" },
+                                    { value: 4.0, label: "4 horas" },
+                                    { value: 8.0, label: "8 horas" },
+                                    { value: 24.0, label: "1 dia" }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => setSettings(s => ({ ...s, min_lead_hours: opt.value }))}
+                                        className={`py-2 px-2 text-xs font-bold rounded-xl border transition-all ${
+                                            Number(settings.min_lead_hours ?? 0.5) === opt.value
+                                                ? "bg-[#F4B544] text-black border-[#F4B544] shadow-md font-extrabold"
+                                                : "bg-[#141414] text-gray-300 border-white/10 hover:border-white/30"
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-1.5">Tempo mínimo que a cozinha precisa antes do horário agendado.</p>
+                        </div>
+
+                        <div>
+                            <Label className="text-xs font-bold text-gray-300">Limite de Dias no Futuro</Label>
+                            <Input 
+                                type="number" 
+                                min="1" 
+                                max="30"
+                                value={settings.max_schedule_days ?? 7}
+                                onChange={e => setSettings(s => ({ ...s, max_schedule_days: parseInt(e.target.value) || 7 }))}
+                                className="mt-2 rounded-xl bg-[#141414] text-white border-white/10 focus:border-[#F4B544]"
+                            />
+                            <p className="text-[10px] text-gray-400 mt-1">Até quantos dias pra frente o cliente pode agendar.</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="space-y-3">
@@ -562,115 +614,191 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
             </div>
 
             <Button onClick={saveDelivery} disabled={loading} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all">
-                <Save className="h-5 w-5 mr-2" /> Salvar Horários de Funcionamento
+                <Save className="h-5 w-5 mr-2" /> Salvar Horários e Agendamento
             </Button>
         </div>
     );
 }
 
 /* ==================== PAYMENT TAB ==================== */
-function PaymentTab({ pixSettings, setPixSettings, uploadingQr, savePix, handleQrUpload }) {
+function PaymentTab({ settings, setSettings, saveDelivery, loading, pixSettings, setPixSettings, uploadingQr, savePix, handleQrUpload }) {
     return (
-        <div className="bg-[#141414] text-white rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl">
-            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
-                <DollarSign className="h-6 w-6 text-[#F4B544]" />
-                <h2 className="font-extrabold text-white text-xl">Configurações PIX</h2>
-            </div>
-
-            {/* Tipo de chave */}
-            <div>
-                <Label className="text-sm font-semibold text-gray-300">Tipo de chave Pix</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                    {PIX_KEY_TYPES.map(t => (
-                        <button key={t.value} type="button"
-                            onClick={() => setPixSettings(s => ({ ...s, pix_key_type: t.value }))}
-                            className={`px-4 py-2 rounded-xl text-xs font-extrabold border transition-all ${
-                                pixSettings.pix_key_type === t.value
-                                    ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black border-[#F4B544] shadow-md"
-                                    : "bg-[#1E1E1E] text-gray-300 border-white/10 hover:border-white/30"
-                            }`}>
-                            {t.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Chave */}
-            <div>
-                <Label className="text-sm font-semibold text-gray-300">Chave Pix</Label>
-                <Input value={pixSettings.pix_key}
-                    onChange={e => setPixSettings(s => ({ ...s, pix_key: e.target.value }))}
-                    placeholder={
-                        pixSettings.pix_key_type === "cpf" ? "000.000.000-00" :
-                        pixSettings.pix_key_type === "cnpj" ? "00.000.000/0000-00" :
-                        pixSettings.pix_key_type === "email" ? "seuemail@exemplo.com" :
-                        pixSettings.pix_key_type === "telefone" ? "+55 (00) 00000-0000" :
-                        "Chave aleatória (UUID)"
-                    }
-                    className="mt-1.5 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="pix-key" />
-            </div>
-
-            {/* Nome */}
-            <div>
-                <Label className="text-sm font-semibold text-gray-300">Nome do titular</Label>
-                <Input value={pixSettings.pix_name}
-                    onChange={e => setPixSettings(s => ({ ...s, pix_name: e.target.value }))}
-                    placeholder="Nome que aparece no recebedor do Pix" className="mt-1.5 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="pix-name" />
-            </div>
-
-            {/* QR Code */}
-            <div>
-                <Label className="text-sm font-semibold text-gray-300">QR Code Pix</Label>
-                {pixSettings.qr_code_url ? (
-                    <div className="mt-2 flex items-start gap-4 p-4 bg-[#1E1E1E] border border-white/10 rounded-2xl">
-                        <div className="relative inline-block">
-                            <img src={pixSettings.qr_code_url} alt="QR Code Pix" className="h-32 w-32 rounded-xl object-contain border p-1 bg-white" />
-                            <button type="button" onClick={() => setPixSettings(s => ({ ...s, qr_code_url: "" }))}
-                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition shadow-lg">
-                                <X className="h-4 w-4" />
-                            </button>
+        <div className="space-y-6">
+            {/* Formas de Pagamento Aceitas no Checkout */}
+            <div className="bg-[#141414] text-white rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl">
+                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        <DollarSign className="h-6 w-6 text-[#F4B544]" />
+                        <div>
+                            <h2 className="font-extrabold text-white text-xl">Formas de Pagamento Aceitas</h2>
+                            <p className="text-xs text-gray-400">Ative ou desative quais opções aparecem para o cliente no Checkout</p>
                         </div>
-                        <div className="flex-1 space-y-3">
-                            <p className="text-xs text-gray-400 font-semibold">Imagem atual do QR Code</p>
-                            <label className="cursor-pointer">
-                                <input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
-                                <Button type="button" variant="outline" size="sm" className="rounded-xl w-full border-white/10 bg-white/5 text-white hover:bg-white/10" disabled={uploadingQr} asChild>
-                                    <span><Upload className="h-4 w-4 mr-2" />{uploadingQr ? "Enviando..." : "Substituir imagem"}</span>
-                                </Button>
-                            </label>
-                            <div>
-                                <p className="text-xs text-gray-400 mb-1">Ou cole a URL:</p>
-                                <Input value={pixSettings.qr_code_url}
-                                    onChange={e => setPixSettings(s => ({ ...s, qr_code_url: e.target.value }))}
-                                    placeholder="https://..." className="rounded-xl bg-[#10100F] text-white border-white/10 text-xs" data-testid="pix-qr-url" />
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {/* Toggle: Pagamento Online Asaas */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-[#1E1E1E] border border-white/10 hover:border-[#F4B544]/30 transition-all">
+                        <div className="space-y-1 pr-4">
+                            <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-sm text-white">💳 Pagamento Online (Asaas - PIX & Cartão de Crédito)</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    Baixa Automática
+                                </span>
+                            </div>
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                O cliente paga online via PIX dinâmico (QR Code / Copia e Cola) ou Cartão. O pedido é confirmado automaticamente assim que o pagamento for liquidado.
+                            </p>
+                        </div>
+                        <Switch 
+                            checked={settings.accept_online_payment !== false} 
+                            onCheckedChange={v => setSettings(s => ({ ...s, accept_online_payment: v }))} 
+                        />
+                    </div>
+
+                    {/* Toggle: Cartão na Maquininha */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-[#1E1E1E] border border-white/10 hover:border-[#F4B544]/30 transition-all">
+                        <div className="space-y-1 pr-4">
+                            <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-sm text-white">📟 Cartão na Entrega / Retirada (Maquininha)</span>
+                            </div>
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                Pagamento com cartão de débito ou crédito presencial na maquininha levada pelo entregador ou no balcão.
+                            </p>
+                        </div>
+                        <Switch 
+                            checked={settings.accept_card_machine !== false} 
+                            onCheckedChange={v => setSettings(s => ({ ...s, accept_card_machine: v }))} 
+                        />
+                    </div>
+
+                    {/* Toggle: Dinheiro em Espécie */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-[#1E1E1E] border border-white/10 hover:border-[#F4B544]/30 transition-all">
+                        <div className="space-y-1 pr-4">
+                            <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-sm text-white">💵 Dinheiro em Espécie (com Troco)</span>
+                            </div>
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                Permite ao cliente pagar em dinheiro físico e solicitar troco para notas específicas durante a finalização.
+                            </p>
+                        </div>
+                        <Switch 
+                            checked={settings.accept_cash !== false} 
+                            onCheckedChange={v => setSettings(s => ({ ...s, accept_cash: v }))} 
+                        />
+                    </div>
+                </div>
+
+                <Button onClick={saveDelivery} disabled={loading} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all">
+                    <Save className="h-5 w-5 mr-2" /> Salvar Formas de Pagamento
+                </Button>
+            </div>
+
+            {/* Configurações de Chave Pix Manual */}
+            <div className="bg-[#141414] text-white rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl">
+                <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                    <QrCode className="h-6 w-6 text-[#F4B544]" />
+                    <div>
+                        <h2 className="font-extrabold text-white text-xl">Chave Pix Manual (Opcional)</h2>
+                        <p className="text-xs text-gray-400">Dados exibidos caso deseje disponibilizar uma chave Pix direta.</p>
+                    </div>
+                </div>
+
+                {/* Tipo de chave */}
+                <div>
+                    <Label className="text-sm font-semibold text-gray-300">Tipo de chave Pix</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {PIX_KEY_TYPES.map(t => (
+                            <button key={t.value} type="button"
+                                onClick={() => setPixSettings(s => ({ ...s, pix_key_type: t.value }))}
+                                className={`px-4 py-2 rounded-xl text-xs font-extrabold border transition-all ${
+                                    pixSettings.pix_key_type === t.value
+                                        ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black border-[#F4B544] shadow-md"
+                                        : "bg-[#1E1E1E] text-gray-300 border-white/10 hover:border-white/30"
+                                }`}>
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Chave */}
+                <div>
+                    <Label className="text-sm font-semibold text-gray-300">Chave Pix</Label>
+                    <Input value={pixSettings.pix_key}
+                        onChange={e => setPixSettings(s => ({ ...s, pix_key: e.target.value }))}
+                        placeholder={
+                            pixSettings.pix_key_type === "cpf" ? "000.000.000-00" :
+                            pixSettings.pix_key_type === "cnpj" ? "00.000.000/0000-00" :
+                            pixSettings.pix_key_type === "email" ? "seuemail@exemplo.com" :
+                            pixSettings.pix_key_type === "telefone" ? "+55 (00) 00000-0000" :
+                            "Chave aleatória (UUID)"
+                        }
+                        className="mt-1.5 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="pix-key" />
+                </div>
+
+                {/* Nome */}
+                <div>
+                    <Label className="text-sm font-semibold text-gray-300">Nome do titular</Label>
+                    <Input value={pixSettings.pix_name}
+                        onChange={e => setPixSettings(s => ({ ...s, pix_name: e.target.value }))}
+                        placeholder="Nome que aparece no recebedor do Pix" className="mt-1.5 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="pix-name" />
+                </div>
+
+                {/* QR Code */}
+                <div>
+                    <Label className="text-sm font-semibold text-gray-300">QR Code Pix</Label>
+                    {pixSettings.qr_code_url ? (
+                        <div className="mt-2 flex items-start gap-4 p-4 bg-[#1E1E1E] border border-white/10 rounded-2xl">
+                            <div className="relative inline-block">
+                                <img src={pixSettings.qr_code_url} alt="QR Code Pix" className="h-32 w-32 rounded-xl object-contain border p-1 bg-white" />
+                                <button type="button" onClick={() => setPixSettings(s => ({ ...s, qr_code_url: "" }))}
+                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition shadow-lg">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                            <div className="flex-1 space-y-3">
+                                <p className="text-xs text-gray-400 font-semibold">Imagem atual do QR Code</p>
+                                <label className="cursor-pointer">
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
+                                    <Button type="button" variant="outline" size="sm" className="rounded-xl w-full border-white/10 bg-white/5 text-white hover:bg-white/10" disabled={uploadingQr} asChild>
+                                        <span><Upload className="h-4 w-4 mr-2" />{uploadingQr ? "Enviando..." : "Substituir imagem"}</span>
+                                    </Button>
+                                </label>
+                                <div>
+                                    <p className="text-xs text-gray-400 mb-1">Ou cole a URL:</p>
+                                    <Input value={pixSettings.qr_code_url}
+                                        onChange={e => setPixSettings(s => ({ ...s, qr_code_url: e.target.value }))}
+                                        placeholder="https://..." className="rounded-xl bg-[#10100F] text-white border-white/10 text-xs" data-testid="pix-qr-url" />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ) : (
-                    <div className="mt-2 space-y-3">
-                        <label className="cursor-pointer flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-2xl p-6 hover:border-[#F4B544] hover:bg-white/5 transition-colors bg-[#1E1E1E]">
-                            <input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
-                            {uploadingQr ? (
-                                <><div className="h-8 w-8 rounded-full border-2 border-[#F4B544] border-t-transparent animate-spin" /><span className="text-sm text-gray-400 font-semibold">Enviando...</span></>
-                            ) : (
-                                <><QrCode className="h-8 w-8 text-[#F4B544]" /><span className="text-sm font-extrabold text-white">Clique para enviar a imagem do QR Code</span><span className="text-xs text-gray-400">PNG, JPG — máx. 2MB</span></>
-                            )}
-                        </label>
-                        <div className="flex items-center gap-2">
-                            <div className="h-px flex-1 bg-white/10" />
-                            <span className="text-xs text-gray-500 font-bold uppercase">ou</span>
-                            <div className="h-px flex-1 bg-white/10" />
+                    ) : (
+                        <div className="mt-2 space-y-3">
+                            <label className="cursor-pointer flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-2xl p-6 hover:border-[#F4B544] hover:bg-white/5 transition-colors bg-[#1E1E1E]">
+                                <input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
+                                {uploadingQr ? (
+                                    <><div className="h-8 w-8 rounded-full border-2 border-[#F4B544] border-t-transparent animate-spin" /><span className="text-sm text-gray-400 font-semibold">Enviando...</span></>
+                                ) : (
+                                    <><QrCode className="h-8 w-8 text-[#F4B544]" /><span className="text-sm font-extrabold text-white">Clique para enviar a imagem do QR Code</span><span className="text-xs text-gray-400">PNG, JPG — máx. 2MB</span></>
+                                )}
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <div className="h-px flex-1 bg-white/10" />
+                                <span className="text-xs text-gray-500 font-bold uppercase">ou</span>
+                                <div className="h-px flex-1 bg-white/10" />
+                            </div>
+                            <Input value={pixSettings.qr_code_url}
+                                onChange={e => setPixSettings(s => ({ ...s, qr_code_url: e.target.value }))}
+                                placeholder="Cole a URL da imagem do QR Code" className="rounded-xl bg-[#1E1E1E] text-white border-white/10 text-sm focus:border-[#F4B544]" data-testid="pix-qr-url" />
                         </div>
-                        <Input value={pixSettings.qr_code_url}
-                            onChange={e => setPixSettings(s => ({ ...s, qr_code_url: e.target.value }))}
-                            placeholder="Cole a URL da imagem do QR Code" className="rounded-xl bg-[#1E1E1E] text-white border-white/10 text-sm focus:border-[#F4B544]" data-testid="pix-qr-url" />
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
 
-            <Button onClick={savePix} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all" data-testid="save-pix-btn">
-                <Save className="h-5 w-5 mr-2" /> Salvar Configurações Pix
-            </Button>
+                <Button onClick={savePix} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all" data-testid="save-pix-btn">
+                    <Save className="h-5 w-5 mr-2" /> Salvar Chave Pix
+                </Button>
+            </div>
         </div>
     );
 }

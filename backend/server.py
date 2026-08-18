@@ -2242,10 +2242,10 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
                 "UPDATE delivery_settings SET restaurant_lat = NULL, restaurant_lng = NULL WHERE id = 1"
             )
         
-        # Garantir colunas de agendamento
+        # Garantir colunas de agendamento e formas de pagamento
         try:
             await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS min_lead_hours INT DEFAULT 8"
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS min_lead_hours NUMERIC(10,2) DEFAULT 0.5"
             )
             await conn.execute(
                 "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS max_schedule_days INT DEFAULT 7"
@@ -2253,29 +2253,51 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
             await conn.execute(
                 "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS allowed_schedule_days JSONB DEFAULT '[\"seg\",\"ter\",\"qua\",\"qui\",\"sex\",\"sab\",\"dom\"]'::jsonb"
             )
-        except Exception:
-            pass
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS accept_online_payment BOOLEAN DEFAULT TRUE"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS accept_card_machine BOOLEAN DEFAULT TRUE"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS accept_cash BOOLEAN DEFAULT TRUE"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS allow_immediate_orders BOOLEAN DEFAULT TRUE"
+            )
+            await conn.execute(
+                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS allow_scheduled_orders BOOLEAN DEFAULT TRUE"
+            )
+        except Exception as col_err:
+            logger.warning(f"Aviso ao garantir colunas em delivery_settings: {col_err}")
 
         row = await conn.fetchrow(
             """UPDATE delivery_settings SET 
                areas = $1, delivery_fee = $2, min_free_delivery = $3, active = $4, business_hours = $5,
                restaurant_address = $6, distance_rates = $7, max_delivery_distance = $8,
                always_open = $9, temporarily_closed = $10,
-               min_lead_hours = $11, max_schedule_days = $12, allowed_schedule_days = $13
+               min_lead_hours = $11, max_schedule_days = $12, allowed_schedule_days = $13,
+               accept_online_payment = $14, accept_card_machine = $15, accept_cash = $16,
+               allow_immediate_orders = $17, allow_scheduled_orders = $18
                WHERE id = 1 RETURNING *""",
             json.dumps(request.get('areas', [])),
-            request.get('delivery_fee', 5.0),
-            request.get('min_free_delivery', 50.0),
-            request.get('active', True),
+            float(request.get('delivery_fee', 5.0)),
+            float(request.get('min_free_delivery', 50.0)),
+            bool(request.get('active', True)),
             json.dumps(request.get('business_hours', {})),
             new_address,
             json.dumps(request.get('distance_rates', [])),
-            request.get('max_delivery_distance', 10.0),
-            request.get('always_open', False),
-            request.get('temporarily_closed', False),
-            int(request.get('min_lead_hours', 8)),
+            float(request.get('max_delivery_distance', 10.0)),
+            bool(request.get('always_open', False)),
+            bool(request.get('temporarily_closed', False)),
+            float(request.get('min_lead_hours', 0.5)),
             int(request.get('max_schedule_days', 7)),
-            json.dumps(request.get('allowed_schedule_days', ["seg","ter","qua","qui","sex","sab","dom"]))
+            json.dumps(request.get('allowed_schedule_days', ["seg","ter","qua","qui","sex","sab","dom"])),
+            bool(request.get('accept_online_payment', True)),
+            bool(request.get('accept_card_machine', True)),
+            bool(request.get('accept_cash', True)),
+            bool(request.get('allow_immediate_orders', True)),
+            bool(request.get('allow_scheduled_orders', True))
         )
         return dict(row) if row else None
 

@@ -89,6 +89,14 @@ export default function CheckoutPage() {
                 if (data.active === false) {
                     setDeliveryType("retirada");
                 }
+                // Definir forma de pagamento padrão baseada nas opções ativas no Admin
+                if (data.accept_online_payment !== false) {
+                    setPaymentMethod("asaas");
+                } else if (data.accept_card_machine !== false) {
+                    setPaymentMethod("cartao_maquininha");
+                } else if (data.accept_cash !== false) {
+                    setPaymentMethod("dinheiro");
+                }
             })
             .catch(err => {
                 console.warn("Erro ao carregar configurações de entrega:", err);
@@ -523,70 +531,84 @@ export default function CheckoutPage() {
 
                             <div className="space-y-2.5">
                                 {/* Opção 1: Asaas (Online) */}
-                                <button
-                                    type="button"
-                                    onClick={() => setPaymentMethod("asaas")}
-                                    className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
-                                        paymentMethod === "asaas"
-                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
-                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
-                                            <QrCode className="w-5 h-5" />
+                                {deliverySettings?.accept_online_payment !== false && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod("asaas")}
+                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
+                                            paymentMethod === "asaas"
+                                                ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
+                                                : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
+                                                <QrCode className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <span className="block font-semibold text-sm text-[#FFFAF0]">Pagamento Online (PIX / Cartão)</span>
+                                                <span className="block text-xs text-[#B8B1A3]">Liberação instantânea via Asaas</span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className="block font-semibold text-sm text-[#FFFAF0]">Pagamento Online (PIX / Cartão)</span>
-                                            <span className="block text-xs text-[#B8B1A3]">Liberação instantânea via Asaas</span>
-                                        </div>
-                                    </div>
-                                    {paymentMethod === "asaas" && <Check className="w-5 h-5 text-[#F4B544]" />}
-                                </button>
+                                        {paymentMethod === "asaas" && <Check className="w-5 h-5 text-[#F4B544]" />}
+                                    </button>
+                                )}
 
                                 {/* Opção 2: Maquininha na Entrega */}
-                                <button
-                                    type="button"
-                                    onClick={() => setPaymentMethod("cartao_maquininha")}
-                                    className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
-                                        paymentMethod === "cartao_maquininha"
-                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
-                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
-                                            <CreditCard className="w-5 h-5" />
+                                {deliverySettings?.accept_card_machine !== false && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod("cartao_maquininha")}
+                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
+                                            paymentMethod === "cartao_maquininha"
+                                                ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
+                                                : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
+                                                <CreditCard className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <span className="block font-semibold text-sm text-[#FFFAF0]">Cartão na Entrega / Retirada</span>
+                                                <span className="block text-xs text-[#B8B1A3]">Débito ou Crédito na maquininha</span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className="block font-semibold text-sm text-[#FFFAF0]">Cartão na Entrega / Retirada</span>
-                                            <span className="block text-xs text-[#B8B1A3]">Débito ou Crédito na maquininha</span>
-                                        </div>
-                                    </div>
-                                    {paymentMethod === "cartao_maquininha" && <Check className="w-5 h-5 text-[#F4B544]" />}
-                                </button>
+                                        {paymentMethod === "cartao_maquininha" && <Check className="w-5 h-5 text-[#F4B544]" />}
+                                    </button>
+                                )}
 
                                 {/* Opção 3: Dinheiro com Troco */}
-                                <button
-                                    type="button"
-                                    onClick={() => setPaymentMethod("dinheiro")}
-                                    className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
-                                        paymentMethod === "dinheiro"
-                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
-                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
-                                            <Banknote className="w-5 h-5" />
+                                {deliverySettings?.accept_cash !== false && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod("dinheiro")}
+                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
+                                            paymentMethod === "dinheiro"
+                                                ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
+                                                : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
+                                                <Banknote className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <span className="block font-semibold text-sm text-[#FFFAF0]">Dinheiro</span>
+                                                <span className="block text-xs text-[#B8B1A3]">Pagamento em espécie</span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className="block font-semibold text-sm text-[#FFFAF0]">Dinheiro</span>
-                                            <span className="block text-xs text-[#B8B1A3]">Pagamento em espécie</span>
-                                        </div>
+                                        {paymentMethod === "dinheiro" && <Check className="w-5 h-5 text-[#F4B544]" />}
+                                    </button>
+                                )}
+
+                                {deliverySettings?.accept_online_payment === false && 
+                                 deliverySettings?.accept_card_machine === false && 
+                                 deliverySettings?.accept_cash === false && (
+                                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                                        Nenhuma forma de pagamento configurada. Por favor, entre em contato via WhatsApp.
                                     </div>
-                                    {paymentMethod === "dinheiro" && <Check className="w-5 h-5 text-[#F4B544]" />}
-                                </button>
+                                )}
 
                                 {paymentMethod === "dinheiro" && (
                                     <div className="p-4 rounded-xl bg-[#050505] border border-[#F4B544]/30 space-y-3 mt-2 animate-in fade-in">

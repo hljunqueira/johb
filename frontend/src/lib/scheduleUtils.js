@@ -72,7 +72,7 @@ export function getAvailableTimeSlots(selectedDateStr, deliverySettings) {
 
     const businessHours = deliverySettings?.business_hours || {};
     const alwaysOpen = Boolean(deliverySettings?.always_open);
-    const minLeadHours = Number(deliverySettings?.min_lead_hours ?? 4);
+    const minLeadHours = Number(deliverySettings?.min_lead_hours ?? 0.5);
 
     const [year, month, day] = selectedDateStr.split('-').map(Number);
     const targetDate = new Date(year, month - 1, day);
