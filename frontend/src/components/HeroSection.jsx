@@ -75,8 +75,8 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
 
                         {/* Conteúdo do Banner */}
                         <div className="relative z-10 max-w-2xl p-6 sm:p-12 space-y-4">
-                            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#F4B544]/20 border border-[#F4B544]/40 text-xs font-bold text-[#F4B544] uppercase tracking-wider">
-                                <Sparkles className="w-3.5 h-3.5" /> Destaque Especial JOHB
+                            <span className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#F4B544]/20 border border-[#F4B544]/40 text-xs font-bold text-[#F4B544] uppercase tracking-wider">
+                                Destaque Especial JOHB
                             </span>
 
                             <h1 className="font-serif text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#FFFAF0] leading-tight">
@@ -212,8 +212,7 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                             
                             {/* Badge elegante no rodapé do vídeo */}
                             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none">
-                                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#10100F]/90 border border-[#F4B544]/30 backdrop-blur-md text-xs font-bold text-[#F4B544] shadow-lg">
-                                    <Sparkles className="w-3.5 h-3.5" />
+                                <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#10100F]/90 border border-[#F4B544]/30 backdrop-blur-md text-xs font-bold text-[#F4B544] shadow-lg">
                                     <span>Salgados Frescos & Artesanais</span>
                                 </div>
                             </div>

@@ -110,8 +110,7 @@ export default function OrderConfirmationPage() {
                 {!isCancelled ? (
                     <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/30 gold-glow-sm">
                         <div className="text-center space-y-1 mb-6">
-                            <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold flex items-center justify-center gap-1.5">
-                                <Sparkles className="w-3.5 h-3.5" />
+                            <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold flex items-center justify-center">
                                 <span>Acompanhamento ao Vivo</span>
                             </span>
                             <h2 className="font-serif text-2xl font-bold text-[#FFFAF0]">
@@ -320,7 +319,6 @@ export default function OrderConfirmationPage() {
                                 disabled={rating === 0}
                                 className="w-full py-3 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg gold-glow flex items-center justify-center gap-2 cursor-pointer"
                             >
-                                <Sparkles className="w-4 h-4" />
                                 <span>{rating > 0 ? "Enviar Minha Avaliação" : "Selecione as estrelas para avaliar"}</span>
                             </button>
                         </form>

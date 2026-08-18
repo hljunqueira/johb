@@ -905,10 +905,9 @@ export default function MenuPage() {
                         </div>
                     ) : (
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1.5 text-[#F4B544] font-bold text-xs sm:text-sm">
-                                <Sparkles className="w-4 h-4 text-[#F4B544]" />
-                                <span>Salgados Frescos & Artesanais</span>
-                            </div>
+                            <span className="text-[#F4B544] font-bold text-xs sm:text-sm">
+                                Salgados Frescos & Artesanais
+                            </span>
                             <span className="text-white/20">|</span>
                             <span className="text-xs text-[#FFFAF0] font-medium">
                                 Feitos sob encomenda com muito carinho em Balneário Arroio do Silva
@@ -960,10 +959,11 @@ export default function MenuPage() {
                             return (
                                 <button
                                     key={menu.id}
+                                    type="button"
                                     onClick={() => handleSelectMenu(menu.id)}
-                                    className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap shadow-md ${isSelected
-                                            ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-[#050505] shadow-[#F4B544]/20 scale-105"
-                                            : "bg-[#10100F] text-[#B8B1A3] border border-[#F4B544]/20 hover:border-[#F4B544]/50 hover:text-[#FFFAF0] hover:bg-[#171612]"
+                                    className={`px-5 py-2.5 rounded-full text-xs uppercase tracking-widest font-extrabold transition-all cursor-pointer border ${isSelected
+                                            ? "bg-[#F4B544] text-[#050505] border-[#F4B544] shadow-lg shadow-[#F4B544]/20 scale-105"
+                                            : "bg-[#10100F] text-[#B8B1A3] border-white/10 hover:border-[#F4B544]/50 hover:text-[#FFFAF0]"
                                         }`}
                                 >
                                     <span>{cleanMenuName}</span>
@@ -1056,9 +1056,6 @@ export default function MenuPage() {
                     </div>
                 ) : (
                     <div className="max-w-xl mx-auto p-8 rounded-3xl bg-[#10100F] border border-[#F4B544]/30 text-center space-y-4 shadow-xl gold-glow-sm">
-                        <div className="w-12 h-12 rounded-full bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center mx-auto text-[#F4B544]">
-                            <Sparkles className="w-6 h-6 text-[#F4B544]" />
-                        </div>
                         <div className="space-y-1.5">
                             <h3 className="font-serif text-xl font-bold text-[#FFFAF0]">Ainda não temos avaliações registradas</h3>
                             <p className="text-xs sm:text-sm text-[#B8B1A3] font-light leading-relaxed max-w-md mx-auto">
