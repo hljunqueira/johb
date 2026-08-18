@@ -34,43 +34,6 @@ const PIX_KEY_TYPES = [
     { value: "aleatoria", label: "Chave aleatória" },
 ];
 
-// Taxas padrão baseadas na tabela do iFood
-const DEFAULT_DISTANCE_RATES = [
-    { max_distance: 2.4, fee: 8.0 },
-    { max_distance: 2.5, fee: 9.0 },
-    { max_distance: 3.4, fee: 9.0 },
-    { max_distance: 3.5, fee: 10.0 },
-    { max_distance: 4.4, fee: 10.0 },
-    { max_distance: 4.5, fee: 11.0 },
-    { max_distance: 5.4, fee: 11.0 },
-    { max_distance: 5.5, fee: 12.0 },
-    { max_distance: 6.4, fee: 12.0 },
-    { max_distance: 6.5, fee: 13.0 },
-    { max_distance: 7.4, fee: 13.0 },
-    { max_distance: 7.5, fee: 14.0 },
-    { max_distance: 8.4, fee: 14.0 },
-    { max_distance: 8.5, fee: 15.0 },
-    { max_distance: 9.4, fee: 15.0 },
-    { max_distance: 9.5, fee: 16.0 },
-    { max_distance: 10.4, fee: 16.0 },
-    { max_distance: 10.5, fee: 17.0 },
-];
-
-// Helper para garantir que distance_rates seja sempre um array
-const parseDistanceRates = (rates) => {
-    if (!rates) return DEFAULT_DISTANCE_RATES;
-    if (Array.isArray(rates)) return rates;
-    if (typeof rates === 'string') {
-        try {
-            const parsed = JSON.parse(rates);
-            return Array.isArray(parsed) ? parsed : DEFAULT_DISTANCE_RATES;
-        } catch {
-            return DEFAULT_DISTANCE_RATES;
-        }
-    }
-    return DEFAULT_DISTANCE_RATES;
-};
-
 // Helper para garantir que business_hours seja sempre um objeto estruturado
 const parseBusinessHoursClient = (raw) => {
     if (!raw) return DEFAULT_HOURS;
@@ -107,8 +70,6 @@ export default function AdminDeliveryPage() {
         allow_pickup: true,
         business_hours: DEFAULT_HOURS,
         restaurant_address: "",
-        distance_rates: DEFAULT_DISTANCE_RATES,
-        max_delivery_distance: 10.5,
         always_open: false,
         temporarily_closed: false,
         accept_online_payment: true,
@@ -121,7 +82,6 @@ export default function AdminDeliveryPage() {
     });
     const [pixSettings, setPixSettings] = useState({ pix_key: "", pix_key_type: "cpf", pix_name: "JOHB", qr_code_url: "" });
     const [newArea, setNewArea] = useState({ name: "", fee: 0 });
-    const [newRate, setNewRate] = useState({ max_distance: "", fee: "" });
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
     const [uploadingQr, setUploadingQr] = useState(false);
@@ -138,8 +98,6 @@ export default function AdminDeliveryPage() {
                     ...prev,
                     ...data,
                     business_hours: parseBusinessHoursClient(data.business_hours),
-                    distance_rates: parseDistanceRates(data.distance_rates),
-                    max_delivery_distance: data.max_delivery_distance || 10.5,
                     restaurant_address: data.restaurant_address || "",
                     always_open: Boolean(data.always_open),
                     temporarily_closed: Boolean(data.temporarily_closed),
@@ -168,8 +126,7 @@ export default function AdminDeliveryPage() {
             const payload = {
                 ...settings,
                 business_hours: settings.business_hours,
-                areas: settings.areas || [],
-                distance_rates: settings.distance_rates || []
+                areas: settings.areas || []
             };
             const res = await axios.put(`${API}/admin/delivery-settings`, payload, { headers });
             if (res.data) {
