@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Search, ShoppingCart, Plus, Minus, Clock, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2, Coffee, MapPin, PhoneCall, Truck, Sparkles, Check } from "lucide-react";
 import Header from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
+import { ExperienceCarousel } from "@/components/ExperienceCarousel";
 import { CategoryPills } from "@/components/CategoryPills";
 import { EnhancedProductCard } from "@/components/EnhancedProductCard";
 import { getAvailableScheduleDates, getAvailableTimeSlots } from "@/lib/scheduleUtils";
@@ -1069,13 +1070,7 @@ export default function MenuPage() {
                     </div>
 
                     <div className="relative">
-                        <div className="rounded-2xl overflow-hidden border border-[#F4B544]/30 gold-glow">
-                            <img
-                                src="https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800&auto=format&fit=crop&q=80"
-                                alt="Salgados e Café JOHB"
-                                className="w-full h-96 object-cover"
-                            />
-                        </div>
+                        <ExperienceCarousel />
                     </div>
                 </div>
             </section>
