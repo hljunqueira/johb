@@ -926,19 +926,21 @@ export default function MenuPage() {
 
     // Filtrar produtos por busca, menu ativo e categoria selecionada
     const filteredProducts = useMemo(() => {
-        let result = products;
+        let result = Array.isArray(products) ? products.filter(Boolean) : [];
 
         if (search) {
             const query = search.toLowerCase();
             result = result.filter(p =>
-                p.name.toLowerCase().includes(query) ||
-                p.description?.toLowerCase().includes(query)
+                p && (
+                    p.name?.toLowerCase().includes(query) ||
+                    p.description?.toLowerCase().includes(query)
+                )
             );
         } else if (selectedCategory && selectedCategory !== "all") {
-            result = result.filter(p => p.category_id === selectedCategory);
+            result = result.filter(p => p && p.category_id === selectedCategory);
         } else if (activeCategories.length > 0) {
-            const activeCatIds = activeCategories.map(c => c.id);
-            result = result.filter(p => activeCatIds.includes(p.category_id));
+            const activeCatIds = activeCategories.map(c => c && c.id).filter(Boolean);
+            result = result.filter(p => p && activeCatIds.includes(p.category_id));
         }
 
         // Deduplicação estrita por ID

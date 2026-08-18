@@ -43,8 +43,10 @@ export function useProducts(token = null) {
     }, [fetchAll]);
 
     // Group products by category
-    const productsByCategory = categories.reduce((acc, cat) => {
-        acc[cat.id] = products.filter(p => p.category_id === cat.id);
+    const productsByCategory = (Array.isArray(categories) ? categories : []).reduce((acc, cat) => {
+        if (cat && cat.id) {
+            acc[cat.id] = (Array.isArray(products) ? products : []).filter(p => p && p.category_id === cat.id);
+        }
         return acc;
     }, {});
 
