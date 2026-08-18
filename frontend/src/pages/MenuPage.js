@@ -785,7 +785,7 @@ export default function MenuPage() {
     const [pendingAddItem, setPendingAddItem] = useState(null);
     const [cartAnimating, setCartAnimating] = useState(false);
 
-    const [reviewsData, setReviewsData] = useState({ avg_rating: 4.9, total_reviews: 48, testimonials: [] });
+    const [reviewsData, setReviewsData] = useState({ avg_rating: 0, total_reviews: 0, testimonials: [] });
     const [quickTagFilter, setQuickTagFilter] = useState("all");
 
     const { items, addItem, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
@@ -803,7 +803,7 @@ export default function MenuPage() {
                     axios.get(`${API}/menus`).catch(() => ({ data: [] })),
                     axios.get(`${API}/categories`).catch(() => ({ data: [] })),
                     axios.get(`${API}/products`).catch(() => ({ data: [] })),
-                    axios.get(`${API}/reviews/summary`).catch(() => ({ data: { avg_rating: 4.9, total_reviews: 48, testimonials: [] } }))
+                    axios.get(`${API}/reviews/summary`).catch(() => ({ data: { avg_rating: 0, total_reviews: 0, testimonials: [] } }))
                 ]);
 
                 const fetchedMenus = Array.isArray(menuRes.data) && menuRes.data.length > 0 ? menuRes.data : [];

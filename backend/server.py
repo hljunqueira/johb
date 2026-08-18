@@ -663,10 +663,10 @@ async def get_reviews_summary():
             real_testimonials.append(c_dict)
 
         total_count = int(stats['total_reviews']) if stats and stats['total_reviews'] else 0
-        avg_val = float(stats['avg_rating']) if stats and stats['avg_rating'] else 5.0
+        avg_val = float(stats['avg_rating']) if stats and stats['avg_rating'] else 0.0
 
         return {
-            "avg_rating": round(avg_val, 1) if total_count > 0 else 5.0,
+            "avg_rating": round(avg_val, 1) if total_count > 0 else 0.0,
             "total_reviews": total_count,
             "testimonials": real_testimonials
         }
