@@ -279,7 +279,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-lg bg-[#10100F] border border-[#F4B544]/20 p-0 text-[#FFFAF0] rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-lg bg-[#10100F] border border-[#F4B544]/20 p-0 text-[#FFFAF0] rounded-2xl overflow-hidden max-h-[90vh] flex flex-col [&>button]:hidden">
                 <div className="relative aspect-[16/9] bg-[#050505]">
                     <img
                         src={getImageUrl(product.image_url)}
@@ -287,8 +287,10 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         className="w-full h-full object-cover"
                     />
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="absolute top-3 right-3 h-8 w-8 rounded-full bg-[#050505]/80 text-[#FFFAF0] hover:text-[#F4B544] flex items-center justify-center border border-[#F4B544]/20"
+                        className="absolute top-3.5 right-3.5 z-50 w-9 h-9 rounded-full bg-[#050505]/85 hover:bg-[#171612] text-[#FFFAF0] hover:text-[#F4B544] flex items-center justify-center border border-[#F4B544]/30 hover:border-[#F4B544] shadow-xl backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+                        aria-label="Fechar modal"
                     >
                         <X className="h-4 w-4" />
                     </button>

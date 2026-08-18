@@ -12,21 +12,40 @@ const getImageUrl = (url, backendUrl) => {
 
 export function EnhancedProductCard({ product, onClick, backendUrl }) {
     const { toggleFavorite, isFavorite } = useFavorites();
-    const { addToCart } = useCart();
+    const { addItem } = useCart();
     const favorited = isFavorite(product.id);
     const hasAdditionals = (product.additionals && product.additionals.length > 0) || (product.complements && product.complements.length > 0);
 
+    const handleFavoriteClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFavorite(product);
+        if (!favorited) {
+            toast.success(`${product.name} adicionado aos favoritos!`, {
+                style: {
+                    background: "#171612",
+                    color: "#FFFAF0",
+                    border: "1px solid rgba(244, 181, 68, 0.4)"
+                }
+            });
+        } else {
+            toast.info(`${product.name} removido dos favoritos.`, {
+                style: {
+                    background: "#171612",
+                    color: "#FFFAF0",
+                    border: "1px solid rgba(244, 181, 68, 0.2)"
+                }
+            });
+        }
+    };
+
     const handleQuickAdd = (e) => {
+        e.preventDefault();
         e.stopPropagation();
         if (hasAdditionals) {
             onClick(product);
         } else {
-            addToCart({
-                ...product,
-                quantity: 1,
-                additionals: [],
-                observation: ""
-            });
+            addItem(product, 1, [], "");
             toast.success(`${product.name} adicionado ao carrinho!`, {
                 style: {
                     background: "#171612",
@@ -40,7 +59,7 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
     return (
         <div
             onClick={() => onClick(product)}
-            className="group relative bg-[#10100F] rounded-xl overflow-hidden border border-[#F4B544]/15 hover:border-[#F4B544]/50 transition-all duration-300 flex flex-col justify-between cursor-pointer gold-glow-sm hover:-translate-y-1"
+            className="group relative bg-[#10100F] rounded-2xl overflow-hidden border border-[#F4B544]/15 hover:border-[#F4B544]/50 transition-all duration-300 flex flex-col justify-between cursor-pointer gold-glow-sm hover:-translate-y-1 select-none"
             data-testid={`product-${product.id}`}
         >
             {/* Foto com overlay sutil */}
@@ -53,16 +72,14 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#10100F] via-transparent to-transparent opacity-60" />
 
-                {/* Favorito */}
+                {/* Botão de Favorito */}
                 <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(product.id);
-                    }}
-                    className="absolute top-2.5 right-2.5 p-2 rounded-full bg-[#050505]/75 backdrop-blur-md border border-[#F4B544]/20 hover:border-[#F4B544] text-[#B8B1A3] hover:text-[#F4B544] transition-colors"
+                    type="button"
+                    onClick={handleFavoriteClick}
+                    className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-[#050505]/80 backdrop-blur-md border border-[#F4B544]/30 hover:border-[#F4B544] text-[#B8B1A3] hover:text-[#F4B544] flex items-center justify-center shadow-lg transition-all active:scale-90"
                     aria-label="Favoritar produto"
                 >
-                    <Heart className={`w-3.5 h-3.5 ${favorited ? "fill-[#F4B544] text-[#F4B544]" : ""}`} />
+                    <Heart className={`w-4 h-4 transition-colors ${favorited ? "fill-[#F4B544] text-[#F4B544]" : ""}`} />
                 </button>
 
                 {/* Badge de Tag Cadastrada pelo Admin */}
@@ -80,7 +97,7 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
                     if (firstTag) {
                         const info = tagMap[firstTag.toLowerCase()];
                         return (
-                            <div className="absolute top-2.5 left-2.5">
+                            <div className="absolute top-3 left-3 z-10">
                                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider backdrop-blur-md border ${info.color}`}>
                                     {info.label}
                                 </span>
@@ -89,7 +106,7 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
                     }
                     if (hasAdditionals) {
                         return (
-                            <div className="absolute top-2.5 left-2.5">
+                            <div className="absolute top-3 left-3 z-10">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-[#050505]/85 backdrop-blur-md text-[#F4B544] border border-[#F4B544]/30">
                                     Opções
                                 </span>
@@ -121,12 +138,13 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
                     </div>
 
                     <button
+                        type="button"
                         onClick={handleQuickAdd}
-                        className="p-2.5 rounded-full bg-[#F4B544] text-[#050505] hover:bg-[#FFC85C] font-bold transition-all transform active:scale-95 shadow-md flex items-center justify-center gap-1"
-                        title={hasAdditionals ? "Personalizar" : "Adicionar rápido"}
+                        className="w-10 h-10 rounded-full bg-[#F4B544] text-[#050505] hover:bg-[#FFC85C] font-bold transition-all transform active:scale-90 shadow-md flex items-center justify-center cursor-pointer"
+                        title={hasAdditionals ? "Personalizar item" : "Adicionar ao carrinho"}
                         data-testid={`add-${product.id}`}
                     >
-                        <Plus className="w-4 h-4 stroke-[3]" />
+                        <Plus className="w-5 h-5 stroke-[2.5]" />
                     </button>
                 </div>
             </div>
