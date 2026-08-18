@@ -346,7 +346,11 @@ export default function AdminDeliveryPage() {
                     handleQrUpload={handleQrUpload}
                 />
             )}
-    /* ==================== DELIVERY TAB ==================== */
+        </div>
+    );
+}
+
+/* ==================== DELIVERY TAB ==================== */
 function DeliveryTab({ 
     settings, 
     setSettings, 
@@ -357,32 +361,6 @@ function DeliveryTab({
     addArea, 
     removeArea 
 }) {
-    const defaultNeighborhoodSuggestions = [
-        { name: "Centro", fee: 5.0 },
-        { name: "Praia dos Golfinhos", fee: 6.0 },
-        { name: "Jardim Atlântico", fee: 6.0 },
-        { name: "Areias Brancas", fee: 7.0 },
-        { name: "Morro dos Conventos", fee: 8.0 },
-        { name: "Zona Nova", fee: 5.0 },
-        { name: "Erechim", fee: 6.0 },
-        { name: "Meta", fee: 6.0 },
-        { name: "Castelo", fee: 7.0 }
-    ];
-
-    const loadSuggestions = () => {
-        const existingNames = new Set((settings.areas || []).map(a => a.name.toLowerCase().trim()));
-        const toAdd = defaultNeighborhoodSuggestions.filter(s => !existingNames.has(s.name.toLowerCase().trim()));
-        if (toAdd.length === 0) {
-            toast.info("Todos os bairros sugeridos já estão na sua lista!");
-            return;
-        }
-        setSettings(s => ({
-            ...s,
-            areas: [...(s.areas || []), ...toAdd]
-        }));
-        toast.success(`${toAdd.length} bairros sugeridos adicionados! Não esqueça de Salvar.`);
-    };
-
     return (
         <div className="bg-[#141414] text-white rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -452,18 +430,9 @@ function DeliveryTab({
                         <MapPin className="h-5 w-5 text-[#F4B544]" />
                         <div>
                             <p className="text-base font-extrabold text-white">Bairros Atendidos & Taxas</p>
-                            <p className="text-xs text-gray-400">O cliente escolhe o bairro no Checkout e a taxa é calculada automaticamente</p>
+                            <p className="text-xs text-gray-400">Cadastre os bairros para os quais realiza entregas e a taxa cobrada para cada um.</p>
                         </div>
                     </div>
-                    <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={loadSuggestions}
-                        className="text-xs border-[#F4B544]/30 text-[#F4B544] hover:bg-[#F4B544]/10 hover:text-white"
-                    >
-                        + Sugerir Bairros Locais
-                    </Button>
                 </div>
 
                 {/* Lista de Bairros Cadastrados */}
@@ -471,8 +440,8 @@ function DeliveryTab({
                     {(settings.areas || []).length === 0 ? (
                         <div className="text-center py-6 border border-dashed border-white/10 rounded-2xl bg-[#1E1E1E]/50 space-y-2">
                             <MapPin className="h-8 w-8 text-gray-500 mx-auto" />
-                            <p className="text-xs text-gray-400 font-semibold">Nenhum bairro específico cadastrado ainda.</p>
-                            <p className="text-[11px] text-gray-500">Adicione os bairros abaixo ou clique em "Sugerir Bairros Locais" para preencher.</p>
+                            <p className="text-xs text-gray-400 font-semibold">Nenhum bairro cadastrado ainda.</p>
+                            <p className="text-[11px] text-gray-500">Cadastre abaixo os bairros atendidos e suas respectivas taxas.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -535,7 +504,7 @@ function DeliveryTab({
                             onClick={addArea} 
                             className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl px-5 h-10 shadow-md shadow-[#F4B544]/20 hover:scale-[1.01] transition-all"
                         >
-                            <Plus className="h-4 w-4 mr-1.5" /> Adicionar
+                            <Plus className="h-4 w-4 mr-1.5" /> Adicionar Bairro
                         </Button>
                     </div>
                 </div>
