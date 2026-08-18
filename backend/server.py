@@ -221,11 +221,11 @@ async def get_db_pool():
             db_pool = await asyncpg.create_pool(
                 dsn,
                 ssl=ssl_mode if ssl_mode not in ['disable', 'prefer'] else None,
-                min_size=2,
-                max_size=25,
-                command_timeout=30,
-                timeout=10,
-                max_inactive_connection_lifetime=300,
+                min_size=10,
+                max_size=35,
+                command_timeout=20,
+                timeout=15,
+                max_inactive_connection_lifetime=3600,
                 statement_cache_size=0  # Necessário para pgbouncer com pool_mode=transaction
             )
             logger.info("Database pool created successfully")
@@ -1821,11 +1821,17 @@ async def admin_mark_paid(order_id: str, user=Depends(get_current_user)):
 
 @app.get("/api/admin/products")
 async def admin_get_products(user=Depends(get_current_user)):
-    """Listar todos os produtos (admin)"""
+    """Listar todos os produtos (admin) com cache"""
+    cached = get_cached("admin_products", 30)
+    if cached is not None:
+        return cached
+
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('SELECT * FROM products ORDER BY "order", name')
-        return [serialize_product(r) for r in rows]
+        data = [serialize_product(r) for r in rows]
+        set_cached("admin_products", data, 30)
+        return data
 
 
 @app.post("/api/admin/products")
@@ -1952,12 +1958,17 @@ async def admin_delete_product(product_id: str, user=Depends(get_current_user)):
 
 @app.get("/api/admin/complement-categories")
 async def admin_get_complement_categories(user=Depends(get_current_user)):
-    """Listar categorias de adicionais/opcionais"""
+    """Listar categorias de adicionais/opcionais com cache"""
+    cached = get_cached("admin_complement_categories", 30)
+    if cached is not None:
+        return cached
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         try:
             rows = await conn.fetch("SELECT * FROM complement_categories ORDER BY created_at DESC")
-            return [dict(r) for r in rows]
+            data = [dict(r) for r in rows]
+            set_cached("admin_complement_categories", data, 30)
+            return data
         except Exception:
             return []
 
@@ -1971,18 +1982,24 @@ async def admin_create_complement_category(request: dict, user=Depends(get_curre
                 "INSERT INTO complement_categories (name, description, min_selection, max_selection, required) VALUES ($1, $2, $3, $4, $5) RETURNING *",
                 request.get("name", ""), request.get("description", ""), request.get("min_selection", 0), request.get("max_selection", 1), request.get("required", False)
             )
+            invalidate_cache()
             return dict(row)
         except Exception as e:
             return {"id": str(uuid.uuid4()), "name": request.get("name", "")}
 
 @app.get("/api/admin/complements")
 async def admin_get_complements(user=Depends(get_current_user)):
-    """Listar adicionais/opcionais"""
+    """Listar adicionais/opcionais com cache"""
+    cached = get_cached("admin_complements", 30)
+    if cached is not None:
+        return cached
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         try:
             rows = await conn.fetch("SELECT * FROM complements ORDER BY name")
-            return [dict(r) for r in rows]
+            data = [dict(r) for r in rows]
+            set_cached("admin_complements", data, 30)
+            return data
         except Exception:
             return []
 
@@ -2000,6 +2017,7 @@ async def admin_create_complement(request: dict, user=Depends(get_current_user))
             request.get("category", "extras"),
             bool(request.get("active", True))
         )
+        invalidate_cache()
         return dict(row)
 
 @app.put("/api/admin/complements/{comp_id}")
@@ -2017,6 +2035,7 @@ async def admin_update_complement(comp_id: str, request: dict, user=Depends(get_
             bool(request.get("active", True)),
             uuid.UUID(comp_id) if isinstance(comp_id, str) else comp_id
         )
+        invalidate_cache()
         return dict(row)
 
 @app.delete("/api/admin/complements/{comp_id}")
@@ -2027,6 +2046,7 @@ async def admin_delete_complement(comp_id: str, user=Depends(get_current_user)):
         comp_uuid = uuid.UUID(comp_id) if isinstance(comp_id, str) else comp_id
         await conn.execute("DELETE FROM complements WHERE id = $1", comp_uuid)
         await conn.execute("UPDATE products SET complement_ids = array_remove(complement_ids, $1)", comp_uuid)
+        invalidate_cache()
         return {"success": True}
 
 
@@ -2036,11 +2056,16 @@ async def admin_delete_complement(comp_id: str, user=Depends(get_current_user)):
 
 @app.get("/api/admin/categories")
 async def admin_get_categories(user=Depends(get_current_user)):
-    """Listar todas as categorias (admin)"""
+    """Listar todas as categorias (admin) com cache"""
+    cached = get_cached("admin_categories", 30)
+    if cached is not None:
+        return cached
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('SELECT * FROM categories ORDER BY "order"')
-        return [dict(r) for r in rows]
+        data = [dict(r) for r in rows]
+        set_cached("admin_categories", data, 30)
+        return data
 
 
 @app.post("/api/admin/categories")
@@ -2056,6 +2081,7 @@ async def admin_create_category(request: CategoryCreate, user=Depends(get_curren
                VALUES ($1, $2, $3, $4, $5, $6) RETURNING *""",
             request.name, request.description, request.icon, request.menu_id, request.order, request.active
         )
+        invalidate_cache()
         return dict(row)
 
 
@@ -2083,6 +2109,7 @@ async def admin_update_category(category_id: str, request: CategoryUpdate, user=
                WHERE id = $7 RETURNING *""",
             name, description, icon, menu_id, order, active, category_id
         )
+        invalidate_cache()
         if row:
             d = dict(row)
             if isinstance(d.get('id'), uuid.UUID):
@@ -2103,6 +2130,7 @@ async def admin_delete_category(category_id: str, user=Depends(get_current_user)
     async with pool.acquire() as conn:
         await conn.execute("UPDATE products SET category_id = NULL WHERE category_id = $1", category_id)
         await conn.execute("DELETE FROM categories WHERE id = $1", category_id)
+        invalidate_cache()
         return {"success": True}
 
 
@@ -2112,11 +2140,16 @@ async def admin_delete_category(category_id: str, user=Depends(get_current_user)
 
 @app.get("/api/admin/menus")
 async def admin_get_menus(user=Depends(get_current_user)):
-    """Listar todos os menus (admin)"""
+    """Listar todos os menus (admin) com cache"""
+    cached = get_cached("admin_menus", 30)
+    if cached is not None:
+        return cached
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('SELECT * FROM menus ORDER BY "order"')
-        return [dict(r) for r in rows]
+        data = [dict(r) for r in rows]
+        set_cached("admin_menus", data, 30)
+        return data
 
 
 @app.post("/api/admin/menus")
@@ -2131,6 +2164,7 @@ async def admin_create_menu(request: MenuCreate, user=Depends(get_current_user))
             'INSERT INTO menus (name, description, "order", active) VALUES ($1, $2, $3, $4) RETURNING *',
             request.name, request.description, request.order, request.active
         )
+        invalidate_cache()
         return dict(row)
 
 
@@ -2155,6 +2189,7 @@ async def admin_update_menu(menu_id: str, request: MenuUpdate, user=Depends(get_
             'UPDATE menus SET name = $1, description = $2, "order" = $3, active = $4 WHERE id = $5 RETURNING *',
             name, description, order, active, menu_id
         )
+        invalidate_cache()
         return dict(row) if row else None
 
 
