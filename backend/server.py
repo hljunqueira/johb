@@ -357,6 +357,8 @@ def serialize_product(row) -> dict:
         d['created_at'] = d['created_at'].isoformat()
     if 'updated_at' in d and isinstance(d['updated_at'], datetime):
         d['updated_at'] = d['updated_at'].isoformat()
+    return d
+
 import time
 
 _MEM_CACHE = {}
@@ -1852,6 +1854,7 @@ async def admin_create_product(request: dict, user=Depends(get_current_user)):
             int(request.get("order", 0)),
             bool(request.get("active", True))
         )
+        invalidate_cache()
         return serialize_product(row)
 
 
@@ -1895,6 +1898,7 @@ async def admin_update_product(product_id: str, request: dict, user=Depends(get_
             additionals if isinstance(additionals, str) else json.dumps(additionals),
             complement_ids, order, active, product_id
         )
+        invalidate_cache()
         return serialize_product(row)
 
 
@@ -1925,6 +1929,7 @@ async def admin_clone_product(product_id: str, user=Depends(get_current_user)):
             ex.get("order", 0),
             True
         )
+        invalidate_cache()
         return serialize_product(row)
 
 
@@ -1937,6 +1942,7 @@ async def admin_delete_product(product_id: str, user=Depends(get_current_user)):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         await conn.execute("DELETE FROM products WHERE id = $1", product_id)
+        invalidate_cache()
         return {"success": True}
 
 
