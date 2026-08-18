@@ -27,16 +27,18 @@ export default function OrderHistoryPage() {
     const navigate = useNavigate();
     const { addItem } = useCart();
 
-    const searchOrders = async () => {
-        const cleanPhone = phone.replace(/\D/g, "");
+    const searchOrders = async (targetPhone) => {
+        const phoneToUse = targetPhone || phone;
+        const cleanPhone = phoneToUse.replace(/\D/g, "");
         if (!cleanPhone) { 
             toast.error("Digite seu WhatsApp para localizar os pedidos"); 
             return; 
         }
+        localStorage.setItem("johb-phone", cleanPhone);
         setLoading(true);
         try { 
             const res = await axios.get(`${API}/orders/phone/${encodeURIComponent(cleanPhone)}`); 
-            setOrders(res.data || []); 
+            setOrders(Array.isArray(res.data) ? res.data : []); 
             setSearched(true); 
         } catch { 
             toast.error("Erro ao buscar pedidos"); 
@@ -44,6 +46,13 @@ export default function OrderHistoryPage() {
             setLoading(false); 
         }
     };
+
+    useEffect(() => {
+        const saved = localStorage.getItem("johb-phone");
+        if (saved && saved.replace(/\D/g, "").length >= 8) {
+            searchOrders(saved);
+        }
+    }, []);
 
     const repeatOrder = (order) => {
         let itemsList = order.items;

@@ -1358,6 +1358,55 @@ async def create_order(request: CreateOrderRequest):
         }
 
 
+def serialize_order(row) -> dict:
+    if not row:
+        return {}
+    d = dict(row)
+    if 'id' in d and isinstance(d['id'], uuid.UUID):
+        d['id'] = str(d['id'])
+    for key in ['total', 'subtotal', 'delivery_fee', 'discount_amount', 'change_for']:
+        if key in d and isinstance(d[key], Decimal):
+            d[key] = float(d[key])
+        elif key in d and d[key] is not None:
+            try:
+                d[key] = float(d[key])
+            except Exception:
+                pass
+    if 'items' in d:
+        if isinstance(d['items'], str):
+            try:
+                d['items'] = json.loads(d['items'])
+            except Exception:
+                pass
+    if 'created_at' in d and isinstance(d['created_at'], datetime):
+        d['created_at'] = d['created_at'].isoformat()
+    if 'updated_at' in d and isinstance(d['updated_at'], datetime):
+        d['updated_at'] = d['updated_at'].isoformat()
+    return d
+
+
+@app.get("/api/orders/phone/{phone}")
+async def get_orders_by_phone(phone: str):
+    """Buscar todos os pedidos de um cliente pelo número de telefone/WhatsApp"""
+    clean_phone = re.sub(r'\D', '', phone)
+    if not clean_phone:
+        return []
+    
+    last_8 = clean_phone[-8:] if len(clean_phone) >= 8 else clean_phone
+    
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """SELECT * FROM orders 
+               WHERE customer_phone = $1 
+                  OR customer_phone LIKE $2 
+                  OR REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, '(', ''), ')', ''), '-', ''), ' ', '') LIKE $2
+               ORDER BY created_at DESC LIMIT 30""",
+            clean_phone, f"%{last_8}%"
+        )
+        return [serialize_order(r) for r in rows]
+
+
 @app.get("/api/orders/{order_id}")
 async def get_order(order_id: str):
     """Buscar pedido por ID"""
