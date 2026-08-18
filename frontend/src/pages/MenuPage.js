@@ -836,17 +836,18 @@ export default function MenuPage() {
                     <div className="flex items-center justify-start md:justify-center gap-3 overflow-x-auto pb-4 scrollbar-none mb-6">
                         {menus.map(menu => {
                             const isSelected = selectedMenu === menu.id;
+                            const cleanMenuName = (menu.name || "").replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[✨⭐🏆🔥🥐🍰🥤🍽️🍴🍕🌱🥧]/gu, "").trim();
                             return (
                                 <button
                                     key={menu.id}
                                     onClick={() => handleSelectMenu(menu.id)}
-                                    className={`px-6 py-3.5 rounded-2xl text-sm font-bold transition-all flex items-center gap-2.5 whitespace-nowrap shadow-md ${
+                                    className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap shadow-md ${
                                         isSelected
                                             ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-[#050505] shadow-[#F4B544]/20 scale-105"
                                             : "bg-[#10100F] text-[#B8B1A3] border border-[#F4B544]/20 hover:border-[#F4B544]/50 hover:text-[#FFFAF0] hover:bg-[#171612]"
                                     }`}
                                 >
-                                    <span>{menu.name}</span>
+                                    <span>{cleanMenuName}</span>
                                 </button>
                             );
                         })}

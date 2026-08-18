@@ -1,40 +1,27 @@
 import React from "react";
-import { Utensils, Flame, Cookie, Package, CupSoda, Sparkles, Snowflake, Pizza } from "lucide-react";
 
-const categoryIconMap = {
-    "salgados": Utensils,
-    "salgados fritos & empadas": Utensils,
-    "assados": Flame,
-    "assados & folhados": Flame,
-    "mini pizzas artesanais": Pizza,
-    "cucas tradicionais": Cookie,
-    "bolos & sobremesas": Cookie,
-    "doces / cucas": Cookie,
-    "doces": Cookie,
-    "combos": Package,
-    "congelados": Snowflake,
-    "bebidas": CupSoda,
-    "refrigerantes & gelados": CupSoda
+const cleanLabel = (text) => {
+    if (!text) return "";
+    return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[✨⭐🏆🔥🥐🍰🥤🍽️🍴🍕🌱🥧]/gu, "").trim();
 };
 
 export function CategoryPills({ categories = [], selectedCategory, onSelectCategory, productCounts = {} }) {
-    const allCategories = [{ id: "all", name: "✨ Ver Todos" }, ...categories];
+    const allCategories = [{ id: "all", name: "Ver Todos" }, ...categories];
 
     return (
         <div className="w-full overflow-x-auto py-2 no-scrollbar">
             <div className="flex gap-2.5 min-w-max pb-2 px-2 md:justify-center">
                 {allCategories.map((category) => {
-                    const catKey = (category.name || "").toLowerCase().trim();
-                    const Icon = category.id === "all" ? Sparkles : (categoryIconMap[catKey] || Utensils);
                     const isActive = selectedCategory === category.id;
                     const count = productCounts[category.id] || 0;
+                    const displayName = cleanLabel(category.name);
 
                     return (
                         <button
                             key={category.id}
                             onClick={() => onSelectCategory(category.id)}
                             className={`
-                                inline-flex items-center gap-2 px-4 py-2.5 rounded-full
+                                inline-flex items-center gap-2 px-5 py-2.5 rounded-full
                                 border transition-all duration-300 whitespace-nowrap text-xs font-bold tracking-wider uppercase
                                 ${
                                     isActive
@@ -43,8 +30,7 @@ export function CategoryPills({ categories = [], selectedCategory, onSelectCateg
                                 }
                             `}
                         >
-                            <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#050505]" : "text-[#F4B544]"}`} />
-                            <span>{category.name}</span>
+                            <span>{displayName}</span>
                             {count > 0 && (
                                 <span
                                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
