@@ -104,6 +104,7 @@ export default function AdminDeliveryPage() {
         delivery_fee: 5, 
         min_free_delivery: 60, 
         active: true, 
+        allow_pickup: true,
         business_hours: DEFAULT_HOURS,
         restaurant_address: "",
         distance_rates: DEFAULT_DISTANCE_RATES,
@@ -147,6 +148,8 @@ export default function AdminDeliveryPage() {
                     accept_cash: Boolean(data.accept_cash),
                     allow_immediate_orders: Boolean(data.allow_immediate_orders),
                     allow_scheduled_orders: Boolean(data.allow_scheduled_orders),
+                    active: Boolean(data.active),
+                    allow_pickup: data.allow_pickup !== false,
                     min_lead_hours: Number(data.min_lead_hours ?? 0.5),
                     max_schedule_days: parseInt(data.max_schedule_days) || 7
                 }));
@@ -182,6 +185,8 @@ export default function AdminDeliveryPage() {
                     accept_cash: Boolean(data.accept_cash),
                     allow_immediate_orders: Boolean(data.allow_immediate_orders),
                     allow_scheduled_orders: Boolean(data.allow_scheduled_orders),
+                    active: Boolean(data.active),
+                    allow_pickup: data.allow_pickup !== false,
                 }));
             }
             toast.success("Configurações salvas com sucesso!");
@@ -373,15 +378,31 @@ function DeliveryTab({
                 </div>
             </div>
 
-            {/* Switch de Ativação */}
-            <div className="flex items-center justify-between bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
-                <div className="space-y-0.5">
-                    <span className="text-sm font-extrabold text-white">Disponibilidade de Entrega</span>
-                    <p className="text-xs text-gray-400">
-                        {settings.active ? "O cardápio permite pedidos de Entrega e Retirada." : "Entregas pausadas. Apenas Retirada no Balcão fica disponível."}
-                    </p>
+            {/* Modalidades de Pedido Aceitas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+                    <div className="space-y-0.5 pr-2">
+                        <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
+                            <Truck className="h-4 w-4 text-[#F4B544]" /> Entrega em Domicílio
+                        </span>
+                        <p className="text-xs text-gray-400">
+                            {settings.active ? "Ativa (clientes podem pedir delivery)" : "Pausada no momento"}
+                        </p>
+                    </div>
+                    <Switch checked={settings.active} onCheckedChange={v => setSettings(s => ({ ...s, active: v }))} data-testid="delivery-active" />
                 </div>
-                <Switch checked={settings.active} onCheckedChange={v => setSettings(s => ({ ...s, active: v }))} data-testid="delivery-active" />
+
+                <div className="flex items-center justify-between bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+                    <div className="space-y-0.5 pr-2">
+                        <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
+                            <Store className="h-4 w-4 text-[#F4B544]" /> Retirada no Balcão
+                        </span>
+                        <p className="text-xs text-gray-400">
+                            {settings.allow_pickup !== false ? "Ativa (clientes podem retirar no local)" : "Pausada no momento"}
+                        </p>
+                    </div>
+                    <Switch checked={settings.allow_pickup !== false} onCheckedChange={v => setSettings(s => ({ ...s, allow_pickup: v }))} data-testid="pickup-active" />
+                </div>
             </div>
 
             {/* Valores Gerais */}

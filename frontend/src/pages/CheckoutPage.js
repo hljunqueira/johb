@@ -72,8 +72,10 @@ export default function CheckoutPage() {
             .then(res => {
                 const data = res.data || {};
                 setDeliverySettings(data);
-                if (data.active === false) {
+                if (data.active === false && data.allow_pickup !== false) {
                     setDeliveryType("retirada");
+                } else if (data.active !== false && data.allow_pickup === false) {
+                    setDeliveryType("entrega");
                 }
                 // Definir forma de pagamento padrão baseada nas opções ativas no Admin
                 if (data.accept_online_payment !== false) {
@@ -372,7 +374,7 @@ export default function CheckoutPage() {
                                 <span>Como deseja receber seu pedido?</span>
                             </h2>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setDeliveryType("entrega")}
@@ -384,22 +386,27 @@ export default function CheckoutPage() {
                                     } ${deliverySettings?.active === false ? "opacity-40 cursor-not-allowed" : ""}`}
                                 >
                                     <Truck className="w-6 h-6" />
-                                    <span className="font-bold text-xs uppercase tracking-wider">Entrega em Casa</span>
-                                    <span className="text-[11px] text-[#B8B1A3]">Balneário Arroio do Silva</span>
+                                    <span className="font-bold text-xs uppercase tracking-wider">Entrega em Domicílio</span>
+                                    <span className="text-[11px] text-[#B8B1A3]">
+                                        {deliverySettings?.active === false ? "Pausada no momento" : "Receba no seu endereço"}
+                                    </span>
                                 </button>
 
                                 <button
                                     type="button"
                                     onClick={() => setDeliveryType("retirada")}
+                                    disabled={deliverySettings?.allow_pickup === false}
                                     className={`p-4 rounded-xl border text-center transition-all flex flex-col items-center gap-2 ${
                                         deliveryType === "retirada"
                                             ? "bg-[#171612] border-[#F4B544] text-[#F4B544] gold-glow-sm"
                                             : "bg-[#050505] border-[#F4B544]/15 text-[#B8B1A3] hover:border-[#F4B544]/30"
-                                    }`}
+                                    } ${deliverySettings?.allow_pickup === false ? "opacity-40 cursor-not-allowed" : ""}`}
                                 >
                                     <Store className="w-6 h-6" />
                                     <span className="font-bold text-xs uppercase tracking-wider">Retirar no Balcão</span>
-                                    <span className="text-[11px] text-emerald-400 font-medium">Sem taxa de entrega</span>
+                                    <span className={`text-[11px] font-medium ${deliverySettings?.allow_pickup === false ? "text-gray-500" : "text-emerald-400"}`}>
+                                        {deliverySettings?.allow_pickup === false ? "Pausada no momento" : "Sem taxa de entrega"}
+                                    </span>
                                 </button>
                             </div>
                         </div>

@@ -598,6 +598,7 @@ def format_delivery_settings_row(row):
     d["accept_cash"] = bool(d.get("accept_cash", True))
     d["allow_immediate_orders"] = bool(d.get("allow_immediate_orders", True))
     d["allow_scheduled_orders"] = bool(d.get("allow_scheduled_orders", True))
+    d["allow_pickup"] = bool(d.get("allow_pickup", True))
     d["min_lead_hours"] = float(d.get("min_lead_hours") or 0.5)
     d["max_schedule_days"] = int(d.get("max_schedule_days") or 7)
     d["delivery_fee"] = float(d.get("delivery_fee") or 5.0)
@@ -2507,6 +2508,11 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
                 "UPDATE delivery_settings SET restaurant_lat = NULL, restaurant_lng = NULL WHERE id = 1"
             )
 
+        try:
+            await conn.execute("ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS allow_pickup BOOLEAN DEFAULT TRUE")
+        except Exception:
+            pass
+
         row = await conn.fetchrow(
             """UPDATE delivery_settings SET 
                areas = $1::jsonb, delivery_fee = $2, min_free_delivery = $3, active = $4, business_hours = $5::jsonb,
@@ -2514,7 +2520,8 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
                always_open = $9, temporarily_closed = $10,
                min_lead_hours = $11, max_schedule_days = $12, allowed_schedule_days = $13::jsonb,
                accept_online_payment = $14, accept_card_machine = $15, accept_cash = $16,
-               allow_immediate_orders = $17, allow_scheduled_orders = $18
+               allow_immediate_orders = $17, allow_scheduled_orders = $18,
+               allow_pickup = $19
                WHERE id = 1 RETURNING *""",
             json.dumps(sanitize_json_input(request.get('areas'), [])),
             float(request.get('delivery_fee', 5.0)),
@@ -2533,7 +2540,8 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
             bool(request.get('accept_card_machine', True)),
             bool(request.get('accept_cash', True)),
             bool(request.get('allow_immediate_orders', True)),
-            bool(request.get('allow_scheduled_orders', True))
+            bool(request.get('allow_scheduled_orders', True)),
+            bool(request.get('allow_pickup', True))
         )
         invalidate_cache()
         return format_delivery_settings_row(row)
