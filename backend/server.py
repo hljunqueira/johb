@@ -78,78 +78,6 @@ app.add_middleware(
 db_pool = None
 
 
-def serialize_product(row: dict) -> dict:
-    """Garante que campos JSONB (additionals) e UUIDs sejam retornados em formato serializavel"""
-    d = dict(row)
-    if isinstance(d.get('id'), uuid.UUID):
-        d['id'] = str(d['id'])
-    if isinstance(d.get('category_id'), uuid.UUID):
-        d['category_id'] = str(d['category_id'])
-    additionals = d.get('additionals')
-    if isinstance(additionals, str):
-        try:
-            d['additionals'] = json.loads(additionals)
-        except Exception:
-            d['additionals'] = []
-    elif additionals is None:
-        d['additionals'] = []
-    return d
-
-@app.get("/api/products")
-async def get_products(category_id: Optional[str] = None):
-    """Lista produtos ativos"""
-    try:
-        pool = await get_db_pool()
-        async with pool.acquire() as conn:
-            query = "SELECT * FROM products WHERE active = TRUE"
-            params = []
-            if category_id:
-                try:
-                    cat_uuid = uuid.UUID(category_id)
-                    query += " AND (category_id = $1 OR category_id::text = $2)"
-                    params.extend([cat_uuid, category_id])
-                except Exception:
-                    query += " AND category_id::text = $1"
-                    params.append(category_id)
-            query += ' ORDER BY "order", name'
-            rows = await conn.fetch(query, *params)
-            return [serialize_product(r) for r in rows]
-    except Exception as e:
-        logger.error(f"Erro ao carregar produtos para category_id={category_id}: {e}")
-        return []
-
-@app.get("/api/categories")
-async def get_categories():
-    """Lista categorias ativas"""
-    try:
-        pool = await get_db_pool()
-        async with pool.acquire() as conn:
-            rows = await conn.fetch('SELECT * FROM categories WHERE active = TRUE ORDER BY "order"')
-            res = []
-            for r in rows:
-                d = dict(r)
-                if isinstance(d.get('id'), uuid.UUID):
-                    d['id'] = str(d['id'])
-                if isinstance(d.get('menu_id'), uuid.UUID):
-                    d['menu_id'] = str(d['menu_id'])
-                res.append(d)
-            return res
-    except Exception as e:
-        logger.error(f"Erro ao carregar categorias: {e}")
-        return []
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=DEFAULT_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Database pool
-db_pool = None
-
-
 # ============================================
 # PYDANTIC MODELS
 # ============================================
@@ -229,15 +157,31 @@ class CategoryCreate(BaseModel):
     description: Optional[str] = None
     icon: Optional[str] = None
     menu_id: Optional[str] = None
-    order: int = 0
-    active: bool = True
+    order: Optional[int] = 0
+    active: Optional[bool] = True
+
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    menu_id: Optional[str] = None
+    order: Optional[int] = None
+    active: Optional[bool] = None
 
 
 class MenuCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    order: int = 0
-    active: bool = True
+    order: Optional[int] = 0
+    active: Optional[bool] = True
+
+
+class MenuUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    order: Optional[int] = None
+    active: Optional[bool] = None
 
 
 class ComplementCreate(BaseModel):
@@ -1014,7 +958,11 @@ async def customer_login(request: CustomerLoginRequest):
     if not db_pool:
         raise HTTPException(status_code=500, detail="Database not available")
 
-    phone = request.phone.replace("\\D", "")
+    phone = re.sub(r'\D', '', request.phone or '')
+    if not phone:
+        raise HTTPException(status_code=400, detail="Telefone inválido")
+
+    customer_name = (request.name or "").strip() or "Cliente"
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
@@ -1023,22 +971,19 @@ async def customer_login(request: CustomerLoginRequest):
         )
 
         if customer:
-            if request.name:
+            if request.name and request.name.strip():
                 await conn.execute(
                     "UPDATE customers SET name = $1 WHERE phone = $2",
-                    request.name, phone
+                    request.name.strip(), phone
                 )
                 customer = await conn.fetchrow("SELECT * FROM customers WHERE phone = $1", phone)
             return {**dict(customer), "is_new": False}
         else:
-            if not request.name:
-                raise HTTPException(status_code=400, detail="Name is required for new customers")
-
             new_customer = await conn.fetchrow(
                 """INSERT INTO customers (name, phone, tags) 
                    VALUES ($1, $2, ARRAY['novo']) 
                    RETURNING *""",
-                request.name, phone
+                customer_name, phone
             )
             return {**dict(new_customer), "is_new": True}
 
@@ -1308,16 +1253,16 @@ async def get_order(order_id: str):
         raise HTTPException(status_code=404, detail="Order not found")
     
     try:
-        uuid.UUID(order_id)
+        parsed_uuid = uuid.UUID(order_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Order not found")
     
     pool = await get_db_pool()
     async with pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT * FROM orders WHERE id = $1", uuid.UUID(order_id))
+        row = await conn.fetchrow("SELECT * FROM orders WHERE id = $1", parsed_uuid)
         if not row:
             raise HTTPException(status_code=404, detail="Order not found")
-        return dict(row)
+        return serialize_order(row)
 
 
 @app.post("/api/orders/{order_id}/rate")
@@ -1635,16 +1580,20 @@ async def admin_get_orders(status: Optional[str] = None, user=Depends(get_curren
     if not db_pool:
         return []
 
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        query = "SELECT * FROM orders"
-        params = []
-        if status:
-            query += " WHERE status = $1"
-            params.append(status)
-        query += " ORDER BY created_at DESC LIMIT 100"
-        rows = await conn.fetch(query, *params)
-        return [serialize_order(r) for r in rows]
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            query = "SELECT * FROM orders"
+            params = []
+            if status:
+                query += " WHERE status = $1"
+                params.append(status)
+            query += " ORDER BY created_at DESC LIMIT 100"
+            rows = await conn.fetch(query, *params)
+            return [serialize_order(r) for r in rows]
+    except Exception as e:
+        logger.error(f"Erro ao carregar pedidos admin: {e}", exc_info=True)
+        return []
 
 
 @app.delete("/api/admin/orders/{order_id}")
@@ -1944,19 +1893,37 @@ async def admin_create_category(request: CategoryCreate, user=Depends(get_curren
 
 
 @app.put("/api/admin/categories/{category_id}")
-async def admin_update_category(category_id: str, request: CategoryCreate, user=Depends(get_current_user)):
-    """Atualizar categoria"""
+async def admin_update_category(category_id: str, request: CategoryUpdate, user=Depends(get_current_user)):
+    """Atualizar categoria (suporta atualização parcial)"""
     if not db_pool:
         raise HTTPException(status_code=500, detail="Database not available")
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
+        current = await conn.fetchrow("SELECT * FROM categories WHERE id = $1", category_id)
+        if not current:
+            raise HTTPException(status_code=404, detail="Categoria não encontrada")
+
+        name = request.name if request.name is not None else current['name']
+        description = request.description if request.description is not None else current['description']
+        icon = request.icon if request.icon is not None else current['icon']
+        menu_id = request.menu_id if request.menu_id is not None else current['menu_id']
+        order = request.order if request.order is not None else current['order']
+        active = request.active if request.active is not None else current['active']
+
         row = await conn.fetchrow(
             """UPDATE categories SET name = $1, description = $2, icon = $3, menu_id = $4, "order" = $5, active = $6
                WHERE id = $7 RETURNING *""",
-            request.name, request.description, request.icon, request.menu_id, request.order, request.active, category_id
+            name, description, icon, menu_id, order, active, category_id
         )
-        return dict(row) if row else None
+        if row:
+            d = dict(row)
+            if isinstance(d.get('id'), uuid.UUID):
+                d['id'] = str(d['id'])
+            if isinstance(d.get('menu_id'), uuid.UUID):
+                d['menu_id'] = str(d['menu_id'])
+            return d
+        return None
 
 
 @app.delete("/api/admin/categories/{category_id}")
@@ -2001,16 +1968,25 @@ async def admin_create_menu(request: MenuCreate, user=Depends(get_current_user))
 
 
 @app.put("/api/admin/menus/{menu_id}")
-async def admin_update_menu(menu_id: str, request: MenuCreate, user=Depends(get_current_user)):
-    """Atualizar menu"""
+async def admin_update_menu(menu_id: str, request: MenuUpdate, user=Depends(get_current_user)):
+    """Atualizar menu (suporta atualização parcial)"""
     if not db_pool:
         raise HTTPException(status_code=500, detail="Database not available")
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
+        current = await conn.fetchrow("SELECT * FROM menus WHERE id = $1", menu_id)
+        if not current:
+            raise HTTPException(status_code=404, detail="Menu não encontrado")
+
+        name = request.name if request.name is not None else current['name']
+        description = request.description if request.description is not None else current['description']
+        order = request.order if request.order is not None else current['order']
+        active = request.active if request.active is not None else current['active']
+
         row = await conn.fetchrow(
             'UPDATE menus SET name = $1, description = $2, "order" = $3, active = $4 WHERE id = $5 RETURNING *',
-            request.name, request.description, request.order, request.active, menu_id
+            name, description, order, active, menu_id
         )
         return dict(row) if row else None
 
