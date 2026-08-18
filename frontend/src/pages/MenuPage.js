@@ -59,6 +59,34 @@ const complementCategories = {
 };
 
 // ============ STORE STATUS HELPER ============
+function parseBusinessHours(raw) {
+    if (!raw) return null;
+    if (typeof raw === "object" && !Array.isArray(raw)) {
+        if ("seg" in raw || "ter" in raw || "qua" in raw || "qui" in raw || "sex" in raw || "sab" in raw || "dom" in raw) {
+            return raw;
+        }
+        if ("0" in raw && "1" in raw) {
+            try {
+                const sortedKeys = Object.keys(raw).filter(k => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b));
+                const str = sortedKeys.map(k => raw[k]).join("");
+                const parsed = JSON.parse(str);
+                return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+            } catch (e) {
+                return null;
+            }
+        }
+    }
+    if (typeof raw === "string") {
+        try {
+            const parsed = JSON.parse(raw);
+            return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+}
+
 function useStoreStatus() {
     const [status, setStatus] = useState({ isOpen: true, message: "", nextOpen: null, temporarilyClosed: false });
     const [deliverySettings, setDeliverySettings] = useState(null);
@@ -67,7 +95,13 @@ function useStoreStatus() {
         if (!settings) return;
 
         if (settings.temporarily_closed) {
-            setStatus({ isOpen: false, message: "Fechado temporariamente", nextOpen: null, temporarilyClosed: true });
+            setStatus({ isOpen: false, message: "Loja Fechada Temporariamente", nextOpen: null, temporarilyClosed: true });
+            return;
+        }
+
+        // Se ambos os modos estiverem desativados, a loja não aceita pedidos
+        if (settings.allow_immediate_orders === false && settings.allow_scheduled_orders === false) {
+            setStatus({ isOpen: false, message: "Pedidos Desativados no Momento", nextOpen: null, temporarilyClosed: true });
             return;
         }
 
@@ -82,9 +116,29 @@ function useStoreStatus() {
             return;
         }
 
+        // Hora atual no fuso de Brasília
         const now = new Date();
-        const dayMap = { 0: "dom", 1: "seg", 2: "ter", 3: "qua", 4: "qui", 5: "sex", 6: "sab" };
-        const todayKey = dayMap[now.getDay()];
+        const formatter = new Intl.DateTimeFormat("pt-BR", {
+            timeZone: "America/Sao_Paulo",
+            weekday: "short",
+            hour: "numeric",
+            minute: "numeric",
+            hour12: false
+        });
+        const parts = formatter.formatToParts(now);
+        const weekdayStr = parts.find(p => p.type === "weekday")?.value?.toLowerCase() || "";
+        const hour = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
+        const minute = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
+
+        let todayKey = "seg";
+        if (weekdayStr.startsWith("dom")) todayKey = "dom";
+        else if (weekdayStr.startsWith("seg")) todayKey = "seg";
+        else if (weekdayStr.startsWith("ter")) todayKey = "ter";
+        else if (weekdayStr.startsWith("qua")) todayKey = "qua";
+        else if (weekdayStr.startsWith("qui")) todayKey = "qui";
+        else if (weekdayStr.startsWith("sex")) todayKey = "sex";
+        else if (weekdayStr.startsWith("s")) todayKey = "sab";
+
         const todayConfig = businessHours[todayKey];
 
         if (!todayConfig || todayConfig.open === false) {
@@ -92,27 +146,37 @@ function useStoreStatus() {
             return;
         }
 
-        const currentTime = now.getHours() * 60 + now.getMinutes();
-        const [openH, openM] = (todayConfig.start || "00:00").split(":").map(Number);
-        const [closeH, closeM] = (todayConfig.end || "23:59").split(":").map(Number);
+        const currentTime = hour * 60 + minute;
+        const [openH, openM] = (todayConfig.start || "11:00").split(":").map(Number);
+        const [closeH, closeM] = (todayConfig.end || "22:00").split(":").map(Number);
         const openMinutes = openH * 60 + openM;
         const closeMinutes = closeH * 60 + closeM;
 
         if (currentTime < openMinutes) {
-            setStatus({ isOpen: false, message: `Abre às ${todayConfig.start}`, nextOpen: todayConfig.start, temporarilyClosed: false });
+            setStatus({ isOpen: false, message: `Abre hoje às ${todayConfig.start}`, nextOpen: todayConfig.start, temporarilyClosed: false });
         } else if (currentTime >= closeMinutes) {
-            setStatus({ isOpen: false, message: "Fechado agora", nextOpen: findNextOpen(businessHours, now), temporarilyClosed: false });
+            setStatus({ isOpen: false, message: `Fechado (encerrou às ${todayConfig.end})`, nextOpen: findNextOpen(businessHours, now), temporarilyClosed: false });
         } else {
-            const minutesUntilClose = closeMinutes - currentTime;
-            const minsUntil = minutesUntilClose % 60;
-            const closingSoon = minutesUntilClose <= 60;
-            setStatus({
-                isOpen: true,
-                message: closingSoon ? `Fecha em ${minsUntil}min` : `Aberto até ${todayConfig.end}`,
-                nextOpen: null,
-                closingSoon,
-                temporarilyClosed: false
-            });
+            // Se está no horário, mas pedidos imediatos estão desativados
+            if (settings.allow_immediate_orders === false) {
+                setStatus({
+                    isOpen: false,
+                    message: "Apenas Encomendas Agendadas",
+                    nextOpen: null,
+                    temporarilyClosed: false,
+                    allowScheduledOnly: true
+                });
+            } else {
+                const minutesUntilClose = closeMinutes - currentTime;
+                const closingSoon = minutesUntilClose <= 60;
+                setStatus({
+                    isOpen: true,
+                    message: closingSoon ? `Fecha em ${minutesUntilClose}min` : `Aberto até às ${todayConfig.end}`,
+                    nextOpen: null,
+                    closingSoon,
+                    temporarilyClosed: false
+                });
+            }
         }
     };
 
@@ -166,26 +230,30 @@ function CategorySkeleton() {
 }
 
 function StoreStatusBanner({ status }) {
-    if (status.temporarilyClosed) {
+    const { deliverySettings } = status || {};
+    const allowScheduled = deliverySettings?.allow_scheduled_orders !== false;
+    const bothDisabled = deliverySettings?.allow_immediate_orders === false && deliverySettings?.allow_scheduled_orders === false;
+
+    if (status?.temporarilyClosed || bothDisabled) {
         return (
             <div className="py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all bg-red-500/15 text-red-300 border border-red-500/30 shadow-lg shadow-red-500/10">
                 <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
                     <Clock className="w-4 h-4 text-red-400 shrink-0" />
                     <span>
-                        🔴 Loja Fechada Temporariamente — Pausamos os pedidos no momento. Retornaremos em breve!
+                        🔴 Loja Fechada Temporariamente — Pedidos online pausados no momento. Retornaremos em breve!
                     </span>
                 </div>
             </div>
         );
     }
 
-    if (!status.isOpen) {
+    if (!status?.isOpen) {
         return (
             <div className="py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-lg shadow-amber-500/5">
                 <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
                     <Clock className="w-4 h-4 text-[#F4B544] shrink-0" />
                     <span>
-                        🔴 Atendimento Presencial Fechado — Aceitando Pedidos por Agendamento Prévio!
+                        🔴 {status?.message || "Fechado no momento"} {allowScheduled ? "— Aceitando Pedidos Agendados para os Próximos Dias!" : "— Pedidos fechados."}
                     </span>
                 </div>
             </div>
@@ -197,7 +265,7 @@ function StoreStatusBanner({ status }) {
             <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
                 <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>
-                    🟢 Aberto Agora — Aceitando Pedidos Online!
+                    🟢 Aberto Agora — {status?.message || "Aceitando Pedidos Online!"}
                 </span>
             </div>
         </div>
