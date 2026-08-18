@@ -65,7 +65,7 @@ export function ExperienceCarousel() {
         <div className="flex flex-col items-center w-full">
             {/* Card Principal Quadrado 1:1 Sem Cortes */}
             <div 
-                className="relative rounded-3xl overflow-hidden border border-[#F4B544]/35 bg-[#10100F] shadow-2xl gold-glow w-full max-w-[500px] lg:max-w-[540px] aspect-square group"
+                className="relative rounded-3xl overflow-hidden border border-[#F4B544]/35 bg-[#10100F] shadow-2xl gold-glow w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[400px] xl:max-w-[440px] aspect-square group"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onTouchStart={handleTouchStart}
@@ -92,33 +92,33 @@ export function ExperienceCarousel() {
                 <button
                     type="button"
                     onClick={prevSlide}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-[#050505]/75 border border-[#F4B544]/40 text-[#FFFAF0] hover:text-[#F4B544] hover:bg-[#10100F] hover:scale-110 transition-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-xl backdrop-blur-sm"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-[#050505]/75 border border-[#F4B544]/40 text-[#FFFAF0] hover:text-[#F4B544] hover:bg-[#10100F] hover:scale-110 transition-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-xl backdrop-blur-sm"
                     aria-label="Slide anterior"
                 >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-4 h-4" />
                 </button>
 
                 {/* Botão Próximo */}
                 <button
                     type="button"
                     onClick={nextSlide}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-[#050505]/75 border border-[#F4B544]/40 text-[#FFFAF0] hover:text-[#F4B544] hover:bg-[#10100F] hover:scale-110 transition-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-xl backdrop-blur-sm"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-[#050505]/75 border border-[#F4B544]/40 text-[#FFFAF0] hover:text-[#F4B544] hover:bg-[#10100F] hover:scale-110 transition-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-xl backdrop-blur-sm"
                     aria-label="Próximo slide"
                 >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-4 h-4" />
                 </button>
             </div>
 
             {/* Barra de Indicadores (Dots) Elegante e Nítida */}
-            <div className="flex items-center justify-center gap-2 pt-4">
+            <div className="flex items-center justify-center gap-2 pt-3">
                 {CAROUSEL_SLIDES.map((_, i) => (
                     <button
                         key={i}
                         onClick={() => setCurrentIdx(i)}
-                        className={`h-2.5 rounded-full transition-all cursor-pointer ${
+                        className={`h-2 rounded-full transition-all cursor-pointer ${
                             i === currentIdx
-                                ? "w-8 bg-[#F4B544] shadow-md shadow-[#F4B544]/50"
-                                : "w-2.5 bg-white/20 hover:bg-white/50"
+                                ? "w-6 bg-[#F4B544] shadow-md shadow-[#F4B544]/50"
+                                : "w-2 bg-white/20 hover:bg-white/50"
                         }`}
                         aria-label={`Ir para o slide ${i + 1}`}
                     />
