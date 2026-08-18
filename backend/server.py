@@ -1592,6 +1592,8 @@ async def asaas_webhook(request: Request):
 
 def serialize_order(row: dict) -> dict:
     """Garante que campos JSONB, UUID e datas sejam retornados como tipos Python serializáveis"""
+    if not row:
+        return {}
     d = dict(row)
     if isinstance(d.get('id'), uuid.UUID):
         d['id'] = str(d['id'])
@@ -1601,11 +1603,29 @@ def serialize_order(row: dict) -> dict:
         d['updated_at'] = d['updated_at'].isoformat()
     if isinstance(d.get('payment_confirmed_at'), datetime):
         d['payment_confirmed_at'] = d['payment_confirmed_at'].isoformat()
+    if isinstance(d.get('scheduled_for'), datetime):
+        d['scheduled_for'] = d['scheduled_for'].isoformat()
+    if isinstance(d.get('estimated_delivery'), datetime):
+        d['estimated_delivery'] = d['estimated_delivery'].isoformat()
+    
+    # Conversão segura de valores monetários / Decimals para float
+    for f in ['total', 'subtotal', 'delivery_fee', 'discount', 'discount_amount', 'change_for', 'estimated_distance']:
+        if d.get(f) is not None:
+            try:
+                d[f] = float(d[f])
+            except Exception:
+                pass
+
     items = d.get('items')
     if isinstance(items, str):
-        try: d['items'] = json.loads(items)
-        except: d['items'] = []
-    elif items is None:
+        try:
+            parsed = json.loads(items)
+            if isinstance(parsed, str):
+                parsed = json.loads(parsed)
+            d['items'] = parsed if isinstance(parsed, list) else []
+        except Exception:
+            d['items'] = []
+    elif not isinstance(items, list):
         d['items'] = []
     return d
 
