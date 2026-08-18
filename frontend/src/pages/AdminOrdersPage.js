@@ -611,77 +611,234 @@ export default function AdminOrdersPage() {
                 </DragDropContext>
             </div>
 
-            {/* Modal de Comanda de Cozinha (KDS / Impressão) */}
+            {/* Modal e Impressão de Cupom Não Fiscal Térmico (58mm / 80mm / A4) */}
             {selectedPrintOrder && (
-                <Dialog open={Boolean(selectedPrintOrder)} onOpenChange={() => setSelectedPrintOrder(null)}>
-                    <DialogContent className="max-w-md bg-[#10100F] border border-[#F4B544]/30 text-white rounded-2xl p-6">
-                        <DialogHeader>
-                            <DialogTitle className="font-serif text-xl text-[#F4B544] flex items-center justify-between border-b border-white/10 pb-3">
-                                <span>Comanda #{selectedPrintOrder.order_number}</span>
-                                <Button 
-                                    size="sm"
-                                    onClick={() => window.print()}
-                                    className="bg-[#F4B544] text-black font-bold text-xs gap-1.5"
-                                >
-                                    <Printer className="w-3.5 h-3.5" />
-                                    <span>Imprimir Comanda</span>
-                                </Button>
-                            </DialogTitle>
-                        </DialogHeader>
+                <>
+                    {/* Modal de Pré-Visualização na Tela */}
+                    <Dialog open={Boolean(selectedPrintOrder)} onOpenChange={() => setSelectedPrintOrder(null)}>
+                        <DialogContent className="max-w-md bg-[#10100F] border border-[#F4B544]/30 text-white rounded-2xl p-6 shadow-2xl">
+                            <DialogHeader>
+                                <DialogTitle className="font-serif text-xl text-[#F4B544] flex items-center justify-between border-b border-white/10 pb-3">
+                                    <span>Cupom Não Fiscal #{selectedPrintOrder.order_number}</span>
+                                    <Button 
+                                        size="sm"
+                                        onClick={() => window.print()}
+                                        className="bg-[#F4B544] text-black font-extrabold text-xs gap-1.5 shadow-md hover:bg-[#FFC85C] cursor-pointer"
+                                    >
+                                        <Printer className="w-4 h-4" />
+                                        <span>Imprimir Cupom</span>
+                                    </Button>
+                                </DialogTitle>
+                            </DialogHeader>
 
-                        <div className="space-y-4 pt-2 text-xs">
-                            <div className="bg-[#171612] p-3.5 rounded-xl border border-[#F4B544]/20 space-y-1.5">
-                                <p className="font-bold text-sm text-white">Cliente: {selectedPrintOrder.customer_name}</p>
-                                <p className="text-gray-300">Telefone: {selectedPrintOrder.customer_phone}</p>
-                                <p className="text-gray-300">
-                                    Modalidade: <strong className="text-[#F4B544] uppercase">{selectedPrintOrder.delivery_type}</strong>
-                                </p>
-                                {selectedPrintOrder.address && selectedPrintOrder.delivery_type === "entrega" && (
-                                    <p className="text-gray-300">Endereço: {selectedPrintOrder.address} - {selectedPrintOrder.neighborhood}</p>
-                                )}
-                                {(selectedPrintOrder.scheduled_date || selectedPrintOrder.scheduled_time) && (
-                                    <div className="p-2 rounded-lg bg-[#F4B544]/20 text-[#F4B544] font-black text-xs mt-2">
-                                        🗓️ AGENDADO: {selectedPrintOrder.scheduled_date ? new Date(selectedPrintOrder.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : ""} {selectedPrintOrder.scheduled_time ? `às ${selectedPrintOrder.scheduled_time}h` : ""}
+                            {/* Prévia Estilo Papel Térmico */}
+                            <div className="bg-white text-black p-5 rounded-xl font-mono text-xs shadow-inner space-y-3 border border-gray-300 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                <div className="text-center space-y-0.5 border-b border-dashed border-gray-400 pb-3">
+                                    <h3 className="font-bold text-base tracking-tight">JOHB CAFÉ & SALGADOS</h3>
+                                    <p className="text-[11px] text-gray-700">Balneário Arroio do Silva - SC</p>
+                                    <p className="text-[10px] font-bold text-gray-600 tracking-wider mt-1">*** CUPOM NÃO FISCAL ***</p>
+                                </div>
+
+                                <div className="space-y-1 text-[11px] border-b border-dashed border-gray-400 pb-2">
+                                    <div className="flex justify-between font-bold text-sm">
+                                        <span>PEDIDO #{selectedPrintOrder.order_number}</span>
+                                        <span className="uppercase text-xs bg-gray-200 px-1.5 py-0.5 rounded">
+                                            {selectedPrintOrder.delivery_type === "entrega" ? "ENTREGA" : "RETIRADA"}
+                                        </span>
                                     </div>
-                                )}
-                            </div>
+                                    <p className="text-gray-700">
+                                        Data Emissão: {new Date(selectedPrintOrder.created_at || new Date()).toLocaleString("pt-BR")}
+                                    </p>
+                                    {(selectedPrintOrder.scheduled_date || selectedPrintOrder.scheduled_time) && (
+                                        <div className="font-bold bg-amber-100 p-1.5 rounded border border-amber-300 text-amber-900 mt-1">
+                                            🗓️ AGENDADO: {selectedPrintOrder.scheduled_date ? new Date(selectedPrintOrder.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : ""} {selectedPrintOrder.scheduled_time ? `às ${selectedPrintOrder.scheduled_time}h` : ""}
+                                        </div>
+                                    )}
+                                </div>
 
-                            {/* Itens do Pedido */}
-                            <div className="space-y-2">
-                                <p className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">Itens da Cozinha:</p>
-                                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                <div className="space-y-1 text-[11px] border-b border-dashed border-gray-400 pb-2">
+                                    <p><strong className="text-black">CLIENTE:</strong> {selectedPrintOrder.customer_name}</p>
+                                    <p><strong className="text-black">TELEFONE:</strong> {selectedPrintOrder.customer_phone}</p>
+                                    {selectedPrintOrder.delivery_type === "entrega" && selectedPrintOrder.address && (
+                                        <p><strong className="text-black">ENDEREÇO:</strong> {selectedPrintOrder.address}{selectedPrintOrder.neighborhood ? ` - ${selectedPrintOrder.neighborhood}` : ""}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2 border-b border-dashed border-gray-400 pb-2">
+                                    <div className="flex justify-between font-bold text-[10px] uppercase text-gray-600 border-b border-gray-200 pb-1">
+                                        <span>QTD  ITEM</span>
+                                        <span>TOTAL</span>
+                                    </div>
                                     {(Array.isArray(selectedPrintOrder.items) ? selectedPrintOrder.items : []).map((it, idx) => (
-                                        <div key={idx} className="p-2.5 rounded-xl bg-[#141414] border border-white/5 flex items-start justify-between">
-                                            <div>
-                                                <span className="font-black text-sm text-white mr-2">{it.quantity}x</span>
-                                                <span className="font-bold text-white text-xs">{it.name || it.product_name}</span>
-                                                {Array.isArray(it.complements) && it.complements.length > 0 && (
-                                                    <p className="text-[11px] text-gray-400 mt-0.5 pl-6">
-                                                        + {it.complements.map(c => c.name || c).join(', ')}
-                                                    </p>
-                                                )}
+                                        <div key={idx} className="space-y-0.5 text-xs">
+                                            <div className="flex justify-between items-start font-medium">
+                                                <span><strong>{it.quantity}x</strong> {it.name || it.product_name}</span>
+                                                <span className="font-bold shrink-0 ml-2">R$ {((it.price || 0) * it.quantity).toFixed(2).replace('.', ',')}</span>
                                             </div>
-                                            <span className="text-xs font-bold text-[#F4B544]">
-                                                R$ {((it.price || 0) * it.quantity).toFixed(2)}
-                                            </span>
+                                            {Array.isArray(it.complements) && it.complements.length > 0 && (
+                                                <div className="pl-4 text-[10px] text-gray-600">
+                                                    {it.complements.map((c, cIdx) => (
+                                                        <p key={cIdx}>+ {c.name || c} {c.price ? `(R$ ${Number(c.price).toFixed(2).replace('.', ',')})` : ''}</p>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
-                            </div>
 
-                            {selectedPrintOrder.observation && (
-                                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
-                                    <strong>Observação:</strong> {selectedPrintOrder.observation}
+                                <div className="space-y-1 text-xs border-b border-dashed border-gray-400 pb-2">
+                                    <div className="flex justify-between text-gray-700">
+                                        <span>Subtotal:</span>
+                                        <span>R$ {Number(selectedPrintOrder.subtotal || selectedPrintOrder.total).toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                    {Number(selectedPrintOrder.delivery_fee) > 0 && (
+                                        <div className="flex justify-between text-gray-700">
+                                            <span>Taxa de Entrega:</span>
+                                            <span>R$ {Number(selectedPrintOrder.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    )}
+                                    {Number(selectedPrintOrder.discount_amount) > 0 && (
+                                        <div className="flex justify-between text-emerald-700 font-bold">
+                                            <span>Desconto Cupom ({selectedPrintOrder.coupon_code || ''}):</span>
+                                            <span>- R$ {Number(selectedPrintOrder.discount_amount).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between font-bold text-sm text-black pt-1 border-t border-gray-300">
+                                        <span>TOTAL:</span>
+                                        <span>R$ {Number(selectedPrintOrder.total).toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1 text-[11px] border-b border-dashed border-gray-400 pb-2">
+                                    <p>
+                                        <strong>PAGAMENTO:</strong> {
+                                            selectedPrintOrder.payment_method === "asaas" ? "Online (Asaas - PIX/Cartão)" :
+                                            selectedPrintOrder.payment_method === "cartao_maquininha" ? "Cartão na Maquininha" :
+                                            selectedPrintOrder.payment_method === "dinheiro" ? (
+                                                selectedPrintOrder.change_for ? `Dinheiro (Troco para R$ ${Number(selectedPrintOrder.change_for).toFixed(2).replace('.', ',')})` : "Dinheiro (Sem Troco)"
+                                            ) : (selectedPrintOrder.payment_method || "Não especificado")
+                                        }
+                                    </p>
+                                    <p>
+                                        <strong>STATUS PGTO:</strong> <span className={selectedPrintOrder.payment_status === "pago" ? "text-emerald-700 font-bold" : "text-amber-700 font-bold"}>
+                                            {selectedPrintOrder.payment_status === "pago" ? "PAGO" : "PENDENTE"}
+                                        </span>
+                                    </p>
+                                    {selectedPrintOrder.observation && (
+                                        <div className="mt-1.5 p-1.5 bg-gray-100 rounded border border-gray-300">
+                                            <strong>OBSERVAÇÕES:</strong> {selectedPrintOrder.observation}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="text-center text-[10px] text-gray-600 pt-1 space-y-0.5">
+                                    <p>Feito com carinho para você!</p>
+                                    <p className="font-bold">WhatsApp: (48) 99101-3293</p>
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Container Invisível na Tela / Exclusivo para Impressão Térmica */}
+                    <div id="printable-thermal-ticket" className="font-mono text-black">
+                        <div style={{ textAlign: "center", marginBottom: "8px", borderBottom: "1px dashed #000", paddingBottom: "6px" }}>
+                            <div style={{ fontSize: "15px", fontWeight: "bold", letterSpacing: "1px" }}>JOHB CAFÉ & SALGADOS</div>
+                            <div style={{ fontSize: "11px" }}>Balneário Arroio do Silva - SC</div>
+                            <div style={{ fontSize: "10px", fontWeight: "bold", marginTop: "3px" }}>*** CUPOM NÃO FISCAL ***</div>
+                        </div>
+
+                        <div style={{ fontSize: "11px", marginBottom: "8px", borderBottom: "1px dashed #000", paddingBottom: "6px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "bold" }}>
+                                <span>PEDIDO #{selectedPrintOrder.order_number}</span>
+                                <span>{selectedPrintOrder.delivery_type === "entrega" ? "ENTREGA" : "RETIRADA"}</span>
+                            </div>
+                            <div>Data: {new Date(selectedPrintOrder.created_at || new Date()).toLocaleString("pt-BR")}</div>
+                            {(selectedPrintOrder.scheduled_date || selectedPrintOrder.scheduled_time) && (
+                                <div style={{ fontWeight: "bold", marginTop: "3px" }}>
+                                    AGENDADO: {selectedPrintOrder.scheduled_date ? new Date(selectedPrintOrder.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : ""} {selectedPrintOrder.scheduled_time ? `às ${selectedPrintOrder.scheduled_time}h` : ""}
                                 </div>
                             )}
+                        </div>
 
-                            <div className="pt-3 border-t border-white/10 flex justify-between items-center text-sm font-extrabold">
-                                <span>Total do Pedido:</span>
-                                <span className="text-[#F4B544] text-base">R$ {Number(selectedPrintOrder.total).toFixed(2)}</span>
+                        <div style={{ fontSize: "11px", marginBottom: "8px", borderBottom: "1px dashed #000", paddingBottom: "6px" }}>
+                            <div><strong>CLIENTE:</strong> {selectedPrintOrder.customer_name}</div>
+                            <div><strong>TELEFONE:</strong> {selectedPrintOrder.customer_phone}</div>
+                            {selectedPrintOrder.delivery_type === "entrega" && selectedPrintOrder.address && (
+                                <div><strong>ENDEREÇO:</strong> {selectedPrintOrder.address}{selectedPrintOrder.neighborhood ? ` - ${selectedPrintOrder.neighborhood}` : ""}</div>
+                            )}
+                        </div>
+
+                        <div style={{ fontSize: "11px", marginBottom: "8px", borderBottom: "1px dashed #000", paddingBottom: "6px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold", borderBottom: "1px solid #ddd", paddingBottom: "3px", marginBottom: "4px" }}>
+                                <span>QTD  ITEM</span>
+                                <span>VALOR</span>
+                            </div>
+                            {(Array.isArray(selectedPrintOrder.items) ? selectedPrintOrder.items : []).map((it, idx) => (
+                                <div key={idx} style={{ marginBottom: "4px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span><strong>{it.quantity}x</strong> {it.name || it.product_name}</span>
+                                        <strong>R$ {((it.price || 0) * it.quantity).toFixed(2).replace('.', ',')}</strong>
+                                    </div>
+                                    {Array.isArray(it.complements) && it.complements.length > 0 && (
+                                        <div style={{ paddingLeft: "12px", fontSize: "10px", color: "#444" }}>
+                                            {it.complements.map((c, cIdx) => (
+                                                <div key={cIdx}>+ {c.name || c} {c.price ? `(R$ ${Number(c.price).toFixed(2).replace('.', ',')})` : ''}</div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ fontSize: "11px", marginBottom: "8px", borderBottom: "1px dashed #000", paddingBottom: "6px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span>Subtotal:</span>
+                                <span>R$ {Number(selectedPrintOrder.subtotal || selectedPrintOrder.total).toFixed(2).replace('.', ',')}</span>
+                            </div>
+                            {Number(selectedPrintOrder.delivery_fee) > 0 && (
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span>Taxa Entrega:</span>
+                                    <span>R$ {Number(selectedPrintOrder.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                </div>
+                            )}
+                            {Number(selectedPrintOrder.discount_amount) > 0 && (
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span>Desconto:</span>
+                                    <span>- R$ {Number(selectedPrintOrder.discount_amount).toFixed(2).replace('.', ',')}</span>
+                                </div>
+                            )}
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "bold", borderTop: "1px solid #000", paddingTop: "4px", marginTop: "3px" }}>
+                                <span>TOTAL:</span>
+                                <span>R$ {Number(selectedPrintOrder.total).toFixed(2).replace('.', ',')}</span>
                             </div>
                         </div>
-                    </DialogContent>
-                </Dialog>
+
+                        <div style={{ fontSize: "11px", marginBottom: "8px", borderBottom: "1px dashed #000", paddingBottom: "6px" }}>
+                            <div>
+                                <strong>PAGAMENTO:</strong> {
+                                    selectedPrintOrder.payment_method === "asaas" ? "Online (Asaas)" :
+                                    selectedPrintOrder.payment_method === "cartao_maquininha" ? "Cartão na Maquininha" :
+                                    selectedPrintOrder.payment_method === "dinheiro" ? (
+                                        selectedPrintOrder.change_for ? `Dinheiro (Troco p/ R$ ${Number(selectedPrintOrder.change_for).toFixed(2).replace('.', ',')})` : "Dinheiro (Sem Troco)"
+                                    ) : (selectedPrintOrder.payment_method || "Não informado")
+                                }
+                            </div>
+                            <div>
+                                <strong>STATUS:</strong> {selectedPrintOrder.payment_status === "pago" ? "PAGO" : "PENDENTE"}
+                            </div>
+                            {selectedPrintOrder.observation && (
+                                <div style={{ marginTop: "4px" }}>
+                                    <strong>OBS:</strong> {selectedPrintOrder.observation}
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ textAlign: "center", fontSize: "10px", marginTop: "6px" }}>
+                            <div>Feito com carinho para você!</div>
+                            <div style={{ fontWeight: "bold" }}>WhatsApp: (48) 99101-3293</div>
+                        </div>
+                    </div>
+                </>
             )}
 
             <ConfirmModal 
