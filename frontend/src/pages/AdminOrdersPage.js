@@ -281,7 +281,7 @@ const OrderCard = ({ order, index, markPaid, updateStatus, setConfirmModal, setD
 export default function AdminOrdersPage() {
     const [columns, setColumns] = useState({});
     const [activeTab, setActiveTab] = useState("all"); // Modo Kanban completo como padrão
-    const [scheduleFilter, setScheduleFilter] = useState("all"); // 'all', 'today', 'future'
+    const [scheduleFilter, setScheduleFilter] = useState("today"); // 'today' (padrão: zera automaticamente a cada novo dia), 'all', 'future'
     const [loading, setLoading] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [selectedPrintOrder, setSelectedPrintOrder] = useState(null);
@@ -449,7 +449,7 @@ export default function AdminOrdersPage() {
         }
     };
 
-    // Filtro adicional por agendamento
+    // Filtro adicional por data: 'today' (pedidos de hoje + em andamento), 'all' (todos), 'future' (agendados futuros)
     const filterOrdersBySchedule = (ordersList) => {
         if (!Array.isArray(ordersList)) return [];
         if (scheduleFilter === "all") return ordersList;
@@ -461,7 +461,14 @@ export default function AdminOrdersPage() {
         const todayStr = `${year}-${month}-${day}`;
 
         if (scheduleFilter === "today") {
-            return ordersList.filter(o => o.scheduled_date === todayStr);
+            return ordersList.filter(o => {
+                const orderDate = o.created_at ? o.created_at.slice(0, 10) : "";
+                if (orderDate === todayStr) return true;
+                if (o.scheduled_date === todayStr) return true;
+                // Pedidos pendentes ou em produção não concluídos
+                if (["aguardando", "confirmado", "preparando", "saiu_entrega"].includes(o.status)) return true;
+                return false;
+            });
         }
         if (scheduleFilter === "future") {
             return ordersList.filter(o => o.scheduled_date && o.scheduled_date > todayStr);
@@ -469,17 +476,108 @@ export default function AdminOrdersPage() {
         return ordersList;
     };
 
+    // Contadores em tempo real para as abas operacionais
+    const todayStr = useMemo(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }, []);
+
+    const totalAll = useMemo(() => {
+        let sum = 0;
+        Object.values(columns).forEach(list => { sum += (list || []).length; });
+        return sum;
+    }, [columns]);
+
+    const totalToday = useMemo(() => {
+        let sum = 0;
+        Object.values(columns).forEach(list => {
+            (list || []).forEach(o => {
+                const orderDate = o.created_at ? o.created_at.slice(0, 10) : "";
+                if (orderDate === todayStr || o.scheduled_date === todayStr || ["aguardando", "confirmado", "preparando", "saiu_entrega"].includes(o.status)) {
+                    sum++;
+                }
+            });
+        });
+        return sum;
+    }, [columns, todayStr]);
+
+    const totalFuture = useMemo(() => {
+        let sum = 0;
+        Object.values(columns).forEach(list => {
+            (list || []).forEach(o => {
+                if (o.scheduled_date && o.scheduled_date > todayStr) {
+                    sum++;
+                }
+            });
+        });
+        return sum;
+    }, [columns, todayStr]);
+
     return (
         <div data-testid="admin-orders-page" className="min-h-[calc(100vh-80px)] bg-[#0A0A0A] text-white flex flex-col">
             {/* Header Estilo Premium JOHB */}
             <div className="pb-6 border-b border-[#D4AF37]/15">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Pedidos em Tempo Real</h1>
-                        <p className="text-gray-400 text-sm font-medium mt-1">Painel KDS de produção e entregas JOHB Café & Salgados.</p>
+                        <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Pedidos & Produção KDS</h1>
+                        <p className="text-gray-400 text-sm font-medium mt-1">Painel operacional com separação automática de pedidos do dia e agendamentos futuros.</p>
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {/* Seletor de Visão Operacional Inteligente */}
+                        <div className="flex items-center gap-1 bg-[#141414] p-1 rounded-2xl border border-[#F4B544]/20 text-xs shadow-inner">
+                            <button
+                                type="button"
+                                onClick={() => setScheduleFilter("today")}
+                                className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    scheduleFilter === "today"
+                                        ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
+                                        : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                                }`}
+                            >
+                                <span>🟢 Hoje</span>
+                                <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                                    scheduleFilter === "today" ? "bg-black/20 text-black" : "bg-white/10 text-gray-300"
+                                }`}>
+                                    {totalToday}
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setScheduleFilter("future")}
+                                className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    scheduleFilter === "future"
+                                        ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
+                                        : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                                }`}
+                            >
+                                <span>📅 Futuros</span>
+                                <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                                    scheduleFilter === "future" ? "bg-black/20 text-black" : "bg-white/10 text-gray-300"
+                                }`}>
+                                    {totalFuture}
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setScheduleFilter("all")}
+                                className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    scheduleFilter === "all"
+                                        ? "bg-[#F4B544] text-[#050505] shadow-md font-extrabold"
+                                        : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                                }`}
+                            >
+                                <span>📋 Todos</span>
+                                <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                                    scheduleFilter === "all" ? "bg-black/20 text-black" : "bg-white/10 text-gray-300"
+                                }`}>
+                                    {totalAll}
+                                </span>
+                            </button>
+                        </div>
+
                         {/* Botão de Som */}
                         <Button
                             variant="outline"
@@ -492,7 +590,7 @@ export default function AdminOrdersPage() {
                             }`}
                         >
                             {soundEnabled ? <Volume2 className="h-4 w-4 text-emerald-400" /> : <VolumeX className="h-4 w-4 text-red-400" />}
-                            <span>{soundEnabled ? "Som Ativo" : "Som Mudo"}</span>
+                            <span>{soundEnabled ? "Som Ativo" : "Mudo"}</span>
                         </Button>
 
                         <Button variant="outline" size="sm" onClick={fetchOrders} className="rounded-xl h-10 w-10 p-0 bg-[#141414] hover:bg-white/10 border-white/10 text-[#F4B544]">
@@ -501,7 +599,7 @@ export default function AdminOrdersPage() {
                     </div>
                 </div>
 
-                {/* Filtros de Status */}
+                {/* Filtros de Status Kanban */}
                 <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
                     <div className="flex flex-wrap gap-2">
                         <Button 
@@ -514,7 +612,7 @@ export default function AdminOrdersPage() {
                             }`}
                         >
                             <GripVertical className="h-3.5 w-3.5" />
-                            Pedidos
+                            Quadro Completo
                         </Button>
 
                         {KANBAN_COLUMNS.map(colId => {
@@ -538,37 +636,6 @@ export default function AdminOrdersPage() {
                                 </Button>
                             );
                         })}
-                    </div>
-
-                    {/* Filtros de Agendamento */}
-                    <div className="flex items-center gap-1.5 bg-[#141414] p-1 rounded-xl border border-white/10 text-xs">
-                        <button
-                            type="button"
-                            onClick={() => setScheduleFilter("all")}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                scheduleFilter === "all" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
-                            }`}
-                        >
-                            Todos
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setScheduleFilter("today")}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                scheduleFilter === "today" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
-                            }`}
-                        >
-                            🗓️ Agendados Hoje
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setScheduleFilter("future")}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                scheduleFilter === "future" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
-                            }`}
-                        >
-                            📅 Futuros
-                        </button>
                     </div>
                 </div>
             </div>
