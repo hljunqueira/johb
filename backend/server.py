@@ -10,6 +10,7 @@ import math
 import httpx
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
+from decimal import Decimal
 import re
 
 # Configurar logging
@@ -331,6 +332,32 @@ async def health_check_db():
 # ============================================
 # PUBLIC ENDPOINTS
 # ============================================
+
+def serialize_product(row) -> dict:
+    """Serializa produto com conversão segura de Decimals, UUIDs e JSONBs"""
+    if not row:
+        return {}
+    d = dict(row)
+    if 'id' in d and isinstance(d['id'], uuid.UUID):
+        d['id'] = str(d['id'])
+    if 'price' in d and isinstance(d['price'], Decimal):
+        d['price'] = float(d['price'])
+    if 'complements' in d:
+        if isinstance(d['complements'], str):
+            try:
+                parsed = json.loads(d['complements'])
+                if isinstance(parsed, str):
+                    parsed = json.loads(parsed)
+                d['complements'] = parsed if isinstance(parsed, list) else []
+            except Exception:
+                d['complements'] = []
+        elif not isinstance(d['complements'], list):
+            d['complements'] = []
+    if 'created_at' in d and isinstance(d['created_at'], datetime):
+        d['created_at'] = d['created_at'].isoformat()
+    if 'updated_at' in d and isinstance(d['updated_at'], datetime):
+        d['updated_at'] = d['updated_at'].isoformat()
+    return d
 
 @app.get("/api/products")
 async def get_products(category_id: Optional[str] = None):
