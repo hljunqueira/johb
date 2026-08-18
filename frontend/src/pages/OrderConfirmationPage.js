@@ -47,7 +47,7 @@ export default function OrderConfirmationPage() {
         fetchOrder();
         const interval = setInterval(fetchOrder, 8000); // Sincronização a cada 8s
         return () => clearInterval(interval);
-    }, [id]);
+    }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const submitRating = async (e) => {
         e.preventDefault();

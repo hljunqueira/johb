@@ -68,7 +68,7 @@ function useStoreStatus() {
             setDeliverySettings(r.data);
             checkStatus(r.data);
         }).catch(() => {});
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const checkStatus = (settings) => {
         if (settings?.always_open) {
