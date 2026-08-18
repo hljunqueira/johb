@@ -599,11 +599,11 @@ def format_delivery_settings_row(row):
     d["allow_immediate_orders"] = bool(d.get("allow_immediate_orders", True))
     d["allow_scheduled_orders"] = bool(d.get("allow_scheduled_orders", True))
     d["allow_pickup"] = bool(d.get("allow_pickup", True))
-    d["min_lead_hours"] = float(d.get("min_lead_hours") or 0.5)
-    d["max_schedule_days"] = int(d.get("max_schedule_days") or 7)
-    d["delivery_fee"] = float(d.get("delivery_fee") or 5.0)
-    d["min_free_delivery"] = float(d.get("min_free_delivery") or 60.0)
-    d["max_delivery_distance"] = float(d.get("max_delivery_distance") or 10.5)
+    d["min_lead_hours"] = float(d["min_lead_hours"] if d.get("min_lead_hours") is not None else 0.5)
+    d["max_schedule_days"] = int(d["max_schedule_days"] if d.get("max_schedule_days") is not None else 7)
+    d["delivery_fee"] = float(d["delivery_fee"] if d.get("delivery_fee") is not None else 5.0)
+    d["min_free_delivery"] = float(d["min_free_delivery"] if d.get("min_free_delivery") is not None else 0.0)
+    d["max_delivery_distance"] = float(d["max_delivery_distance"] if d.get("max_delivery_distance") is not None else 10.5)
     return d
 
 
@@ -2524,8 +2524,8 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
                allow_pickup = $19
                WHERE id = 1 RETURNING *""",
             json.dumps(sanitize_json_input(request.get('areas'), [])),
-            float(request.get('delivery_fee', 5.0)),
-            float(request.get('min_free_delivery', 60.0)),
+            float(request.get('delivery_fee') if request.get('delivery_fee') is not None else 5.0),
+            float(request.get('min_free_delivery') if request.get('min_free_delivery') is not None else 0.0),
             bool(request.get('active', True)),
             json.dumps(sanitize_json_input(request.get('business_hours'), {})),
             new_address,

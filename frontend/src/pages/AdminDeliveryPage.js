@@ -65,7 +65,7 @@ export default function AdminDeliveryPage() {
     const [settings, setSettings] = useState({ 
         areas: [], 
         delivery_fee: 5, 
-        min_free_delivery: 60, 
+        min_free_delivery: 0, 
         active: true, 
         allow_pickup: true,
         business_hours: DEFAULT_HOURS,
@@ -108,6 +108,8 @@ export default function AdminDeliveryPage() {
                     allow_scheduled_orders: Boolean(data.allow_scheduled_orders),
                     active: Boolean(data.active),
                     allow_pickup: data.allow_pickup !== false,
+                    delivery_fee: Number(data.delivery_fee ?? 5),
+                    min_free_delivery: Number(data.min_free_delivery ?? 0),
                     min_lead_hours: Number(data.min_lead_hours ?? 0.5),
                     max_schedule_days: parseInt(data.max_schedule_days) || 7
                 }));
