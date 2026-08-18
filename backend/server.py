@@ -2535,6 +2535,7 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
             bool(request.get('allow_immediate_orders', True)),
             bool(request.get('allow_scheduled_orders', True))
         )
+        invalidate_cache()
         return format_delivery_settings_row(row)
 
 

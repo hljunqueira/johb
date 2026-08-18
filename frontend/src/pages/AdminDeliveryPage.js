@@ -71,6 +71,32 @@ const parseDistanceRates = (rates) => {
     return DEFAULT_DISTANCE_RATES;
 };
 
+// Helper para garantir que business_hours seja sempre um objeto estruturado
+const parseBusinessHoursClient = (raw) => {
+    if (!raw) return DEFAULT_HOURS;
+    if (typeof raw === "object" && !Array.isArray(raw)) {
+        if ("seg" in raw) return raw;
+        if ("0" in raw && "1" in raw) {
+            try {
+                const sortedKeys = Object.keys(raw).filter(k => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b));
+                const str = sortedKeys.map(k => raw[k]).join("");
+                const parsed = JSON.parse(str);
+                const obj = typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+                if (obj && typeof obj === "object" && "seg" in obj) return obj;
+            } catch {}
+        }
+        return raw;
+    }
+    if (typeof raw === "string") {
+        try {
+            const parsed = JSON.parse(raw);
+            const obj = typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+            if (obj && typeof obj === "object" && "seg" in obj) return obj;
+        } catch {}
+    }
+    return DEFAULT_HOURS;
+};
+
 export default function AdminDeliveryPage() {
     const [activeTab, setActiveTab] = useState("delivery");
     const [settings, setSettings] = useState({ 
@@ -107,9 +133,7 @@ export default function AdminDeliveryPage() {
             setSettings(prev => ({
                 ...prev,
                 ...data,
-                business_hours: (data.business_hours && typeof data.business_hours === "object" && data.business_hours.seg)
-                    ? data.business_hours
-                    : DEFAULT_HOURS,
+                business_hours: parseBusinessHoursClient(data.business_hours),
                 distance_rates: parseDistanceRates(data.distance_rates),
                 max_delivery_distance: data.max_delivery_distance || 10.5,
                 restaurant_address: data.restaurant_address || "",
@@ -132,13 +156,19 @@ export default function AdminDeliveryPage() {
     const saveDelivery = async () => {
         setLoading(true);
         try {
-            const res = await axios.put(`${API}/admin/delivery-settings`, settings, { headers });
+            const payload = {
+                ...settings,
+                business_hours: settings.business_hours,
+                areas: settings.areas || [],
+                distance_rates: settings.distance_rates || []
+            };
+            const res = await axios.put(`${API}/admin/delivery-settings`, payload, { headers });
             if (res.data) {
                 const data = res.data;
                 setSettings(prev => ({
                     ...prev,
                     ...data,
-                    business_hours: (data.business_hours && data.business_hours.seg) ? data.business_hours : prev.business_hours,
+                    business_hours: parseBusinessHoursClient(data.business_hours) || prev.business_hours,
                     always_open: Boolean(data.always_open),
                     temporarily_closed: Boolean(data.temporarily_closed),
                     accept_online_payment: data.accept_online_payment !== false,
