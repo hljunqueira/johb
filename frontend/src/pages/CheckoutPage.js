@@ -151,12 +151,13 @@ export default function CheckoutPage() {
         return getAvailableScheduleDates(deliverySettings);
     }, [deliverySettings]);
 
-    // Data selecionada
+    // Data selecionada (pega primeira data com slots disponíveis)
     const currentSelectedDate = useMemo(() => {
         if (scheduledDate && availableDates.some(d => d.value === scheduledDate)) {
             return scheduledDate;
         }
-        return availableDates[0]?.value || "";
+        const firstWithSlots = availableDates.find(d => d.hasSlots);
+        return firstWithSlots?.value || availableDates[0]?.value || "";
     }, [scheduledDate, availableDates]);
 
     // Horários disponíveis
@@ -240,6 +241,11 @@ export default function CheckoutPage() {
         }
         if (deliveryType === "entrega" && (!address.trim() || !neighborhood.trim())) {
             toast.error("Preencha seu endereço completo e bairro em Balneário Arroio do Silva.");
+            return;
+        }
+
+        if (isScheduled && (!currentSelectedDate || !currentSelectedTime)) {
+            toast.error("Por favor, selecione uma data e horário disponíveis para o agendamento.");
             return;
         }
 
@@ -461,7 +467,8 @@ export default function CheckoutPage() {
                                         <select
                                             value={currentSelectedDate}
                                             onChange={e => handleDateChange(e.target.value)}
-                                            className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
+                                            style={{ color: '#FFFAF0', backgroundColor: '#050505' }}
+                                            className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544] cursor-pointer"
                                         >
                                             {availableDates.map(d => (
                                                 <option key={d.value} value={d.value} className="bg-[#10100F] text-white">
@@ -476,7 +483,8 @@ export default function CheckoutPage() {
                                         <select
                                             value={currentSelectedTime}
                                             onChange={e => handleTimeChange(e.target.value)}
-                                            className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
+                                            style={{ color: '#FFFAF0', backgroundColor: '#050505' }}
+                                            className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544] cursor-pointer"
                                         >
                                             {availableTimes.length > 0 ? (
                                                 availableTimes.map(t => (
@@ -789,10 +797,15 @@ export default function CheckoutPage() {
                                     {isScheduled ? "🗓️ Horário Agendado" : "⚡ Modalidade de Envio"}
                                 </span>
                                 <span className="text-xs font-extrabold text-[#FFFAF0] block">
-                                    {isScheduled 
-                                        ? `Data: ${currentSelectedDate ? new Date(currentSelectedDate + 'T00:00:00').toLocaleDateString("pt-BR") : "Hoje"} às ${currentSelectedTime || "12:00"} hs`
-                                        : "Preparo Imediato (O quanto antes)"
-                                    }
+                                    {isScheduled ? (
+                                        (currentSelectedDate && currentSelectedTime) ? (
+                                            `Data: ${new Date(currentSelectedDate + 'T00:00:00').toLocaleDateString("pt-BR")} às ${currentSelectedTime} hs`
+                                        ) : (
+                                            <span className="text-amber-400 font-semibold">⚠️ Selecione um horário para agendar</span>
+                                        )
+                                    ) : (
+                                        "Preparo Imediato (O quanto antes)"
+                                    )}
                                 </span>
                             </div>
 
@@ -827,8 +840,8 @@ export default function CheckoutPage() {
                             {/* Botão de Finalização */}
                             <button
                                 type="submit"
-                                disabled={loading}
-                                className="w-full py-4 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-50 transform hover:-translate-y-0.5"
+                                disabled={loading || (isScheduled && (!currentSelectedDate || !currentSelectedTime))}
+                                className="w-full py-4 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
                             >
                                 {loading ? (
                                     <>
@@ -841,7 +854,7 @@ export default function CheckoutPage() {
                                             {paymentMethod === "asaas" 
                                                 ? "Ir para Pagamento Online" 
                                                 : isScheduled 
-                                                    ? "Confirmar Pedido Agendado" 
+                                                    ? (currentSelectedTime ? "Confirmar Pedido Agendado" : "Selecione um Horário Válido")
                                                     : "Confirmar Pedido Agora"
                                             }
                                         </span>

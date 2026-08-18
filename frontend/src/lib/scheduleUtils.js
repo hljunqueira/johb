@@ -13,13 +13,26 @@ const DAY_LABELS = {
     sab: "Sábado"
 };
 
+export function parseBusinessHours(raw) {
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    if (typeof raw === 'string') {
+        try {
+            return JSON.parse(raw);
+        } catch {
+            return {};
+        }
+    }
+    return {};
+}
+
 /**
  * Retorna a lista de datas elegíveis para agendamento respeitando os dias em que o restaurante abre.
  */
 export function getAvailableScheduleDates(deliverySettings) {
     const dates = [];
     const maxDays = Number(deliverySettings?.max_schedule_days) || 7;
-    const businessHours = deliverySettings?.business_hours || {};
+    const businessHours = parseBusinessHours(deliverySettings?.business_hours);
     const alwaysOpen = Boolean(deliverySettings?.always_open);
 
     const now = new Date();
@@ -30,9 +43,9 @@ export function getAvailableScheduleDates(deliverySettings) {
 
         const dayKey = DAY_KEYS[d.getDay()];
         const dayConfig = businessHours[dayKey];
-        const isOpen = alwaysOpen || (dayConfig && dayConfig.open !== false);
+        const isOpen = alwaysOpen || !dayConfig || dayConfig.open !== false;
 
-        // Se o dia não estiver aberto no expediente, pula para o próximo
+        // Se o restaurante estiver fechado neste dia da semana, pula
         if (!isOpen) continue;
 
         const year = d.getFullYear();
@@ -40,23 +53,29 @@ export function getAvailableScheduleDates(deliverySettings) {
         const day = String(d.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${day}`;
 
-        let label = "";
-        if (i === 0) {
-            label = "Hoje";
-        } else if (i === 1) {
-            label = "Amanhã";
-        } else {
-            label = d.toLocaleDateString("pt-BR", { weekday: 'short', day: '2-digit', month: '2-digit' });
+        let prefix = "";
+        if (i === 0) prefix = "Hoje";
+        else if (i === 1) prefix = "Amanhã";
+        else {
+            const w = DAY_LABELS[dayKey].split("-")[0];
+            prefix = w;
         }
+
+        const label = `${prefix} (${day}/${month})`;
+        const slots = getAvailableTimeSlots(dateStr, deliverySettings);
+        const hasSlots = slots.length > 0;
 
         dates.push({
             value: dateStr,
-            label,
-            displayDate: d.toLocaleDateString("pt-BR"),
+            label: hasSlots ? label : `${label} (Esgotado)`,
+            displayDate: `${day}/${month}/${year}`,
             dayKey,
             dayName: DAY_LABELS[dayKey],
             isToday: i === 0,
-            isTomorrow: i === 1
+            isTomorrow: i === 1,
+            hasSlots,
+            slotsCount: slots.length,
+            firstSlot: slots[0] || ""
         });
     }
 
@@ -70,27 +89,27 @@ export function getAvailableScheduleDates(deliverySettings) {
 export function getAvailableTimeSlots(selectedDateStr, deliverySettings) {
     if (!selectedDateStr) return [];
 
-    const businessHours = deliverySettings?.business_hours || {};
+    const businessHours = parseBusinessHours(deliverySettings?.business_hours);
     const alwaysOpen = Boolean(deliverySettings?.always_open);
     const minLeadHours = Number(deliverySettings?.min_lead_hours ?? 0.5);
 
     const [year, month, day] = selectedDateStr.split('-').map(Number);
     const targetDate = new Date(year, month - 1, day);
     const dayKey = DAY_KEYS[targetDate.getDay()];
-    const dayConfig = businessHours[dayKey] || { open: true, start: "11:00", end: "21:30" };
+    const dayConfig = businessHours[dayKey] || { open: true, start: "11:00", end: "22:00" };
 
     if (!alwaysOpen && dayConfig.open === false) {
         return [];
     }
 
     const startStr = dayConfig.start || "11:00";
-    const endStr = dayConfig.end || "21:30";
+    const endStr = dayConfig.end || "22:00";
 
     const [startH, startM] = startStr.split(':').map(Number);
     const [endH, endM] = endStr.split(':').map(Number);
 
     const startTotalMins = (isNaN(startH) ? 11 : startH) * 60 + (isNaN(startM) ? 0 : startM);
-    const endTotalMins = (isNaN(endH) ? 21 : endH) * 60 + (isNaN(endM) ? 30 : endM);
+    const endTotalMins = (isNaN(endH) ? 22 : endH) * 60 + (isNaN(endM) ? 0 : endM);
 
     const now = new Date();
     const isToday = (
@@ -101,7 +120,7 @@ export function getAvailableTimeSlots(selectedDateStr, deliverySettings) {
 
     // Se for hoje, calcula a restrição de horário mínimo
     const currentMinsNow = now.getHours() * 60 + now.getMinutes();
-    const minEarliestMins = isToday ? (currentMinsNow + (minLeadHours * 60)) : 0;
+    const minEarliestMins = isToday ? (currentMinsNow + Math.round(minLeadHours * 60)) : 0;
 
     const slots = [];
     for (let m = startTotalMins; m <= endTotalMins; m += 30) {
@@ -113,11 +132,6 @@ export function getAvailableTimeSlots(selectedDateStr, deliverySettings) {
         const mins = m % 60;
         const timeFormatted = `${String(h).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
         slots.push(timeFormatted);
-    }
-
-    // Se não tiver nenhum slot disponível hoje porque passou do horário de atendimento
-    if (slots.length === 0 && isToday) {
-        return [];
     }
 
     return slots;
