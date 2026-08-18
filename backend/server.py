@@ -357,11 +357,60 @@ def serialize_product(row) -> dict:
         d['created_at'] = d['created_at'].isoformat()
     if 'updated_at' in d and isinstance(d['updated_at'], datetime):
         d['updated_at'] = d['updated_at'].isoformat()
-    return d
+import time
+
+_MEM_CACHE = {}
+
+def get_cached(key: str, ttl_seconds: int = 60):
+    if key in _MEM_CACHE:
+        val, expire_at = _MEM_CACHE[key]
+        if time.time() < expire_at:
+            return val
+    return None
+
+def set_cached(key: str, val, ttl_seconds: int = 60):
+    _MEM_CACHE[key] = (val, time.time() + ttl_seconds)
+
+def invalidate_cache(prefix: str = ""):
+    global _MEM_CACHE
+    if not prefix:
+        _MEM_CACHE.clear()
+    else:
+        _MEM_CACHE = {k: v for k, v in _MEM_CACHE.items() if not k.startswith(prefix)}
+
+@app.get("/api/bootstrap")
+async def get_bootstrap():
+    """Retorna todo o cardápio público em 1 única requisição com cache de altíssima velocidade (<5ms)"""
+    cached = get_cached("bootstrap_data", 60)
+    if cached is not None:
+        return cached
+
+    menus = await get_menus()
+    categories = await get_categories()
+    products = await get_products()
+    banners = await get_banners()
+    delivery_settings = await get_delivery_settings()
+    reviews_summary = await get_reviews_summary()
+
+    data = {
+        "menus": menus,
+        "categories": categories,
+        "products": products,
+        "banners": banners,
+        "delivery_settings": delivery_settings,
+        "reviews_summary": reviews_summary
+    }
+    set_cached("bootstrap_data", data, 60)
+    return data
 
 @app.get("/api/products")
 async def get_products(category_id: Optional[str] = None):
-    """Lista produtos ativos"""
+    """Lista produtos ativos com cache em memória"""
+    cache_key = f"products_{category_id or 'all'}"
+    cached = get_cached(cache_key, 60)
+    if cached is not None:
+        return cached
+
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         query = "SELECT * FROM products WHERE active = TRUE"
@@ -371,7 +420,9 @@ async def get_products(category_id: Optional[str] = None):
             params.append(category_id)
         query += ' ORDER BY "order", name'
         rows = await conn.fetch(query, *params)
-        return [serialize_product(r) for r in rows]
+        data = [serialize_product(r) for r in rows]
+        set_cached(cache_key, data, 60)
+        return data
 
 
 @app.get("/api/products/{product_id}")
@@ -387,20 +438,32 @@ async def get_product(product_id: str):
 
 @app.get("/api/categories")
 async def get_categories():
-    """Lista categorias ativas"""
+    """Lista categorias ativas com cache em memória"""
+    cached = get_cached("categories", 60)
+    if cached is not None:
+        return cached
+
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('SELECT * FROM categories WHERE active = TRUE ORDER BY "order"')
-        return [dict(r) for r in rows]
+        data = [dict(r) for r in rows]
+        set_cached("categories", data, 60)
+        return data
 
 
 @app.get("/api/menus")
 async def get_menus():
-    """Lista menus ativos"""
+    """Lista menus ativos com cache em memória"""
+    cached = get_cached("menus", 60)
+    if cached is not None:
+        return cached
+
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('SELECT * FROM menus WHERE active = TRUE ORDER BY "order"')
-        return [dict(r) for r in rows]
+        data = [dict(r) for r in rows]
+        set_cached("menus", data, 60)
+        return data
 
 
 @app.get("/api/menus/{menu_id}/categories")
@@ -442,19 +505,29 @@ async def get_category_products(category_id: str):
 @app.get("/api/complements")
 async def get_complements():
     """Lista complementos ativos"""
+    cached = get_cached("complements", 60)
+    if cached is not None:
+        return cached
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("SELECT * FROM complements WHERE active = TRUE ORDER BY name")
-        return [dict(r) for r in rows]
+        data = [dict(r) for r in rows]
+        set_cached("complements", data, 60)
+        return data
 
 
 @app.get("/api/banners")
 async def get_banners():
-    """Lista banners ativos"""
+    """Lista banners ativos com cache"""
+    cached = get_cached("banners", 60)
+    if cached is not None:
+        return cached
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('SELECT * FROM banners WHERE active = TRUE ORDER BY "order"')
-        return [dict(r) for r in rows]
+        data = [dict(r) for r in rows]
+        set_cached("banners", data, 60)
+        return data
 
 
 @app.get("/api/combos")
@@ -533,11 +606,17 @@ def format_delivery_settings_row(row):
 
 @app.get("/api/delivery-settings")
 async def get_delivery_settings():
-    """Configurações de entrega"""
+    """Configurações de entrega com cache em memória"""
+    cached = get_cached("delivery_settings", 60)
+    if cached is not None:
+        return cached
+
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM delivery_settings WHERE id = 1")
-        return format_delivery_settings_row(row)
+        data = format_delivery_settings_row(row)
+        set_cached("delivery_settings", data, 60)
+        return data
 
 
 @app.get("/api/pix-settings")
@@ -636,7 +715,11 @@ def format_relative_date(dt):
 
 @app.get("/api/reviews/summary")
 async def get_reviews_summary():
-    """Resumo de avaliações 100% reais para prova social no cardápio"""
+    """Resumo de avaliações 100% reais para prova social no cardápio com cache"""
+    cached = get_cached("reviews_summary", 60)
+    if cached is not None:
+        return cached
+
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         stats = await conn.fetchrow("""
@@ -665,11 +748,13 @@ async def get_reviews_summary():
         total_count = int(stats['total_reviews']) if stats and stats['total_reviews'] else 0
         avg_val = float(stats['avg_rating']) if stats and stats['avg_rating'] else 0.0
 
-        return {
+        data = {
             "avg_rating": round(avg_val, 1) if total_count > 0 else 0.0,
             "total_reviews": total_count,
             "testimonials": real_testimonials
         }
+        set_cached("reviews_summary", data, 60)
+        return data
 
 
 # ============================================

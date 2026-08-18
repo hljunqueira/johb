@@ -794,26 +794,42 @@ export default function MenuPage() {
     const { isOpen: storeOpen, ...storeStatus } = useStoreStatus();
     const navigate = useNavigate();
 
-    // Carregar Menus, Categorias, Produtos e Reviews no mount
+    // Carregar Menus, Categorias, Produtos e Reviews no mount via /api/bootstrap unificado
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setProductLoading(true);
-                const [menuRes, catRes, prodRes, revRes] = await Promise.all([
-                    axios.get(`${API}/menus`).catch(() => ({ data: [] })),
-                    axios.get(`${API}/categories`).catch(() => ({ data: [] })),
-                    axios.get(`${API}/products`).catch(() => ({ data: [] })),
-                    axios.get(`${API}/reviews/summary`).catch(() => ({ data: { avg_rating: 0, total_reviews: 0, testimonials: [] } }))
-                ]);
+                let fetchedMenus = [];
+                let fetchedCats = [];
+                let fetchedProds = [];
+                let fetchedReviews = null;
 
-                const fetchedMenus = Array.isArray(menuRes.data) && menuRes.data.length > 0 ? menuRes.data : [];
-                const fetchedCats = Array.isArray(catRes.data) && catRes.data.length > 0 ? catRes.data : DEFAULT_JOHB_CATEGORIES;
-                const fetchedProds = Array.isArray(prodRes.data) ? prodRes.data : [];
+                try {
+                    const bootRes = await axios.get(`${API}/bootstrap`);
+                    if (bootRes?.data) {
+                        fetchedMenus = Array.isArray(bootRes.data.menus) ? bootRes.data.menus : [];
+                        fetchedCats = Array.isArray(bootRes.data.categories) && bootRes.data.categories.length > 0 ? bootRes.data.categories : DEFAULT_JOHB_CATEGORIES;
+                        fetchedProds = Array.isArray(bootRes.data.products) ? bootRes.data.products : [];
+                        fetchedReviews = bootRes.data.reviews_summary;
+                    }
+                } catch {
+                    // Fallback para requisições individuais
+                    const [menuRes, catRes, prodRes, revRes] = await Promise.all([
+                        axios.get(`${API}/menus`).catch(() => ({ data: [] })),
+                        axios.get(`${API}/categories`).catch(() => ({ data: [] })),
+                        axios.get(`${API}/products`).catch(() => ({ data: [] })),
+                        axios.get(`${API}/reviews/summary`).catch(() => ({ data: { avg_rating: 0, total_reviews: 0, testimonials: [] } }))
+                    ]);
+                    fetchedMenus = Array.isArray(menuRes.data) && menuRes.data.length > 0 ? menuRes.data : [];
+                    fetchedCats = Array.isArray(catRes.data) && catRes.data.length > 0 ? catRes.data : DEFAULT_JOHB_CATEGORIES;
+                    fetchedProds = Array.isArray(prodRes.data) ? prodRes.data : [];
+                    fetchedReviews = revRes?.data;
+                }
 
                 setMenus(fetchedMenus);
                 setCategories(fetchedCats);
                 setProducts(fetchedProds);
-                if (revRes?.data) setReviewsData(revRes.data);
+                if (fetchedReviews) setReviewsData(fetchedReviews);
 
                 if (fetchedMenus.length > 0) {
                     const firstMenuId = fetchedMenus[0].id;
