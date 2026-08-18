@@ -338,50 +338,114 @@ export default function AdminOrdersPage() {
         }
     };
 
-    const updateStatus = async (orderId, status) => {
-        try { 
-            await axios.put(`${API}/admin/orders/${orderId}/status`, { status }, { headers }); 
-            toast.success(`Pedido movido para ${statusConfig[status]?.label || status}`);
-            fetchOrders(); 
-        } catch { toast.error("Erro ao atualizar status"); }
+    const updateStatus = (orderId, newStatus) => {
+        // Atualização Otimista Imediata (0ms de resposta visual na tela)
+        setColumns(prev => {
+            let foundOrder = null;
+            const next = {};
+            for (const col of KANBAN_COLUMNS) {
+                const list = prev[col] || [];
+                const filtered = list.filter(o => {
+                    if (o.id === orderId) {
+                        foundOrder = { ...o, status: newStatus };
+                        return false;
+                    }
+                    return true;
+                });
+                next[col] = filtered;
+            }
+            if (foundOrder) {
+                next[newStatus] = [foundOrder, ...(next[newStatus] || [])];
+            }
+            return next;
+        });
+
+        toast.success(`Pedido movido para ${statusConfig[newStatus]?.label || newStatus}`);
+
+        // Requisição assíncrona em background
+        axios.put(`${API}/admin/orders/${orderId}/status`, { status: newStatus }, { headers })
+            .catch(err => {
+                console.error("Erro ao atualizar status:", err);
+                toast.error("Erro ao sincronizar status com o servidor");
+                fetchOrders();
+            });
     };
 
-    const markPaid = async (orderId) => {
-        try { await axios.put(`${API}/admin/orders/${orderId}/payment`, {}, { headers }); toast.success("Pagamento confirmado"); fetchOrders(); }
-        catch { toast.error("Erro ao marcar pagamento"); }
+    const markPaid = (orderId) => {
+        // Atualização Otimista Imediata (0ms)
+        setColumns(prev => {
+            const next = {};
+            for (const col of KANBAN_COLUMNS) {
+                next[col] = (prev[col] || []).map(o => o.id === orderId ? { ...o, payment_status: "pago" } : o);
+            }
+            return next;
+        });
+        toast.success("Pagamento confirmado");
+
+        axios.put(`${API}/admin/orders/${orderId}/payment`, {}, { headers })
+            .catch(() => {
+                toast.error("Erro ao salvar pagamento");
+                fetchOrders();
+            });
     };
 
-    const handleDeleteOrder = async (orderId) => {
-        try {
-            await axios.delete(`${API}/admin/orders/${orderId}`, { headers });
-            toast.success("Pedido excluído com sucesso");
-            fetchOrders();
-        } catch {
-            toast.error("Erro ao excluir pedido");
-        }
+    const handleDeleteOrder = (orderId) => {
+        // Remoção Otimista Imediata (0ms)
+        setColumns(prev => {
+            const next = {};
+            for (const col of KANBAN_COLUMNS) {
+                next[col] = (prev[col] || []).filter(o => o.id !== orderId);
+            }
+            return next;
+        });
+        toast.success("Pedido excluído com sucesso");
+
+        axios.delete(`${API}/admin/orders/${orderId}`, { headers })
+            .catch(() => {
+                toast.error("Erro ao excluir no servidor");
+                fetchOrders();
+            });
     };
 
     const onDragEnd = (result) => {
         const { source, destination, draggableId } = result;
         if (!destination) return;
-        if (source.droppableId === destination.droppableId) return;
+        if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
         const orderId = draggableId;
         const newStatus = destination.droppableId;
         
-        const sourceOrders = Array.from(columns[source.droppableId] || []);
-        const destOrders = Array.from(columns[destination.droppableId] || []);
-        const [movedOrder] = sourceOrders.splice(source.index, 1);
-        if (movedOrder) {
-            destOrders.splice(destination.index, 0, { ...movedOrder, status: newStatus });
+        setColumns(prev => {
+            const sourceOrders = Array.from(prev[source.droppableId] || []);
+            const destOrders = source.droppableId === destination.droppableId 
+                ? sourceOrders 
+                : Array.from(prev[destination.droppableId] || []);
             
-            setColumns({
-                ...columns,
-                [source.droppableId]: sourceOrders,
-                [destination.droppableId]: destOrders
-            });
+            const [movedOrder] = sourceOrders.splice(source.index, 1);
+            if (movedOrder) {
+                const updated = { ...movedOrder, status: newStatus };
+                if (source.droppableId === destination.droppableId) {
+                    sourceOrders.splice(destination.index, 0, updated);
+                    return { ...prev, [source.droppableId]: sourceOrders };
+                } else {
+                    destOrders.splice(destination.index, 0, updated);
+                    return {
+                        ...prev,
+                        [source.droppableId]: sourceOrders,
+                        [destination.droppableId]: destOrders
+                    };
+                }
+            }
+            return prev;
+        });
 
-            updateStatus(orderId, newStatus);
+        if (source.droppableId !== destination.droppableId) {
+            toast.success(`Pedido movido para ${statusConfig[newStatus]?.label || newStatus}`);
+            axios.put(`${API}/admin/orders/${orderId}/status`, { status: newStatus }, { headers })
+                .catch(() => {
+                    toast.error("Erro ao sincronizar status");
+                    fetchOrders();
+                });
         }
     };
 
