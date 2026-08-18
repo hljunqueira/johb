@@ -24,15 +24,6 @@ const BACKEND_URL = (rawBackend && rawBackend.includes('hljdev.com.br'))
     : 'https://johb-api.hljdev.com.br';
 const API = `${BACKEND_URL}/api`;
 
-// Categorias padrão JOHB para exibição contínua
-const DEFAULT_JOHB_CATEGORIES = [
-    { id: "cat-salgados", name: "Salgados", description: "Salgados fritos e assados artesanais quentinhos", order: 0 },
-    { id: "cat-assados", name: "Assados", description: "Folhados e assados dourados saindo do forno", order: 1 },
-    { id: "cat-doces", name: "Doces / Cucas", description: "Cucas tradicionais e bolos fofinhos artesanais", order: 2 },
-    { id: "cat-combos", name: "Combos", description: "Combinações perfeitas de salgados + bebida", order: 3 },
-    { id: "cat-bebidas", name: "Bebidas", description: "Refrigerantes e sucos naturais bem gelados", order: 4 }
-];
-
 const getImageUrl = (url) => {
     if (!url) return "/logo-semfundo.png";
     if (url.startsWith("http")) return url;
@@ -900,8 +891,8 @@ function AboutVideoCard() {
 export default function MenuPage() {
     const [menus, setMenus] = useState([]);
     const [selectedMenu, setSelectedMenu] = useState(null);
-    const [categories, setCategories] = useState(DEFAULT_JOHB_CATEGORIES);
-    const [selectedCategory, setSelectedCategory] = useState("cat-salgados");
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState("all");
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isProductLoading, setProductLoading] = useState(false);
@@ -935,20 +926,20 @@ export default function MenuPage() {
                     const bootRes = await axios.get(`${API}/bootstrap`);
                     if (bootRes?.data) {
                         fetchedMenus = Array.isArray(bootRes.data.menus) ? bootRes.data.menus : [];
-                        fetchedCats = Array.isArray(bootRes.data.categories) && bootRes.data.categories.length > 0 ? bootRes.data.categories : DEFAULT_JOHB_CATEGORIES;
+                        fetchedCats = Array.isArray(bootRes.data.categories) ? bootRes.data.categories : [];
                         fetchedProds = Array.isArray(bootRes.data.products) ? bootRes.data.products : [];
                         fetchedReviews = bootRes.data.reviews_summary;
                     }
                 } catch {
-                    // Fallback para requisições individuais
+                    // Fallback para requisições individuais diretas à API
                     const [menuRes, catRes, prodRes, revRes] = await Promise.all([
                         axios.get(`${API}/menus`).catch(() => ({ data: [] })),
                         axios.get(`${API}/categories`).catch(() => ({ data: [] })),
                         axios.get(`${API}/products`).catch(() => ({ data: [] })),
                         axios.get(`${API}/reviews/summary`).catch(() => ({ data: { avg_rating: 0, total_reviews: 0, testimonials: [] } }))
                     ]);
-                    fetchedMenus = Array.isArray(menuRes.data) && menuRes.data.length > 0 ? menuRes.data : [];
-                    fetchedCats = Array.isArray(catRes.data) && catRes.data.length > 0 ? catRes.data : DEFAULT_JOHB_CATEGORIES;
+                    fetchedMenus = Array.isArray(menuRes.data) ? menuRes.data : [];
+                    fetchedCats = Array.isArray(catRes.data) ? catRes.data : [];
                     fetchedProds = Array.isArray(prodRes.data) ? prodRes.data : [];
                     fetchedReviews = revRes?.data;
                 }
@@ -969,9 +960,11 @@ export default function MenuPage() {
                     }
                 } else if (fetchedCats.length > 0) {
                     setSelectedCategory(fetchedCats[0].id);
+                } else {
+                    setSelectedCategory("all");
                 }
             } catch {
-                setCategories(DEFAULT_JOHB_CATEGORIES);
+                setCategories([]);
             } finally {
                 setProductLoading(false);
             }

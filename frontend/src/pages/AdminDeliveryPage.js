@@ -122,35 +122,41 @@ export default function AdminDeliveryPage() {
     const [newArea, setNewArea] = useState({ name: "", fee: 0 });
     const [newRate, setNewRate] = useState({ max_distance: "", fee: "" });
     const [loading, setLoading] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [uploadingQr, setUploadingQr] = useState(false);
     const { token } = useAuth();
     const headers = { Authorization: `Bearer ${token}` };
 
     useEffect(() => {
-        axios.get(`${API}/admin/delivery-settings`, { headers }).then(r => {
-            const data = r.data;
-            if (!data) return;
-            setSettings(prev => ({
-                ...prev,
-                ...data,
-                business_hours: parseBusinessHoursClient(data.business_hours),
-                distance_rates: parseDistanceRates(data.distance_rates),
-                max_delivery_distance: data.max_delivery_distance || 10.5,
-                restaurant_address: data.restaurant_address || "",
-                always_open: Boolean(data.always_open),
-                temporarily_closed: Boolean(data.temporarily_closed),
-                accept_online_payment: data.accept_online_payment !== false,
-                accept_card_machine: data.accept_card_machine !== false,
-                accept_cash: data.accept_cash !== false,
-                allow_immediate_orders: data.allow_immediate_orders !== false,
-                allow_scheduled_orders: data.allow_scheduled_orders !== false,
-                min_lead_hours: Number(data.min_lead_hours ?? 0.5),
-                max_schedule_days: parseInt(data.max_schedule_days) || 7
-            }));
-        }).catch(() => {});
-        axios.get(`${API}/admin/pix-settings`, { headers }).then(r => {
-            setPixSettings(prev => ({ ...prev, ...r.data }));
-        }).catch(() => {});
+        setInitialLoading(true);
+        Promise.all([
+            axios.get(`${API}/admin/delivery-settings`, { headers }).then(r => {
+                const data = r.data;
+                if (!data) return;
+                setSettings(prev => ({
+                    ...prev,
+                    ...data,
+                    business_hours: parseBusinessHoursClient(data.business_hours),
+                    distance_rates: parseDistanceRates(data.distance_rates),
+                    max_delivery_distance: data.max_delivery_distance || 10.5,
+                    restaurant_address: data.restaurant_address || "",
+                    always_open: Boolean(data.always_open),
+                    temporarily_closed: Boolean(data.temporarily_closed),
+                    accept_online_payment: Boolean(data.accept_online_payment),
+                    accept_card_machine: Boolean(data.accept_card_machine),
+                    accept_cash: Boolean(data.accept_cash),
+                    allow_immediate_orders: Boolean(data.allow_immediate_orders),
+                    allow_scheduled_orders: Boolean(data.allow_scheduled_orders),
+                    min_lead_hours: Number(data.min_lead_hours ?? 0.5),
+                    max_schedule_days: parseInt(data.max_schedule_days) || 7
+                }));
+            }).catch(() => {}),
+            axios.get(`${API}/admin/pix-settings`, { headers }).then(r => {
+                setPixSettings(prev => ({ ...prev, ...r.data }));
+            }).catch(() => {})
+        ]).finally(() => {
+            setInitialLoading(false);
+        });
     }, []); // eslint-disable-line
 
     const saveDelivery = async () => {
@@ -171,11 +177,11 @@ export default function AdminDeliveryPage() {
                     business_hours: parseBusinessHoursClient(data.business_hours) || prev.business_hours,
                     always_open: Boolean(data.always_open),
                     temporarily_closed: Boolean(data.temporarily_closed),
-                    accept_online_payment: data.accept_online_payment !== false,
-                    accept_card_machine: data.accept_card_machine !== false,
-                    accept_cash: data.accept_cash !== false,
-                    allow_immediate_orders: data.allow_immediate_orders !== false,
-                    allow_scheduled_orders: data.allow_scheduled_orders !== false,
+                    accept_online_payment: Boolean(data.accept_online_payment),
+                    accept_card_machine: Boolean(data.accept_card_machine),
+                    accept_cash: Boolean(data.accept_cash),
+                    allow_immediate_orders: Boolean(data.allow_immediate_orders),
+                    allow_scheduled_orders: Boolean(data.allow_scheduled_orders),
                 }));
             }
             toast.success("Configurações salvas com sucesso!");
@@ -256,6 +262,16 @@ export default function AdminDeliveryPage() {
         { id: "hours", label: "Configuração de Horários", icon: Clock },
         { id: "payment", label: "Configuração de Pagamentos", icon: DollarSign },
     ];
+
+    if (initialLoading) {
+        return (
+            <div className="text-white space-y-6 animate-pulse">
+                <div className="h-8 bg-[#141414] rounded-xl w-64 border border-white/10" />
+                <div className="h-14 bg-[#141414] rounded-2xl border border-white/10" />
+                <div className="h-96 bg-[#141414] rounded-2xl border border-white/10" />
+            </div>
+        );
+    }
 
     return (
         <div className="text-white space-y-6" data-testid="admin-delivery-page">
