@@ -103,17 +103,18 @@ export default function AdminDeliveryPage() {
     useEffect(() => {
         axios.get(`${API}/admin/delivery-settings`, { headers }).then(r => {
             const data = r.data;
+            if (!data) return;
             setSettings(prev => ({
                 ...prev,
                 ...data,
-                business_hours: (data.business_hours && Object.keys(data.business_hours).length > 0)
+                business_hours: (data.business_hours && typeof data.business_hours === "object" && data.business_hours.seg)
                     ? data.business_hours
                     : DEFAULT_HOURS,
                 distance_rates: parseDistanceRates(data.distance_rates),
                 max_delivery_distance: data.max_delivery_distance || 10.5,
                 restaurant_address: data.restaurant_address || "",
-                always_open: data.always_open || false,
-                temporarily_closed: data.temporarily_closed || false,
+                always_open: Boolean(data.always_open),
+                temporarily_closed: Boolean(data.temporarily_closed),
                 accept_online_payment: data.accept_online_payment !== false,
                 accept_card_machine: data.accept_card_machine !== false,
                 accept_cash: data.accept_cash !== false,
@@ -131,7 +132,22 @@ export default function AdminDeliveryPage() {
     const saveDelivery = async () => {
         setLoading(true);
         try {
-            await axios.put(`${API}/admin/delivery-settings`, settings, { headers });
+            const res = await axios.put(`${API}/admin/delivery-settings`, settings, { headers });
+            if (res.data) {
+                const data = res.data;
+                setSettings(prev => ({
+                    ...prev,
+                    ...data,
+                    business_hours: (data.business_hours && data.business_hours.seg) ? data.business_hours : prev.business_hours,
+                    always_open: Boolean(data.always_open),
+                    temporarily_closed: Boolean(data.temporarily_closed),
+                    accept_online_payment: data.accept_online_payment !== false,
+                    accept_card_machine: data.accept_card_machine !== false,
+                    accept_cash: data.accept_cash !== false,
+                    allow_immediate_orders: data.allow_immediate_orders !== false,
+                    allow_scheduled_orders: data.allow_scheduled_orders !== false,
+                }));
+            }
             toast.success("Configurações salvas com sucesso!");
         } catch {
             toast.error("Erro ao salvar configurações");

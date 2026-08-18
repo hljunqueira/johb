@@ -495,13 +495,78 @@ async def get_combos():
         return [dict(r) for r in rows]
 
 
+def parse_jsonb_field(val, default):
+    if val is None:
+        return default
+    if isinstance(val, (dict, list)):
+        if isinstance(val, dict) and "0" in val and "1" in val:
+            try:
+                sorted_keys = sorted([int(k) for k in val.keys() if str(k).isdigit()])
+                reconstructed = "".join([val[str(k)] for k in sorted_keys])
+                parsed = json.loads(reconstructed)
+                if isinstance(parsed, str):
+                    parsed = json.loads(parsed)
+                return parsed
+            except Exception:
+                return default
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, str):
+                parsed = json.loads(parsed)
+            return parsed
+        except Exception:
+            return default
+    return default
+
+
+def sanitize_json_input(val, default):
+    if val is None:
+        return default
+    if isinstance(val, (dict, list)):
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, str):
+                parsed = json.loads(parsed)
+            return parsed
+        except Exception:
+            return default
+    return default
+
+
+def format_delivery_settings_row(row):
+    if not row:
+        return {}
+    d = dict(row)
+    d["business_hours"] = parse_jsonb_field(d.get("business_hours"), {})
+    d["areas"] = parse_jsonb_field(d.get("areas"), [])
+    d["distance_rates"] = parse_jsonb_field(d.get("distance_rates"), [])
+    d["allowed_schedule_days"] = parse_jsonb_field(d.get("allowed_schedule_days"), ["seg", "ter", "qua", "qui", "sex", "sab", "dom"])
+    d["always_open"] = bool(d.get("always_open", False))
+    d["temporarily_closed"] = bool(d.get("temporarily_closed", False))
+    d["accept_online_payment"] = bool(d.get("accept_online_payment", True))
+    d["accept_card_machine"] = bool(d.get("accept_card_machine", True))
+    d["accept_cash"] = bool(d.get("accept_cash", True))
+    d["allow_immediate_orders"] = bool(d.get("allow_immediate_orders", True))
+    d["allow_scheduled_orders"] = bool(d.get("allow_scheduled_orders", True))
+    d["min_lead_hours"] = float(d.get("min_lead_hours") or 0.5)
+    d["max_schedule_days"] = int(d.get("max_schedule_days") or 7)
+    d["delivery_fee"] = float(d.get("delivery_fee") or 5.0)
+    d["min_free_delivery"] = float(d.get("min_free_delivery") or 60.0)
+    d["max_delivery_distance"] = float(d.get("max_delivery_distance") or 10.5)
+    return d
+
+
 @app.get("/api/delivery-settings")
 async def get_delivery_settings():
     """Configurações de entrega"""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM delivery_settings WHERE id = 1")
-        return dict(row) if row else {}
+        return format_delivery_settings_row(row)
 
 
 @app.get("/api/pix-settings")
@@ -2222,7 +2287,7 @@ async def admin_get_delivery_settings(user=Depends(get_current_user)):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM delivery_settings WHERE id = 1")
-        return dict(row) if row else {}
+        return format_delivery_settings_row(row)
 
 
 @app.put("/api/admin/delivery-settings")
@@ -2246,33 +2311,33 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
 
         row = await conn.fetchrow(
             """UPDATE delivery_settings SET 
-               areas = $1, delivery_fee = $2, min_free_delivery = $3, active = $4, business_hours = $5,
-               restaurant_address = $6, distance_rates = $7, max_delivery_distance = $8,
+               areas = $1::jsonb, delivery_fee = $2, min_free_delivery = $3, active = $4, business_hours = $5::jsonb,
+               restaurant_address = $6, distance_rates = $7::jsonb, max_delivery_distance = $8,
                always_open = $9, temporarily_closed = $10,
-               min_lead_hours = $11, max_schedule_days = $12, allowed_schedule_days = $13,
+               min_lead_hours = $11, max_schedule_days = $12, allowed_schedule_days = $13::jsonb,
                accept_online_payment = $14, accept_card_machine = $15, accept_cash = $16,
                allow_immediate_orders = $17, allow_scheduled_orders = $18
                WHERE id = 1 RETURNING *""",
-            json.dumps(request.get('areas', [])),
+            json.dumps(sanitize_json_input(request.get('areas'), [])),
             float(request.get('delivery_fee', 5.0)),
-            float(request.get('min_free_delivery', 50.0)),
+            float(request.get('min_free_delivery', 60.0)),
             bool(request.get('active', True)),
-            json.dumps(request.get('business_hours', {})),
+            json.dumps(sanitize_json_input(request.get('business_hours'), {})),
             new_address,
-            json.dumps(request.get('distance_rates', [])),
-            float(request.get('max_delivery_distance', 10.0)),
+            json.dumps(sanitize_json_input(request.get('distance_rates'), [])),
+            float(request.get('max_delivery_distance', 10.5)),
             bool(request.get('always_open', False)),
             bool(request.get('temporarily_closed', False)),
             float(request.get('min_lead_hours', 0.5)),
             int(request.get('max_schedule_days', 7)),
-            json.dumps(request.get('allowed_schedule_days', ["seg","ter","qua","qui","sex","sab","dom"])),
+            json.dumps(sanitize_json_input(request.get('allowed_schedule_days'), ["seg", "ter", "qua", "qui", "sex", "sab", "dom"])),
             bool(request.get('accept_online_payment', True)),
             bool(request.get('accept_card_machine', True)),
             bool(request.get('accept_cash', True)),
             bool(request.get('allow_immediate_orders', True)),
             bool(request.get('allow_scheduled_orders', True))
         )
-        return dict(row) if row else None
+        return format_delivery_settings_row(row)
 
 
 @app.get("/api/admin/pix-settings")
