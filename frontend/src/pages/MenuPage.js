@@ -11,10 +11,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Search, ShoppingCart, Plus, Minus, Clock, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2, Coffee, MapPin, PhoneCall, Truck, Sparkles, Check } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Clock, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2, Coffee, MapPin, PhoneCall, Truck, Sparkles, Check, Volume2, VolumeX } from "lucide-react";
 import Header from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
-import { ExperienceCarousel } from "@/components/ExperienceCarousel";
 import { CategoryPills } from "@/components/CategoryPills";
 import { EnhancedProductCard } from "@/components/EnhancedProductCard";
 import { getAvailableScheduleDates, getAvailableTimeSlots } from "@/lib/scheduleUtils";
@@ -711,6 +710,66 @@ function LoginModal({ open, onClose, onLogin }) {
     );
 }
 
+function AboutVideoCard() {
+    const [muted, setMuted] = useState(true);
+    const videoRef = useRef(null);
+
+    const toggleSound = () => {
+        if (videoRef.current) {
+            videoRef.current.muted = !muted;
+            setMuted(!muted);
+            if (muted) {
+                toast.success("Áudio do vídeo ativado!", {
+                    style: { background: "#171612", color: "#FFFAF0", border: "1px solid rgba(244, 181, 68, 0.4)" }
+                });
+            }
+        }
+    };
+
+    return (
+        <div className="relative w-full max-w-sm sm:max-w-md mx-auto rounded-3xl overflow-hidden border border-[#F4B544]/35 bg-[#10100F] shadow-2xl gold-glow group">
+            <video
+                ref={videoRef}
+                src="/johbcafeesalgados.mp4"
+                autoPlay
+                loop
+                muted={muted}
+                playsInline
+                className="w-full h-full object-cover max-h-[500px] rounded-3xl"
+            />
+            {/* Overlay com gradiente suave */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/85 via-transparent to-transparent pointer-events-none rounded-3xl" />
+
+            {/* Botão de Controle de Som */}
+            <button
+                type="button"
+                onClick={toggleSound}
+                className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#050505]/85 hover:bg-[#171612] border border-[#F4B544]/40 hover:border-[#F4B544] text-[#FFFAF0] text-xs font-bold shadow-xl backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+                aria-label={muted ? "Ativar som do vídeo" : "Desativar som do vídeo"}
+            >
+                {muted ? (
+                    <>
+                        <VolumeX className="w-4 h-4 text-[#F4B544]" />
+                        <span>Ativar Som</span>
+                    </>
+                ) : (
+                    <>
+                        <Volume2 className="w-4 h-4 text-[#F4B544] animate-pulse" />
+                        <span>Som Ligado</span>
+                    </>
+                )}
+            </button>
+
+            {/* Badge elegante no rodapé do vídeo */}
+            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none z-10">
+                <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#10100F]/90 border border-[#F4B544]/30 backdrop-blur-md text-xs font-bold text-[#F4B544] shadow-lg">
+                    <span>🎬 Produção Artesanal JOHB</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function MenuPage() {
     const [menus, setMenus] = useState([]);
     const [selectedMenu, setSelectedMenu] = useState(null);
@@ -1061,8 +1120,8 @@ export default function MenuPage() {
                         </div>
                     </div>
 
-                    <div className="relative">
-                        <ExperienceCarousel />
+                    <div className="relative flex justify-center items-center">
+                        <AboutVideoCard />
                     </div>
                 </div>
             </section>

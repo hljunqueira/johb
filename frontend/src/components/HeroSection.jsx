@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { ArrowRight, Heart, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { ExperienceCarousel } from "@/components/ExperienceCarousel";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 const getImageUrl = (url) => {
-    if (!url) return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600";
+    if (!url) return "/logo-semfundo.png";
     if (url.startsWith("http")) return url;
     return `${BACKEND_URL}${url}`;
 };
@@ -92,7 +93,7 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                             <div className="pt-2 flex items-center gap-4">
                                 <button
                                     onClick={scrollToMenu}
-                                    className="group inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5 gold-glow"
+                                    className="group inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5 gold-glow cursor-pointer"
                                 >
                                     <span>{banner.cta_text || getCtaLabel()}</span>
                                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -105,13 +106,13 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                             <>
                                 <button
                                     onClick={() => setCurrentBannerIdx(prev => (prev - 1 + banners.length) % banners.length)}
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-[#050505]/70 border border-white/10 text-white hover:text-[#F4B544] transition-all z-20"
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-[#050505]/70 border border-white/10 text-white hover:text-[#F4B544] transition-all z-20 cursor-pointer"
                                 >
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => setCurrentBannerIdx(prev => (prev + 1) % banners.length)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-[#050505]/70 border border-white/10 text-white hover:text-[#F4B544] transition-all z-20"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-[#050505]/70 border border-white/10 text-white hover:text-[#F4B544] transition-all z-20 cursor-pointer"
                                 >
                                     <ChevronRight className="w-5 h-5" />
                                 </button>
@@ -122,7 +123,7 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                                         <button
                                             key={i}
                                             onClick={() => setCurrentBannerIdx(i)}
-                                            className={`h-2 rounded-full transition-all ${
+                                            className={`h-2 rounded-full transition-all cursor-pointer ${
                                                 currentBannerIdx === i ? "w-6 bg-[#F4B544]" : "w-2 bg-white/30"
                                             }`}
                                         />
@@ -136,7 +137,7 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
         );
     }
 
-    // Visual Padrão Editorial se não houver banners cadastrados
+    // Visual Padrão Editorial com Carrossel de Fotos na Coluna Direita
     return (
         <section className="relative overflow-hidden bg-[#050505] text-[#FFFAF0] pt-8 pb-16 md:py-20 lg:py-24 border-b border-[#F4B544]/15">
             <div className="absolute top-0 right-0 w-96 h-96 bg-[#F4B544]/5 rounded-full blur-3xl pointer-events-none" />
@@ -146,7 +147,7 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
                     
                     {/* Coluna de Texto */}
-                    <div className="lg:col-span-7 space-y-6 text-left">
+                    <div className="lg:col-span-6 space-y-6 text-left">
                         <div className="space-y-1">
                             <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#FFFAF0] leading-[1.08]">
                                 FEITO COM <span className="gold-gradient-text italic font-normal">CARINHO.</span> <br />
@@ -188,7 +189,7 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                         <div className="pt-4">
                             <button
                                 onClick={scrollToMenu}
-                                className="group inline-flex items-center justify-center gap-3 px-9 py-4 rounded-full bg-[#F4B544] text-[#050505] font-bold text-sm uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5 gold-glow"
+                                className="group inline-flex items-center justify-center gap-3 px-9 py-4 rounded-full bg-[#F4B544] text-[#050505] font-bold text-sm uppercase tracking-widest hover:bg-[#FFC85C] transition-all shadow-lg hover:shadow-[#F4B544]/20 transform hover:-translate-y-0.5 gold-glow cursor-pointer"
                             >
                                 <span>{getCtaLabel()}</span>
                                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -196,27 +197,9 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                         </div>
                     </div>
 
-                    {/* Coluna com Vídeo Institucional */}
-                    <div className="lg:col-span-5 relative flex justify-center items-center">
-                        <div className="relative w-full max-w-sm sm:max-w-md rounded-3xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] shadow-2xl gold-glow-sm">
-                            <video
-                                src="/johbcafeesalgados.mp4"
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                className="w-full h-full object-cover max-h-[480px] sm:max-h-[520px] rounded-3xl transform transition-transform duration-700 hover:scale-105"
-                            />
-                            {/* Overlay com gradiente suave */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/80 via-transparent to-transparent pointer-events-none rounded-3xl" />
-                            
-                            {/* Badge elegante no rodapé do vídeo */}
-                            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none">
-                                <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#10100F]/90 border border-[#F4B544]/30 backdrop-blur-md text-xs font-bold text-[#F4B544] shadow-lg">
-                                    <span>Salgados Frescos & Artesanais</span>
-                                </div>
-                            </div>
-                        </div>
+                    {/* Coluna com Carrossel de Fotos na Hero */}
+                    <div className="lg:col-span-6 relative flex justify-center items-center">
+                        <ExperienceCarousel />
                     </div>
 
                 </div>
