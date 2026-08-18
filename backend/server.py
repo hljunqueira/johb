@@ -48,11 +48,14 @@ app = FastAPI(
 DEFAULT_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://localhost:5173",
     "https://johb-cyan.vercel.app",
     "https://johb-qm4um2wl7-henriques-projects-31af9234.vercel.app",
+    "https://www.appzapcar.com.br",
+    "https://appzapcar.com.br",
+    "https://johb-api.hljdev.com.br"
 ]
 
-# Adicionar origens da variável de ambiente se existir
 CORS_ORIGINS_ENV = os.environ.get('CORS_ORIGINS', '')
 if CORS_ORIGINS_ENV:
     env_origins = [origin.strip() for origin in CORS_ORIGINS_ENV.split(',') if origin.strip()]
@@ -65,7 +68,7 @@ logger.info(f"CORS Allowed Origins: {DEFAULT_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=DEFAULT_ORIGINS,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
