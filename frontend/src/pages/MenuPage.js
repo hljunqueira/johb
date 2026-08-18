@@ -423,15 +423,27 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
 });
 
 function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout, deliverySettings }) {
-    const { scheduledDate, scheduledTime, setScheduleInfo } = useCart();
-    const [scheduleMode, setScheduleMode] = useState(scheduledDate ? "agendado" : "imediato");
+    const { scheduleMode, setScheduleMode, scheduledDate, scheduledTime, setScheduleInfo } = useCart();
+    const [historyPhone, setHistoryPhone] = useState(() => localStorage.getItem("johb-phone") || "");
+    const navigate = useNavigate();
 
-    const minFreeDelivery = Number(deliverySettings?.min_free_delivery) || 0;
-    const isFreeDelivery = minFreeDelivery > 0 && total >= minFreeDelivery;
+    const handleSearchHistory = (e) => {
+        e.preventDefault();
+        const clean = historyPhone.replace(/\D/g, "");
+        if (!clean) {
+            toast.error("Digite seu número de WhatsApp");
+            return;
+        }
+        localStorage.setItem("johb-phone", clean);
+        navigate("/historico");
+    };
+
+    const minFreeDelivery = deliverySettings?.min_free_delivery || 60.0;
+    const isFreeDelivery = total >= minFreeDelivery;
     const diffToFree = Math.max(0, minFreeDelivery - total);
-    const progressPercent = minFreeDelivery > 0 ? Math.min(100, Math.round((total / minFreeDelivery) * 100)) : 0;
+    const progressPercent = Math.min(100, Math.round((total / minFreeDelivery) * 100));
 
-    // Gerar datas disponíveis baseadas nas regras da loja
+    // Dias disponíveis para agendamento
     const availableDates = useMemo(() => {
         return getAvailableScheduleDates(deliverySettings);
     }, [deliverySettings]);
@@ -469,9 +481,42 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
 
     if (items.length === 0) {
         return (
-            <div className="text-center py-12 space-y-4">
-                <ShoppingCart className="h-12 w-12 text-[#F4B544]/40 mx-auto" />
-                <p className="text-sm text-[#B8B1A3]">Seu carrinho está vazio</p>
+            <div className="py-6 space-y-6">
+                <div className="text-center space-y-3">
+                    <div className="w-16 h-16 rounded-2xl bg-[#141414] border border-[#F4B544]/20 flex items-center justify-center mx-auto text-[#F4B544]">
+                        <ShoppingCart className="h-8 w-8 text-[#F4B544]" />
+                    </div>
+                    <div>
+                        <h3 className="font-serif text-lg font-bold text-[#FFFAF0]">Seu carrinho está vazio</h3>
+                        <p className="text-xs text-[#B8B1A3]">Escolha seus salgados favoritos no cardápio!</p>
+                    </div>
+                </div>
+
+                {/* Busca Rápida de Pedidos Anteriores por WhatsApp */}
+                <div className="p-4 rounded-2xl bg-[#050505] border border-[#F4B544]/30 space-y-3 text-left shadow-lg">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#F4B544] uppercase tracking-wider">
+                        <History className="w-4 h-4 text-[#F4B544]" />
+                        <span>Consultar Pedido / Histórico</span>
+                    </div>
+                    <p className="text-xs text-[#B8B1A3] leading-relaxed">
+                        Já fez um pedido? Digite seu WhatsApp para ver o andamento ou pedir novamente:
+                    </p>
+                    <form onSubmit={handleSearchHistory} className="flex gap-2">
+                        <input
+                            type="tel"
+                            value={historyPhone}
+                            onChange={e => setHistoryPhone(e.target.value)}
+                            placeholder="(48) 99999-9999"
+                            className="flex-1 rounded-xl border border-[#F4B544]/25 bg-[#10100F] px-3 py-2.5 text-xs text-[#FFFAF0] focus:outline-none focus:border-[#F4B544] placeholder:text-[#B8B1A3]/50"
+                        />
+                        <button
+                            type="submit"
+                            className="px-4 py-2.5 rounded-xl bg-[#F4B544] hover:bg-[#FFC85C] text-[#050505] font-bold text-xs transition-all shrink-0 cursor-pointer shadow-sm"
+                        >
+                            Buscar
+                        </button>
+                    </form>
+                </div>
             </div>
         );
     }
@@ -662,6 +707,20 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
                     <span>Avançar para Checkout</span>
                     <ChevronRight className="w-4 h-4" />
                 </button>
+
+                <div className="text-center pt-1">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (historyPhone) localStorage.setItem("johb-phone", historyPhone);
+                            navigate("/historico");
+                        }}
+                        className="text-xs text-[#B8B1A3] hover:text-[#F4B544] underline inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                        <History className="w-3.5 h-3.5 text-[#F4B544]" />
+                        <span>Ver histórico de pedidos anteriores</span>
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -1163,11 +1222,23 @@ export default function MenuPage() {
             {/* Sheet de Carrinho */}
             <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                 <SheetContent side="right" className="w-full sm:max-w-md bg-[#10100F] border-l border-[#F4B544]/20 p-0 text-[#FFFAF0] flex flex-col">
-                    <SheetHeader className="p-5 border-b border-[#F4B544]/15 bg-[#050505]">
-                        <SheetTitle className="font-serif text-2xl font-bold text-[#FFFAF0] flex items-center gap-2">
+                    <SheetHeader className="p-4 sm:p-5 border-b border-[#F4B544]/15 bg-[#050505] flex flex-row items-center justify-between space-y-0">
+                        <SheetTitle className="font-serif text-xl sm:text-2xl font-bold text-[#FFFAF0] flex items-center gap-2">
                             <ShoppingCart className="w-5 h-5 text-[#F4B544]" />
-                            <span>Seu Pedido JOHB</span>
+                            <span>Seu Pedido</span>
                         </SheetTitle>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setCartOpen(false);
+                                navigate("/historico");
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F4B544]/15 hover:bg-[#F4B544]/25 border border-[#F4B544]/30 text-[#F4B544] text-xs font-bold transition-all cursor-pointer mr-6"
+                            title="Ver histórico de pedidos e rastrear"
+                        >
+                            <History className="w-3.5 h-3.5" />
+                            <span>Histórico</span>
+                        </button>
                     </SheetHeader>
                     <div className="p-5 flex-1 overflow-y-auto">
                         <CartContent
