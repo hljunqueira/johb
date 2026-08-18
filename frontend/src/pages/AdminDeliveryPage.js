@@ -173,29 +173,6 @@ export default function AdminDeliveryPage() {
 
     const removeArea = (i) => setSettings(s => ({ ...s, areas: s.areas.filter((_, idx) => idx !== i) }));
 
-    const addRate = () => {
-        if (!newRate.max_distance || !newRate.fee) return;
-        const rate = { 
-            max_distance: parseFloat(newRate.max_distance), 
-            fee: parseFloat(newRate.fee) 
-        };
-        setSettings(s => ({ 
-            ...s, 
-            distance_rates: [...(s.distance_rates || []), rate].sort((a, b) => a.max_distance - b.max_distance) 
-        }));
-        setNewRate({ max_distance: "", fee: "" });
-    };
-
-    const removeRate = (i) => setSettings(s => ({ 
-        ...s, 
-        distance_rates: (s.distance_rates || []).filter((_, idx) => idx !== i) 
-    }));
-
-    const resetToDefaultRates = () => {
-        setSettings(s => ({ ...s, distance_rates: [...DEFAULT_DISTANCE_RATES] }));
-        toast.success("Taxas restauradas para o padrão!");
-    };
-
     const updateHour = (day, field, value) => setSettings(s => ({
         ...s,
         business_hours: {
@@ -275,15 +252,10 @@ export default function AdminDeliveryPage() {
                     setSettings={setSettings}
                     newArea={newArea}
                     setNewArea={setNewArea}
-                    newRate={newRate}
-                    setNewRate={setNewRate}
                     loading={loading}
                     saveDelivery={saveDelivery}
                     addArea={addArea}
                     removeArea={removeArea}
-                    addRate={addRate}
-                    removeRate={removeRate}
-                    resetToDefaultRates={resetToDefaultRates}
                 />
             )}
 
