@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Truck, Plus, Trash2, DollarSign, MapPin, Save, Clock, Upload, Image, X, QrCode, Navigation, Package } from "lucide-react";
+import { Truck, Plus, Trash2, DollarSign, MapPin, Save, Clock, Upload, X, QrCode, Navigation } from "lucide-react";
 
 import { API } from "@/lib/constants";
 
@@ -83,9 +83,16 @@ export default function AdminDeliveryPage() {
         distance_rates: DEFAULT_DISTANCE_RATES,
         max_delivery_distance: 10.5,
         always_open: false,
-        temporarily_closed: false
+        temporarily_closed: false,
+        accept_online_payment: true,
+        accept_card_machine: true,
+        accept_cash: true,
+        allow_immediate_orders: true,
+        allow_scheduled_orders: true,
+        min_lead_hours: 0.5,
+        max_schedule_days: 7
     });
-    const [pixSettings, setPixSettings] = useState({ pix_key: "", pix_key_type: "cpf", pix_name: "Salada Soul", qr_code_url: "" });
+    const [pixSettings, setPixSettings] = useState({ pix_key: "", pix_key_type: "cpf", pix_name: "JOHB", qr_code_url: "" });
     const [newArea, setNewArea] = useState({ name: "", fee: 0 });
     const [newRate, setNewRate] = useState({ max_distance: "", fee: "" });
     const [loading, setLoading] = useState(false);
@@ -106,7 +113,14 @@ export default function AdminDeliveryPage() {
                 max_delivery_distance: data.max_delivery_distance || 10.5,
                 restaurant_address: data.restaurant_address || "",
                 always_open: data.always_open || false,
-                temporarily_closed: data.temporarily_closed || false
+                temporarily_closed: data.temporarily_closed || false,
+                accept_online_payment: data.accept_online_payment !== false,
+                accept_card_machine: data.accept_card_machine !== false,
+                accept_cash: data.accept_cash !== false,
+                allow_immediate_orders: data.allow_immediate_orders !== false,
+                allow_scheduled_orders: data.allow_scheduled_orders !== false,
+                min_lead_hours: Number(data.min_lead_hours ?? 0.5),
+                max_schedule_days: parseInt(data.max_schedule_days) || 7
             }));
         }).catch(() => {});
         axios.get(`${API}/admin/pix-settings`, { headers }).then(r => {
@@ -574,7 +588,7 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
                             <Input 
                                 type="number" 
                                 min="1" 
-                                max="30"
+                                max="30" 
                                 value={settings.max_schedule_days ?? 7}
                                 onChange={e => setSettings(s => ({ ...s, max_schedule_days: parseInt(e.target.value) || 7 }))}
                                 className="mt-2 rounded-xl bg-[#141414] text-white border-white/10 focus:border-[#F4B544]"
@@ -689,8 +703,9 @@ function PaymentTab({ settings, setSettings, saveDelivery, loading, pixSettings,
                     </div>
                 </div>
 
-                <Button onClick={saveDelivery} disabled={loading} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all">
-                    <Save className="h-5 w-5 mr-2" /> Salvar Formas de Pagamento
+                <Button onClick={saveDelivery} disabled={loading} className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl h-12 shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all disabled:opacity-50">
+                    <Save className={`h-5 w-5 mr-2 ${loading ? 'animate-spin' : ''}`} /> 
+                    {loading ? "Salvando Formas de Pagamento..." : "Salvar Formas de Pagamento"}
                 </Button>
             </div>
 

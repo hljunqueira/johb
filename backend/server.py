@@ -2205,35 +2205,6 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
-        # Verificar se colunas existem, adicionar se não existirem
-        try:
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS business_hours JSONB DEFAULT '{}'"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS restaurant_address TEXT DEFAULT ''"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS restaurant_lat NUMERIC(10,8) DEFAULT NULL"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS restaurant_lng NUMERIC(11,8) DEFAULT NULL"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS distance_rates JSONB DEFAULT '[]'"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS max_delivery_distance NUMERIC(10,2) DEFAULT 10.0"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS always_open BOOLEAN DEFAULT FALSE"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS temporarily_closed BOOLEAN DEFAULT FALSE"
-            )
-        except Exception:
-            pass
-        
         # Se o endereço do restaurante mudou, limpar as coordenadas para recalcular
         current_settings = await conn.fetchrow("SELECT restaurant_address FROM delivery_settings WHERE id = 1")
         current_address = current_settings["restaurant_address"] if current_settings else ""
@@ -2244,35 +2215,6 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
             await conn.execute(
                 "UPDATE delivery_settings SET restaurant_lat = NULL, restaurant_lng = NULL WHERE id = 1"
             )
-        
-        # Garantir colunas de agendamento e formas de pagamento
-        try:
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS min_lead_hours NUMERIC(10,2) DEFAULT 0.5"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS max_schedule_days INT DEFAULT 7"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS allowed_schedule_days JSONB DEFAULT '[\"seg\",\"ter\",\"qua\",\"qui\",\"sex\",\"sab\",\"dom\"]'::jsonb"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS accept_online_payment BOOLEAN DEFAULT TRUE"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS accept_card_machine BOOLEAN DEFAULT TRUE"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS accept_cash BOOLEAN DEFAULT TRUE"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS allow_immediate_orders BOOLEAN DEFAULT TRUE"
-            )
-            await conn.execute(
-                "ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS allow_scheduled_orders BOOLEAN DEFAULT TRUE"
-            )
-        except Exception as col_err:
-            logger.warning(f"Aviso ao garantir colunas em delivery_settings: {col_err}")
 
         row = await conn.fetchrow(
             """UPDATE delivery_settings SET 

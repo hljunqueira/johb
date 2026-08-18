@@ -118,6 +118,9 @@ export default function CheckoutPage() {
         setPhone(val);
     };
 
+    // Controle se o pedido é agendado ou imediato
+    const [isScheduled, setIsScheduled] = useState(() => Boolean(scheduledDate && scheduledTime));
+
     // Auto-reconhecimento de cliente por WhatsApp
     const handlePhoneBlur = async () => {
         const clean = phone.replace(/\D/g, "");
@@ -277,8 +280,8 @@ export default function CheckoutPage() {
                 observation: observation,
                 payment_method: paymentMethod,
                 change_for: (paymentMethod === "dinheiro" && needsChange) ? parsedChangeFor : null,
-                scheduled_date: currentSelectedDate,
-                scheduled_time: currentSelectedTime,
+                scheduled_date: isScheduled ? currentSelectedDate : null,
+                scheduled_time: isScheduled ? currentSelectedTime : null,
                 coupon_code: appliedCoupon?.code || null,
                 discount_amount: discountAmount
             };
@@ -403,48 +406,91 @@ export default function CheckoutPage() {
                             </div>
                         </div>
 
-                        {/* Bloco 2: Agendamento de Data e Horário */}
+                        {/* Bloco 2: Quando deseja seu pedido? */}
                         <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/20 space-y-4">
-                            <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-[#F4B544]" />
-                                <span>Quando deseja seu pedido?</span>
-                            </h2>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs text-[#B8B1A3]">Data do Pedido</Label>
-                                    <select
-                                        value={currentSelectedDate}
-                                        onChange={e => handleDateChange(e.target.value)}
-                                        className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
-                                    >
-                                        {availableDates.map(d => (
-                                            <option key={d.value} value={d.value} className="bg-[#10100F] text-white">
-                                                {d.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs text-[#B8B1A3]">Horário Desejado</Label>
-                                    <select
-                                        value={currentSelectedTime}
-                                        onChange={e => handleTimeChange(e.target.value)}
-                                        className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
-                                    >
-                                        {availableTimes.length > 0 ? (
-                                            availableTimes.map(t => (
-                                                <option key={t} value={t} className="bg-[#10100F] text-white">
-                                                    {t} hs
-                                                </option>
-                                            ))
-                                        ) : (
-                                            <option value="" className="bg-[#10100F] text-white">Sem horários para hoje</option>
-                                        )}
-                                    </select>
-                                </div>
+                            <div className="flex items-center justify-between">
+                                <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-[#F4B544]" />
+                                    <span>Quando deseja receber?</span>
+                                </h2>
                             </div>
+
+                            {/* Seletor Imediato vs Agendado */}
+                            {deliverySettings?.allow_immediate_orders !== false && deliverySettings?.allow_scheduled_orders !== false && (
+                                <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#050505] border border-[#F4B544]/15">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsScheduled(false);
+                                            setScheduleInfo("", "");
+                                        }}
+                                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                            !isScheduled
+                                                ? "bg-[#F4B544] text-black font-extrabold shadow-md"
+                                                : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                                        }`}
+                                    >
+                                        <span>⚡ O quanto antes</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsScheduled(true);
+                                            setScheduleInfo(currentSelectedDate, currentSelectedTime);
+                                        }}
+                                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                            isScheduled
+                                                ? "bg-[#F4B544] text-black font-extrabold shadow-md"
+                                                : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                                        }`}
+                                    >
+                                        <span>📅 Agendar Horário</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {!isScheduled && deliverySettings?.allow_immediate_orders !== false ? (
+                                <div className="p-3.5 rounded-xl bg-[#050505] border border-[#F4B544]/20 flex items-center justify-between text-xs text-[#B8B1A3]">
+                                    <span>Preparo e envio na sequência da confirmação.</span>
+                                    <span className="font-bold text-[#F4B544]">⚡ Envio Imediato</span>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs text-[#B8B1A3]">Data do Pedido</Label>
+                                        <select
+                                            value={currentSelectedDate}
+                                            onChange={e => handleDateChange(e.target.value)}
+                                            className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
+                                        >
+                                            {availableDates.map(d => (
+                                                <option key={d.value} value={d.value} className="bg-[#10100F] text-white">
+                                                    {d.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs text-[#B8B1A3]">Horário Desejado</Label>
+                                        <select
+                                            value={currentSelectedTime}
+                                            onChange={e => handleTimeChange(e.target.value)}
+                                            className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
+                                        >
+                                            {availableTimes.length > 0 ? (
+                                                availableTimes.map(t => (
+                                                    <option key={t} value={t} className="bg-[#10100F] text-white">
+                                                        {t} hs
+                                                    </option>
+                                                ))
+                                            ) : (
+                                                <option value="" className="bg-[#10100F] text-white">Sem horários para esta data</option>
+                                            )}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Bloco 3: Dados de Contato e Endereço */}
@@ -737,11 +783,16 @@ export default function CheckoutPage() {
                                 )}
                             </div>
 
-                            {/* Card de Agendamento */}
+                            {/* Card de Agendamento ou Imediato */}
                             <div className="p-3.5 rounded-xl bg-[#171612] border border-[#F4B544]/30 space-y-1">
-                                <span className="text-[10px] uppercase font-bold text-[#F4B544] tracking-wider block">🗓️ Horário Agendado</span>
+                                <span className="text-[10px] uppercase font-bold text-[#F4B544] tracking-wider block">
+                                    {isScheduled ? "🗓️ Horário Agendado" : "⚡ Modalidade de Envio"}
+                                </span>
                                 <span className="text-xs font-extrabold text-[#FFFAF0] block">
-                                    Data: {currentSelectedDate ? new Date(currentSelectedDate + 'T00:00:00').toLocaleDateString("pt-BR") : "Hoje"} às {currentSelectedTime || "12:00"} hs
+                                    {isScheduled 
+                                        ? `Data: ${currentSelectedDate ? new Date(currentSelectedDate + 'T00:00:00').toLocaleDateString("pt-BR") : "Hoje"} às ${currentSelectedTime || "12:00"} hs`
+                                        : "Preparo Imediato (O quanto antes)"
+                                    }
                                 </span>
                             </div>
 
@@ -786,7 +837,14 @@ export default function CheckoutPage() {
                                     </>
                                 ) : (
                                     <>
-                                        <span>{paymentMethod === "asaas" ? "Ir para Pagamento Online" : "Confirmar Pedido Agendado"}</span>
+                                        <span>
+                                            {paymentMethod === "asaas" 
+                                                ? "Ir para Pagamento Online" 
+                                                : isScheduled 
+                                                    ? "Confirmar Pedido Agendado" 
+                                                    : "Confirmar Pedido Agora"
+                                            }
+                                        </span>
                                         <ArrowLeft className="w-4 h-4 rotate-180" />
                                     </>
                                 )}
