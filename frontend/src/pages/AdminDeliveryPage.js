@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Truck, Plus, Trash2, DollarSign, MapPin, Save, Clock, Upload, X, QrCode, Navigation } from "lucide-react";
+import { Truck, Store, Plus, Trash2, DollarSign, MapPin, Save, Clock, Upload, X, QrCode, Navigation } from "lucide-react";
 
 import { API } from "@/lib/constants";
 
