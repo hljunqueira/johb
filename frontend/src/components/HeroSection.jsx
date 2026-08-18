@@ -134,7 +134,10 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
                     </div>
                 </div>
             </section>
-           // Visual Padrão Editorial com Carrossel de Fotos na Coluna Direita (1 tela só)
+        );
+    }
+
+    // Visual Padrão Editorial com Carrossel de Fotos na Coluna Direita (1 tela só)
     return (
         <section className="relative overflow-hidden bg-[#050505] text-[#FFFAF0] py-8 lg:py-0 min-h-[calc(100vh-80px)] flex items-center border-b border-[#F4B544]/15">
             <div className="absolute top-0 right-0 w-96 h-96 bg-[#F4B544]/5 rounded-full blur-3xl pointer-events-none" />

@@ -1170,6 +1170,41 @@ export default function MenuPage() {
                 </SheetContent>
             </Sheet>
 
+            {/* Floating Bottom Bar "Ver Carrinho" ao adicionar itens */}
+            {itemCount > 0 && !cartOpen && (
+                <div className="fixed bottom-16 lg:bottom-6 left-0 right-0 z-40 px-4 pointer-events-none flex justify-center animate-in fade-in slide-in-from-bottom-6 duration-300">
+                    <div className="pointer-events-auto max-w-lg w-full bg-[#10100F]/95 backdrop-blur-xl border border-[#F4B544]/50 rounded-2xl p-3 sm:p-3.5 shadow-2xl gold-glow flex items-center justify-between gap-3 transform hover:scale-[1.01] transition-all">
+                        <div className="flex items-center gap-3 pl-1.5 sm:pl-2">
+                            <div className="relative">
+                                <div className="w-10 h-10 rounded-xl bg-[#F4B544]/20 border border-[#F4B544]/40 flex items-center justify-center text-[#F4B544] shadow-inner">
+                                    <ShoppingCart className="w-5 h-5" />
+                                </div>
+                                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-[#F4B544] text-[#050505] font-extrabold text-[11px] flex items-center justify-center shadow-md">
+                                    {itemCount}
+                                </span>
+                            </div>
+                            <div className="flex flex-col text-left">
+                                <span className="text-[11px] text-[#B8B1A3] font-medium">
+                                    {itemCount} {itemCount === 1 ? 'item adicionado' : 'itens adicionados'}
+                                </span>
+                                <span className="text-sm sm:text-base font-extrabold text-[#F4B544] leading-tight">
+                                    R$ {total.toFixed(2).replace(".", ",")}
+                                </span>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setCartOpen(true)}
+                            className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[#F4B544] hover:bg-[#FFC85C] text-[#050505] font-bold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg gold-glow cursor-pointer active:scale-95 shrink-0"
+                        >
+                            <span>Ver Carrinho</span>
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Bar de Navegação Mobile Fixo */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#10100F]/95 backdrop-blur-md border-t border-[#F4B544]/20 flex items-center justify-around py-2 px-3 shadow-2xl">
                 <button
