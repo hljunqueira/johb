@@ -422,20 +422,22 @@ function ProductsTab({ headers, setConfirmModal }) {
     };
     useEffect(() => { fetchAll(); }, []); // eslint-disable-line
 
-    const filtered = products.filter(p => {
-        const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
+    const filtered = (Array.isArray(products) ? products : []).filter(p => {
+        if (!p) return false;
+        const matchSearch = !search || (p.name && p.name.toLowerCase().includes(search.toLowerCase()));
         const matchCat = !filterCategory || p.category_id === filterCategory;
-        const matchStatus = filterStatus === "all" || (filterStatus === "active" ? p.active : !p.active);
+        const matchStatus = filterStatus === "all" || (filterStatus === "active" ? Boolean(p.active) : !p.active);
         return matchSearch && matchCat && matchStatus;
     });
 
-    const totalActive = products.filter(p => p.active).length;
-    const totalInactive = products.filter(p => !p.active).length;
+    const totalActive = (Array.isArray(products) ? products : []).filter(p => p && p.active).length;
+    const totalInactive = (Array.isArray(products) ? products : []).filter(p => p && !p.active).length;
 
     const getOptionalsCount = (p) => {
+        if (!p) return 0;
         const compIds = p.complement_ids || [];
         if (!Array.isArray(compIds) || compIds.length === 0) return 0;
-        const activeComps = complements.filter(c => compIds.includes(c.id));
+        const activeComps = (Array.isArray(complements) ? complements : []).filter(c => c && compIds.includes(c.id));
         return activeComps.length;
     };
 
@@ -828,7 +830,7 @@ function ProductsTab({ headers, setConfirmModal }) {
                             </div>
                             <p className="text-xs text-muted-foreground mb-3">Vincule categorias de complemento a este produto</p>
 
-                            {complements.filter(c => c.active).length === 0 ? (
+                            {(Array.isArray(complements) ? complements : []).filter(c => c && c.active).length === 0 ? (
                                 <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
                                     <p className="text-xs text-muted-foreground">Nenhum complemento cadastrado.</p>
                                     <p className="text-xs text-muted-foreground">Crie na aba <strong>Opcionais</strong>.</p>
@@ -850,11 +852,11 @@ function ProductsTab({ headers, setConfirmModal }) {
                                         <div className="space-y-3">
                                             {/* Categorias vinculadas */}
                                             {form.linked_categories.map(catKey => {
-                                                const catInfo = compCategories.find(c => c.key === catKey || c.id === catKey || (c.name && c.name.toLowerCase() === String(catKey).toLowerCase()))
+                                                const catInfo = compCategories.find(c => c && (c.key === catKey || c.id === catKey || (c.name && c.name.toLowerCase() === String(catKey).toLowerCase())))
                                                     || { name: String(catKey).charAt(0).toUpperCase() + String(catKey).slice(1).replace(/_/g, " "), icon: "🏷️", key: catKey };
                                                 
                                                 // Agrupar complementos desta categoria
-                                                const items = complements.filter(c => c.active && (
+                                                const items = (Array.isArray(complements) ? complements : []).filter(c => c && c.active && (
                                                     c.category === catKey || 
                                                     (c.category && c.category.toLowerCase() === String(catKey).toLowerCase()) ||
                                                     (catInfo.id && c.category_id === catInfo.id)
