@@ -450,7 +450,7 @@ export default function AdminOrdersPage() {
                             }`}
                         >
                             <GripVertical className="h-3.5 w-3.5" />
-                            Quadro Kanban Completo
+                            Pedidos
                         </Button>
 
                         {KANBAN_COLUMNS.map(colId => {
@@ -509,70 +509,72 @@ export default function AdminOrdersPage() {
                 </div>
             </div>
 
-            {/* Kanban / Grid Area */}
-            <div className="flex-1 overflow-auto pt-6 custom-scrollbar">
+            {/* Kanban / Grid Area com Scroll Horizontal e Vertical Otimizado */}
+            <div className="flex-1 w-full overflow-hidden pt-4 flex flex-col">
                 <DragDropContext onDragEnd={onDragEnd}>
                     {activeTab === "all" ? (
-                        /* Kanban View */
-                        <div className="flex gap-6 h-full min-w-max pb-6">
-                            {KANBAN_COLUMNS.map((colId) => {
-                                const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
-                                const StatusIcon = config.icon || CircleEllipsis;
-                                const orders = filterOrdersBySchedule(columns[colId] || []);
-                                
-                                return (
-                                    <div key={colId} className="w-[320px] flex flex-col h-full bg-[#141414] rounded-2xl border border-white/10 p-4 shadow-xl">
-                                        <div className="flex items-center justify-between mb-4 px-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-2 rounded-lg bg-[#1E1E1E] text-[#F4B544] border border-[#D4AF37]/30 shadow-sm">
-                                                    <StatusIcon className="h-4 w-4" />
+                        /* Kanban View Horizontal Scroll */
+                        <div className="flex-1 w-full overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
+                            <div className="flex gap-5 h-full min-w-max pr-6">
+                                {KANBAN_COLUMNS.map((colId) => {
+                                    const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
+                                    const StatusIcon = config.icon || CircleEllipsis;
+                                    const orders = filterOrdersBySchedule(columns[colId] || []);
+                                    
+                                    return (
+                                        <div key={colId} className="w-[330px] shrink-0 flex flex-col h-[calc(100vh-235px)] bg-[#141414] rounded-2xl border border-white/10 p-4 shadow-xl">
+                                            <div className="flex items-center justify-between mb-3.5 px-1 shrink-0">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 rounded-lg bg-[#1E1E1E] text-[#F4B544] border border-[#D4AF37]/30 shadow-sm">
+                                                        <StatusIcon className="h-4 w-4" />
+                                                    </div>
+                                                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">{config.label}</h3>
                                                 </div>
-                                                <h3 className="font-bold text-white text-sm uppercase tracking-wider">{config.label}</h3>
+                                                <Badge variant="secondary" className="rounded-full bg-[#1E1E1E] text-gray-300 border-white/10 text-xs font-bold px-2.5 py-0.5">
+                                                    {orders.length}
+                                                </Badge>
                                             </div>
-                                            <Badge variant="secondary" className="rounded-full bg-[#1E1E1E] text-gray-300 border-white/10 text-xs font-bold px-2.5 py-0.5">
-                                                {orders.length}
-                                            </Badge>
-                                        </div>
 
-                                        <Droppable droppableId={colId}>
-                                            {(provided, snapshot) => (
-                                                <div
-                                                    {...provided.droppableProps}
-                                                    ref={provided.innerRef}
-                                                    className={`flex-1 overflow-y-auto space-y-4 rounded-xl transition-all p-1.5 custom-scrollbar min-h-[300px] ${
-                                                        snapshot.isDraggingOver ? "bg-[#1E1E1E]/60 ring-1 ring-[#D4AF37]/30" : ""
-                                                    }`}
-                                                >
-                                                    {orders.length === 0 ? (
-                                                        <div className="h-40 flex flex-col items-center justify-center text-center p-6 border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
-                                                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Tudo limpo por aqui!</p>
-                                                            <p className="text-[11px] text-gray-500">Aguardando novos pedidos.</p>
-                                                        </div>
-                                                    ) : (
-                                                        orders.map((order, index) => (
-                                                            <OrderCard 
-                                                                key={order.id} 
-                                                                order={order} 
-                                                                index={index} 
-                                                                markPaid={markPaid} 
-                                                                updateStatus={updateStatus}
-                                                                setConfirmModal={setConfirmModal}
-                                                                setDeleteConfirm={setDeleteConfirm}
-                                                                setSelectedPrintOrder={setSelectedPrintOrder}
-                                                            />
-                                                        ))
-                                                    )}
-                                                    {provided.placeholder}
-                                                </div>
-                                            )}
-                                        </Droppable>
-                                    </div>
-                                );
-                            })}
+                                            <Droppable droppableId={colId}>
+                                                {(provided, snapshot) => (
+                                                    <div
+                                                        {...provided.droppableProps}
+                                                        ref={provided.innerRef}
+                                                        className={`flex-1 overflow-y-auto space-y-3.5 rounded-xl transition-all p-1.5 custom-scrollbar pr-1 min-h-[150px] ${
+                                                            snapshot.isDraggingOver ? "bg-[#1E1E1E]/80 ring-2 ring-[#F4B544]/60" : ""
+                                                        }`}
+                                                    >
+                                                        {orders.length === 0 ? (
+                                                            <div className="h-40 flex flex-col items-center justify-center text-center p-6 border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
+                                                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Tudo limpo por aqui!</p>
+                                                                <p className="text-[11px] text-gray-500">Aguardando novos pedidos.</p>
+                                                            </div>
+                                                        ) : (
+                                                            orders.map((order, index) => (
+                                                                <OrderCard 
+                                                                    key={order.id} 
+                                                                    order={order} 
+                                                                    index={index} 
+                                                                    markPaid={markPaid} 
+                                                                    updateStatus={updateStatus}
+                                                                    setConfirmModal={setConfirmModal}
+                                                                    setDeleteConfirm={setDeleteConfirm}
+                                                                    setSelectedPrintOrder={setSelectedPrintOrder}
+                                                                />
+                                                            ))
+                                                        )}
+                                                        {provided.placeholder}
+                                                    </div>
+                                                )}
+                                            </Droppable>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ) : (
-                        /* Grid View for Filtered Status */
-                        <div className="h-full">
+                        /* Grid View for Filtered Status com Scroll Vertical */
+                        <div className="flex-1 w-full overflow-y-auto custom-scrollbar pb-10">
                             <Droppable droppableId={activeTab}>
                                 {(provided) => {
                                     const filteredList = filterOrdersBySchedule(columns[activeTab] || []);
@@ -580,7 +582,7 @@ export default function AdminOrdersPage() {
                                         <div 
                                             {...provided.droppableProps} 
                                             ref={provided.innerRef}
-                                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-10"
+                                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pr-2"
                                         >
                                             {filteredList.length === 0 ? (
                                                 <div className="col-span-full h-64 border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center bg-[#141414]">
