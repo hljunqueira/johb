@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ShoppingBag, Menu as MenuIcon, X, PhoneCall, MapPin } from "lucide-react";
+import { ShoppingBag, Menu as MenuIcon, X, PhoneCall } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export default function Header({ onOpenCart }) {
@@ -24,17 +24,7 @@ export default function Header({ onOpenCart }) {
         <header className="sticky top-0 z-40 w-full bg-[#050505]/95 backdrop-blur-md border-b border-[#F4B544]/20 transition-all">
             {/* Topbar informativo */}
             <div className="bg-[#10100F] border-b border-[#F4B544]/10 py-1.5 px-4 text-xs text-[#B8B1A3]">
-                <div className="max-w-7xl mx-auto flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1.5 text-[#F4B544]">
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span className="font-semibold">Balneário Arroio do Silva — SC</span>
-                        </span>
-                        <span className="hidden md:inline-block text-[#F4B544]/40">•</span>
-                        <span className="hidden md:inline-flex items-center gap-1.5 text-[#F4B544] font-bold">
-                            🗓️ Somente Pedidos por Agendamento Prévio
-                        </span>
-                    </div>
+                <div className="max-w-7xl mx-auto flex justify-end items-center">
                     <a
                         href="https://wa.me/message/FUNP4LBHYBA3O1"
                         target="_blank"

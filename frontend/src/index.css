@@ -54,6 +54,7 @@ h1, h2, h3, h4, h5, h6, .font-serif-editorial {
 /* Utilitários estéticos JOHB */
 .gold-gradient-text {
     background: linear-gradient(135deg, #FFC85C 0%, #F4B544 50%, #C88A24 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -90,6 +91,45 @@ h1, h2, h3, h4, h5, h6, .font-serif-editorial {
 }
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(244, 181, 68, 0.5);
+}
+
+/* Universal Dark Mode Input, Textarea & Select Styling */
+input, textarea, select {
+    background-color: #0D0D0C !important;
+    color: #FFFAF0 !important;
+    border-color: rgba(244, 181, 68, 0.25) !important;
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: #F4B544 !important;
+    outline: none !important;
+    box-shadow: 0 0 12px -2px rgba(244, 181, 68, 0.3) !important;
+}
+
+select option {
+    background-color: #10100F !important;
+    color: #FFFAF0 !important;
+    padding: 8px 12px !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #B8B1A3 !important;
+    opacity: 0.6 !important;
+}
+
+/* Override Chrome / Edge / Safari Autofill Styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #FFFAF0 !important;
+    -webkit-box-shadow: 0 0 0px 1000px #0D0D0C inset !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 @media (prefers-reduced-motion: reduce) {

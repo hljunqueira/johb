@@ -11,16 +11,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Search, ShoppingCart, Plus, Minus, Clock, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2, Coffee, MapPin, PhoneCall } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Clock, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2, Coffee, MapPin, PhoneCall, Truck, Sparkles, Check } from "lucide-react";
 import Header from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { CategoryPills } from "@/components/CategoryPills";
 import { EnhancedProductCard } from "@/components/EnhancedProductCard";
+import { getAvailableScheduleDates, getAvailableTimeSlots } from "@/lib/scheduleUtils";
 
 const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
 const BACKEND_URL = (rawBackend && rawBackend.includes('hljdev.com.br'))
     ? rawBackend
-    : 'https://api.hljdev.com.br';
+    : 'https://johb-api.hljdev.com.br';
 const API = `${BACKEND_URL}/api`;
 
 // Categorias padrão JOHB para exibição contínua
@@ -164,17 +165,17 @@ function CategorySkeleton() {
 function StoreStatusBanner({ status }) {
     const isClosed = !status.isOpen || status.temporarilyClosed;
     return (
-        <div className={`py-2.5 px-4 text-center text-xs font-extrabold tracking-wider ${
+        <div className={`py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all ${
             isClosed
-                ? "bg-amber-500/20 text-amber-300 border-b border-amber-500/30"
-                : "bg-[#F4B544]/20 text-[#F4B544] border-b border-[#F4B544]/30"
+                ? "bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-lg shadow-amber-500/5"
+                : "bg-[#F4B544]/15 text-[#F4B544] border border-[#F4B544]/30 shadow-lg shadow-[#F4B544]/5"
         }`}>
-            <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+            <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
                 <Clock className="w-4 h-4 text-[#F4B544] shrink-0" />
                 <span>
                     {isClosed 
                         ? "🔴 Atendimento Presencial Fechado — Aceitando Pedidos por Agendamento Prévio!" 
-                        : "🗓️ Pedidos por Agendamento Prévio (Antecedência mínima de 8 horas para produção)."
+                        : "🗓️ Pedidos por Agendamento Prévio"
                     }
                 </span>
             </div>
@@ -347,6 +348,52 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         </div>
                     )}
 
+                    {/* Compre Junto / Cross-sell Inteligente de Bebidas */}
+                    <div className="p-3 rounded-xl bg-[#050505] border border-[#F4B544]/20 space-y-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#F4B544] flex items-center gap-1.5">
+                            <span>☕</span> Que tal acompanhar uma bebida?
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const cafeItem = { name: "Café Especial JOHB", price: 6.00, category: "bebidas" };
+                                    setSelectedAdditionals(prev => {
+                                        const exists = prev.find(a => a.name === cafeItem.name);
+                                        return exists ? prev.filter(a => a.name !== cafeItem.name) : [...prev, cafeItem];
+                                    });
+                                }}
+                                className={`p-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${
+                                    selectedAdditionals.find(a => a.name === "Café Especial JOHB")
+                                        ? "border-[#F4B544] bg-[#171612] text-[#F4B544]"
+                                        : "border-[#F4B544]/15 bg-[#10100F] text-[#FFFAF0] hover:border-[#F4B544]/40"
+                                }`}
+                            >
+                                <span className="truncate">☕ Café Especial</span>
+                                <span className="font-bold shrink-0 text-[#F4B544]">+ R$ 6</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const refriItem = { name: "Coca-Cola Lata Gelada", price: 6.50, category: "bebidas" };
+                                    setSelectedAdditionals(prev => {
+                                        const exists = prev.find(a => a.name === refriItem.name);
+                                        return exists ? prev.filter(a => a.name !== refriItem.name) : [...prev, refriItem];
+                                    });
+                                }}
+                                className={`p-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${
+                                    selectedAdditionals.find(a => a.name === "Coca-Cola Lata Gelada")
+                                        ? "border-[#F4B544] bg-[#171612] text-[#F4B544]"
+                                        : "border-[#F4B544]/15 bg-[#10100F] text-[#FFFAF0] hover:border-[#F4B544]/40"
+                                }`}
+                            >
+                                <span className="truncate">🥤 Coca-Cola Lata</span>
+                                <span className="font-bold shrink-0 text-[#F4B544]">+ R$ 6,50</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="pt-2 border-t border-[#F4B544]/15">
                         <textarea
                             value={observation}
@@ -382,32 +429,39 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
     );
 });
 
-function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout }) {
+function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout, deliverySettings }) {
     const { scheduledDate, scheduledTime, setScheduleInfo } = useCart();
 
-    // Gerar próximas datas disponíveis (Hoje + 7 dias)
+    const minFreeDelivery = Number(deliverySettings?.min_free_delivery) || 0;
+    const isFreeDelivery = minFreeDelivery > 0 && total >= minFreeDelivery;
+    const diffToFree = Math.max(0, minFreeDelivery - total);
+    const progressPercent = minFreeDelivery > 0 ? Math.min(100, Math.round((total / minFreeDelivery) * 100)) : 0;
+
+    // Gerar datas disponíveis baseadas nas regras da loja
     const availableDates = useMemo(() => {
-        const dates = [];
-        const today = new Date();
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(today);
-            d.setDate(today.getDate() + i);
-            const dateStr = d.toISOString().split('T')[0];
-            const label = i === 0 ? "Hoje" : i === 1 ? "Amanhã" : d.toLocaleDateString("pt-BR", { weekday: 'short', day: '2-digit', month: '2-digit' });
-            dates.push({ value: dateStr, label, displayDate: d.toLocaleDateString("pt-BR") });
+        return getAvailableScheduleDates(deliverySettings);
+    }, [deliverySettings]);
+
+    // Data selecionada válida
+    const selDate = useMemo(() => {
+        if (scheduledDate && availableDates.some(d => d.value === scheduledDate)) {
+            return scheduledDate;
         }
-        return dates;
-    }, []);
+        return availableDates[0]?.value || "";
+    }, [scheduledDate, availableDates]);
 
-    // Seletor de faixas de horário (intervalos de 30min das 11:30 às 21:00)
-    const timeSlots = [
-        "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-        "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00",
-        "18:30", "19:00", "19:30", "20:00", "20:30", "21:00"
-    ];
+    // Slots de horário para a data selecionada
+    const timeSlots = useMemo(() => {
+        return getAvailableTimeSlots(selDate, deliverySettings);
+    }, [selDate, deliverySettings]);
 
-    const selDate = scheduledDate || availableDates[0]?.value || "";
-    const selTime = scheduledTime || timeSlots[0] || "";
+    // Horário selecionado válido
+    const selTime = useMemo(() => {
+        if (scheduledTime && timeSlots.includes(scheduledTime)) {
+            return scheduledTime;
+        }
+        return timeSlots[0] || "";
+    }, [scheduledTime, timeSlots]);
 
     if (items.length === 0) {
         return (
@@ -420,30 +474,65 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
 
     return (
         <div className="space-y-5">
+            {/* Barra de Progresso de Frete Grátis */}
+            {minFreeDelivery > 0 && (
+                <div className="p-3.5 rounded-2xl bg-[#050505] border border-[#F4B544]/30 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 font-bold">
+                            <Truck className="w-4 h-4 text-[#F4B544]" />
+                            {isFreeDelivery ? (
+                                <span className="text-emerald-400 font-extrabold flex items-center gap-1">
+                                    <Sparkles className="w-3.5 h-3.5 text-[#F4B544]" /> Frete Grátis Garantido!
+                                </span>
+                            ) : (
+                                <span className="text-[#FFFAF0]">
+                                    Faltam <strong className="text-[#F4B544]">R$ {diffToFree.toFixed(2).replace(".", ",")}</strong> para Frete Grátis
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-[10px] text-[#B8B1A3] font-bold">Meta: R$ {minFreeDelivery.toFixed(2)}</span>
+                    </div>
+
+                    <div className="w-full h-2 bg-[#1A1A1A] rounded-full overflow-hidden border border-white/5">
+                        <div
+                            className={`h-full transition-all duration-500 rounded-full ${
+                                isFreeDelivery 
+                                    ? "bg-gradient-to-r from-emerald-400 to-[#F4B544]" 
+                                    : "bg-gradient-to-r from-[#F4B544] to-[#C88A24]"
+                            }`}
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
+                </div>
+            )}
+
             {/* Lista de Itens */}
             <div className="space-y-3">
-                {items.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-[#050505] border border-[#F4B544]/15">
-                        <div className="flex-1 min-w-0 pr-3">
-                            <h4 className="text-xs font-bold text-[#FFFAF0] truncate">{item.name}</h4>
-                            <p className="text-[11px] text-[#F4B544] font-semibold mt-0.5">
-                                R$ {(item.price * item.quantity).toFixed(2)}
-                            </p>
+                {items.map((item, idx) => {
+                    const itemKey = item.cart_id || item.id || idx;
+                    return (
+                        <div key={itemKey} className="flex items-center justify-between p-3 rounded-xl bg-[#050505] border border-[#F4B544]/15">
+                            <div className="flex-1 min-w-0 pr-3">
+                                <h4 className="text-xs font-bold text-[#FFFAF0] truncate">{item.name || item.product_name}</h4>
+                                <p className="text-[11px] text-[#F4B544] font-semibold mt-0.5">
+                                    R$ {(item.price * item.quantity).toFixed(2)}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => updateQuantity(itemKey, item.quantity - 1)} className="p-1 text-[#B8B1A3] hover:text-[#FFFAF0]">
+                                    <Minus className="h-3 w-3" />
+                                </button>
+                                <span className="text-xs font-bold text-[#F4B544]">{item.quantity}</span>
+                                <button onClick={() => updateQuantity(itemKey, item.quantity + 1)} className="p-1 text-[#B8B1A3] hover:text-[#FFFAF0]">
+                                    <Plus className="h-3 w-3" />
+                                </button>
+                                <button onClick={() => removeItem(itemKey)} className="p-1 text-red-400 hover:text-red-300 ml-1" title="Remover item">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => updateQuantity(idx, item.quantity - 1)} className="p-1 text-[#B8B1A3] hover:text-[#FFFAF0]">
-                                <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="text-xs font-bold text-[#F4B544]">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(idx, item.quantity + 1)} className="p-1 text-[#B8B1A3] hover:text-[#FFFAF0]">
-                                <Plus className="h-3 w-3" />
-                            </button>
-                            <button onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-300 ml-1">
-                                <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Bloco de Escolha do Horário de Agendamento */}
@@ -477,15 +566,21 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
                 {/* Seleção da Faixa de Horário */}
                 <div>
                     <label className="text-[11px] font-semibold text-[#B8B1A3] block mb-1.5">Horário de Entrega/Retirada:</label>
-                    <select
-                        value={selTime}
-                        onChange={e => setScheduleInfo(selDate, e.target.value)}
-                        className="w-full bg-[#10100F] text-[#FFFAF0] border border-[#F4B544]/30 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#F4B544]"
-                    >
-                        {timeSlots.map(t => (
-                            <option key={t} value={t}>{t} hs</option>
-                        ))}
-                    </select>
+                    {timeSlots.length > 0 ? (
+                        <select
+                            value={selTime}
+                            onChange={e => setScheduleInfo(selDate, e.target.value)}
+                            className="w-full bg-[#10100F] text-[#FFFAF0] border border-[#F4B544]/30 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#F4B544]"
+                        >
+                            {timeSlots.map(t => (
+                                <option key={t} value={t}>{t} hs</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px]">
+                            Horários para hoje encerrados ou dentro da antecedência mínima. Por favor, selecione <strong>Amanhã</strong> ou outra data.
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -568,52 +663,113 @@ export default function MenuPage() {
     const [pendingAddItem, setPendingAddItem] = useState(null);
     const [cartAnimating, setCartAnimating] = useState(false);
 
+    const [reviewsData, setReviewsData] = useState({ avg_rating: 4.9, total_reviews: 48, testimonials: [] });
+    const [quickTagFilter, setQuickTagFilter] = useState("all");
+
     const { items, addItem, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
     const { favorites, clearFavorites } = useFavorites();
     const { customer, isLoggedIn, login, logout } = useCustomer();
     const { isOpen: storeOpen, ...storeStatus } = useStoreStatus();
     const navigate = useNavigate();
 
-    // Carregar categorias no mount ou usar padrão JOHB se estiver sem itens
+    // Carregar Menus, Categorias, Produtos e Reviews no mount
     useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const catRes = await axios.get(`${API}/categories`);
-                const cats = Array.isArray(catRes.data) && catRes.data.length > 0 ? catRes.data : DEFAULT_JOHB_CATEGORIES;
-                setCategories(cats);
-                if (cats.length > 0) setSelectedCategory(cats[0].id);
-            } catch {
-                setCategories(DEFAULT_JOHB_CATEGORIES);
-                setSelectedCategory("cat-salgados");
-            }
-        };
-        fetchCategories();
-    }, []);
-
-    // Carregar produtos da categoria selecionada
-    useEffect(() => {
-        if (!selectedCategory) return;
-        const fetchProducts = async () => {
+        const fetchData = async () => {
             try {
                 setProductLoading(true);
-                const res = await axios.get(`${API}/products?category_id=${selectedCategory}`);
-                setProducts(Array.isArray(res.data) ? res.data : []);
+                const [menuRes, catRes, prodRes, revRes] = await Promise.all([
+                    axios.get(`${API}/menus`).catch(() => ({ data: [] })),
+                    axios.get(`${API}/categories`).catch(() => ({ data: [] })),
+                    axios.get(`${API}/products`).catch(() => ({ data: [] })),
+                    axios.get(`${API}/reviews/summary`).catch(() => ({ data: { avg_rating: 4.9, total_reviews: 48, testimonials: [] } }))
+                ]);
+
+                const fetchedMenus = Array.isArray(menuRes.data) && menuRes.data.length > 0 ? menuRes.data : [];
+                const fetchedCats = Array.isArray(catRes.data) && catRes.data.length > 0 ? catRes.data : DEFAULT_JOHB_CATEGORIES;
+                const fetchedProds = Array.isArray(prodRes.data) ? prodRes.data : [];
+
+                setMenus(fetchedMenus);
+                setCategories(fetchedCats);
+                setProducts(fetchedProds);
+                if (revRes?.data) setReviewsData(revRes.data);
+
+                if (fetchedMenus.length > 0) {
+                    const firstMenuId = fetchedMenus[0].id;
+                    setSelectedMenu(firstMenuId);
+                    const firstMenuCats = fetchedCats.filter(c => c.menu_id === firstMenuId);
+                    if (firstMenuCats.length > 0) {
+                        setSelectedCategory(firstMenuCats[0].id);
+                    } else {
+                        setSelectedCategory("all");
+                    }
+                } else if (fetchedCats.length > 0) {
+                    setSelectedCategory(fetchedCats[0].id);
+                }
             } catch {
-                setProducts([]);
+                setCategories(DEFAULT_JOHB_CATEGORIES);
             } finally {
                 setProductLoading(false);
             }
         };
-        fetchProducts();
-    }, [selectedCategory]);
+        fetchData();
+    }, []);
 
+    // Categorias ativas com base no Menu selecionado
+    const activeCategories = useMemo(() => {
+        if (!selectedMenu) return categories;
+        const filtered = categories.filter(c => c.menu_id === selectedMenu);
+        return filtered.length > 0 ? filtered : categories;
+    }, [categories, selectedMenu]);
+
+    // Trocar de Menu e definir a primeira categoria correspondente
+    const handleSelectMenu = (menuId) => {
+        setSelectedMenu(menuId);
+        const menuCats = categories.filter(c => c.menu_id === menuId);
+        if (menuCats.length > 0) {
+            setSelectedCategory(menuCats[0].id);
+        } else {
+            setSelectedCategory("all");
+        }
+    };
+
+    // Filtrar produtos por busca, categoria, menu ativo e filtro rápido
     const filteredProducts = useMemo(() => {
-        if (!search) return products;
-        return products.filter(p => 
-            p.name.toLowerCase().includes(search.toLowerCase()) ||
-            p.description?.toLowerCase().includes(search.toLowerCase())
-        );
-    }, [products, search]);
+        let result = products;
+
+        if (search) {
+            const query = search.toLowerCase();
+            return result.filter(p => 
+                p.name.toLowerCase().includes(query) ||
+                p.description?.toLowerCase().includes(query)
+            );
+        }
+
+        if (quickTagFilter !== "all") {
+            if (quickTagFilter === "vegano") {
+                result = result.filter(p => {
+                    const tags = Array.isArray(p.tags) ? p.tags : (p.tag ? [p.tag] : []);
+                    return tags.some(t => t.toLowerCase().includes("vegan") || t.toLowerCase().includes("vegetari"));
+                });
+            } else if (quickTagFilter === "assados") {
+                result = result.filter(p => p.name.toLowerCase().includes("assado") || p.name.toLowerCase().includes("joelhinho") || p.name.toLowerCase().includes("joelho") || p.name.toLowerCase().includes("folhado") || p.name.toLowerCase().includes("empada"));
+            } else if (quickTagFilter === "fritos") {
+                result = result.filter(p => p.name.toLowerCase().includes("coxinha") || p.name.toLowerCase().includes("pastel") || p.name.toLowerCase().includes("risole") || p.name.toLowerCase().includes("kibe"));
+            } else if (quickTagFilter === "doces") {
+                result = result.filter(p => p.name.toLowerCase().includes("cuca") || p.name.toLowerCase().includes("bolo") || p.name.toLowerCase().includes("doce") || p.name.toLowerCase().includes("torta"));
+            } else if (quickTagFilter === "bebidas") {
+                result = result.filter(p => p.name.toLowerCase().includes("café") || p.name.toLowerCase().includes("coca") || p.name.toLowerCase().includes("suco") || p.name.toLowerCase().includes("refrigerante"));
+            }
+        }
+
+        if (selectedCategory && selectedCategory !== "all") {
+            result = result.filter(p => p.category_id === selectedCategory);
+        } else if (activeCategories.length > 0) {
+            const activeCatIds = activeCategories.map(c => c.id);
+            result = result.filter(p => activeCatIds.includes(p.category_id));
+        }
+
+        return result;
+    }, [products, search, selectedCategory, activeCategories, quickTagFilter]);
 
     const handleAddItem = (product, quantity, additionals, observation) => {
         addItem(product, quantity, additionals, observation);
@@ -625,10 +781,7 @@ export default function MenuPage() {
             {/* Header Artesanal JOHB */}
             <Header onOpenCart={() => setCartOpen(true)} />
 
-            {/* Banner de Status da Loja */}
-            <StoreStatusBanner status={{ isOpen: storeOpen, ...storeStatus }} />
-
-            {/* Hero Section Editorial */}
+            {/* Hero Section Editorial com Banners Dinâmicos */}
             <HeroSection
                 onVerCardapio={() => {
                     const el = document.getElementById("cardapio");
@@ -640,11 +793,31 @@ export default function MenuPage() {
                 }}
             />
 
-            {/* Conteúdo Principal — Cardápio */}
+            {/* Conteúdo Principal — Cardápio em 3 Níveis */}
             <section id="cardapio" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                
-                {/* Barra de Pesquisa e Título da Seção sem estrelas AI */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#F4B544]/15 mb-8">
+                {/* Banner de Status da Loja / Agendamento */}
+                <StoreStatusBanner status={{ isOpen: storeOpen, ...storeStatus }} />
+
+                {/* Selo de Prova Social no Topo */}
+                <div className="flex items-center justify-between flex-wrap gap-4 p-4 rounded-2xl bg-[#10100F] border border-[#F4B544]/20 mb-8 shadow-lg">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-[#F4B544] font-extrabold text-sm sm:text-base">
+                            <span>⭐</span>
+                            <span>{reviewsData.avg_rating}</span>
+                            <span className="text-[#B8B1A3] font-normal text-xs">/ 5.0</span>
+                        </div>
+                        <span className="text-white/20">|</span>
+                        <span className="text-xs text-[#FFFAF0] font-medium">
+                            <strong>{reviewsData.total_reviews}+</strong> clientes satisfeitos em Balneário Arroio do Silva
+                        </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-[#F4B544] uppercase tracking-wider bg-[#F4B544]/10 px-3 py-1 rounded-full border border-[#F4B544]/30">
+                        🏆 Tradição & Qualidade Artesanal
+                    </span>
+                </div>
+
+                {/* Barra de Pesquisa e Título da Seção */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#F4B544]/15 mb-6">
                     <div>
                         <div className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#F4B544] font-semibold mb-1">
                             Nosso Cardápio
@@ -674,10 +847,56 @@ export default function MenuPage() {
                     </div>
                 </div>
 
-                {/* Categorias Pílula — Exibição constante */}
+                {/* Filtros Rápidos de Preferência */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-6">
+                    {[
+                        { key: "all", label: "✨ Todos os Itens" },
+                        { key: "assados", label: "🥐 Assados & Folhados" },
+                        { key: "fritos", label: "🔥 Fritos Dourados" },
+                        { key: "doces", label: "🍰 Cucas & Bolos" },
+                        { key: "vegano", label: "🌱 Veganos & Vegetarianos" },
+                        { key: "bebidas", label: "🥤 Cafés & Bebidas" }
+                    ].map(f => (
+                        <button
+                            key={f.key}
+                            onClick={() => setQuickTagFilter(f.key)}
+                            className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap border ${
+                                quickTagFilter === f.key
+                                    ? "bg-[#F4B544] text-[#050505] border-[#F4B544] shadow-md shadow-[#F4B544]/20"
+                                    : "bg-[#10100F] text-[#B8B1A3] border-[#F4B544]/20 hover:border-[#F4B544]/50 hover:text-[#FFFAF0]"
+                            }`}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Nível 1: Abas de Menus Principais */}
+                {menus.length > 0 && (
+                    <div className="flex items-center justify-start md:justify-center gap-3 overflow-x-auto pb-4 scrollbar-none mb-6">
+                        {menus.map(menu => {
+                            const isSelected = selectedMenu === menu.id;
+                            return (
+                                <button
+                                    key={menu.id}
+                                    onClick={() => handleSelectMenu(menu.id)}
+                                    className={`px-6 py-3.5 rounded-2xl text-sm font-bold transition-all flex items-center gap-2.5 whitespace-nowrap shadow-md ${
+                                        isSelected
+                                            ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-[#050505] shadow-[#F4B544]/20 scale-105"
+                                            : "bg-[#10100F] text-[#B8B1A3] border border-[#F4B544]/20 hover:border-[#F4B544]/50 hover:text-[#FFFAF0] hover:bg-[#171612]"
+                                    }`}
+                                >
+                                    <span>{menu.name}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Nível 2: Pílulas de Categorias do Menu Ativo */}
                 <div className="mb-8">
                     <CategoryPills
-                        categories={categories}
+                        categories={activeCategories}
                         selectedCategory={selectedCategory}
                         onSelectCategory={setSelectedCategory}
                     />
@@ -722,6 +941,41 @@ export default function MenuPage() {
                     </div>
                 )}
             </section>
+
+            {/* Seção de Depoimentos & Prova Social Reais */}
+            {reviewsData?.testimonials && reviewsData.testimonials.length > 0 && (
+                <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-[#F4B544]/15">
+                    <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
+                        <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold">
+                            O Que Dizem Nossos Clientes
+                        </span>
+                        <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#FFFAF0]">
+                            Amor em Cada Mordida
+                        </h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {reviewsData.testimonials.map((t, idx) => (
+                            <div key={idx} className="p-6 rounded-2xl bg-[#10100F] border border-[#F4B544]/20 space-y-4 shadow-lg gold-glow-sm flex flex-col justify-between">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-1 text-[#F4B544] text-sm">
+                                        {Array.from({ length: t.rating || 5 }).map((_, i) => (
+                                            <span key={i}>⭐</span>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs sm:text-sm text-[#FFFAF0] italic font-light leading-relaxed">
+                                        "{t.rating_comment}"
+                                    </p>
+                                </div>
+                                <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-[#B8B1A3]">
+                                    <span className="font-bold text-[#F4B544]">{t.customer_name}</span>
+                                    <span>{t.created_at}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* Seção Sobre / Experiência JOHB */}
             <section id="sobre" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -794,6 +1048,7 @@ export default function MenuPage() {
                             updateQuantity={updateQuantity}
                             total={total}
                             itemCount={itemCount}
+                            deliverySettings={storeStatus.deliverySettings}
                             onCheckout={() => {
                                 setCartOpen(false);
                                 navigate("/checkout");

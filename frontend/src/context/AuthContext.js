@@ -5,7 +5,7 @@ import axios from "axios";
 const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
 const BACKEND_URL = (rawBackend && rawBackend.includes('hljdev.com.br'))
     ? rawBackend
-    : 'https://api.hljdev.com.br';
+    : 'https://johb-api.hljdev.com.br';
 const API = `${BACKEND_URL}/api`;
 const AuthContext = createContext();
 
@@ -26,9 +26,15 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         if (token) {
-            axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+            axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 })
                 .then(res => { setUser(res.data); setLoading(false); })
-                .catch(() => { setToken(null); setUser(null); setLoading(false); });
+                .catch(err => {
+                    if (err.response && err.response.status === 401) {
+                        setToken(null);
+                        setUser(null);
+                    }
+                    setLoading(false);
+                });
         } else { setLoading(false); }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { 
     Clock, Package, CheckCircle2, DollarSign, RefreshCw, 
     ThumbsUp, Timer, Truck, XCircle, CircleEllipsis,
-    MoreVertical, ChevronRight, GripVertical
+    MoreVertical, ChevronRight, GripVertical, Volume2, VolumeX,
+    Printer, ReceiptText, MapPin, Phone, Banknote, Calendar
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -20,6 +22,7 @@ import {
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { API } from "@/lib/constants";
+import { startOrderAlertLoop, stopOrderAlertLoop, playOrderAlertChime } from "@/lib/soundAlert";
 
 const statusConfig = {
     aguardando: { 
@@ -63,103 +66,163 @@ const isDelayed = (order) => {
     return (now - created) > (order.estimated_time || 30) * 60 * 1000;
 };
 
-const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm }) => (
-    <Draggable key={order.id} draggableId={order.id} index={index}>
-        {(provided, snapshot) => (
-            <div
-                ref={provided.innerRef}
-                {...provided.draggableProps}
-                {...provided.dragHandleProps}
-                className={`bg-[#1E1E1E] rounded-2xl border p-5 shadow-lg transition-all h-full flex flex-col ${
-                    snapshot.isDragging ? "shadow-2xl ring-2 ring-[#F4B544] border-[#F4B544] scale-105 rotate-1" : "border-white/10 hover:border-[#D4AF37]/40"
-                } ${isDelayed(order) ? "border-red-500/40 bg-red-950/10" : ""}`}
-            >
-                <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-gray-500" />
-                        <span className="text-lg font-black text-[#F4B544] leading-none">#{order.order_number}</span>
-                    </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-white/10 text-gray-300">
-                                <MoreVertical className="h-4 w-4" />
+const OrderCard = ({ order, index, markPaid, setConfirmModal, setDeleteConfirm, setSelectedPrintOrder }) => {
+    const isToday = (() => {
+        if (!order.scheduled_date) return false;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+        return order.scheduled_date === todayStr;
+    })();
+
+    return (
+        <Draggable key={order.id} draggableId={order.id} index={index}>
+            {(provided, snapshot) => (
+                <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}
+                    className={`bg-[#1E1E1E] rounded-2xl border p-5 shadow-lg transition-all h-full flex flex-col ${
+                        snapshot.isDragging ? "shadow-2xl ring-2 ring-[#F4B544] border-[#F4B544] scale-105 rotate-1" : "border-white/10 hover:border-[#D4AF37]/40"
+                    } ${isDelayed(order) ? "border-red-500/40 bg-red-950/10" : ""}`}
+                >
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-2">
+                            <GripVertical className="h-4 w-4 text-gray-500" />
+                            <span className="text-lg font-black text-[#F4B544] leading-none">#{order.order_number}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-1">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                title="Ver Comanda de Cozinha / Imprimir"
+                                onClick={() => setSelectedPrintOrder(order)}
+                                className="h-8 w-8 rounded-xl hover:bg-white/10 text-gray-300 hover:text-[#F4B544]"
+                            >
+                                <Printer className="h-4 w-4" />
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-2xl bg-[#1A1A1A] border-white/10 text-white">
-                            <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-2">Ações</DropdownMenuLabel>
-                            <DropdownMenuItem 
-                                disabled={order.payment_status === "pago"}
-                                onClick={() => markPaid(order.id)}
-                                className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-emerald-500/20 text-emerald-400 cursor-pointer"
-                            >
-                                <DollarSign className="h-4 w-4" /> Marcar como Pago
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="my-1 mx-2 bg-white/10" />
-                            <DropdownMenuItem 
-                                onClick={() => setConfirmModal({ isOpen: true, orderId: order.id })}
-                                className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-red-500/20 text-red-400 cursor-pointer"
-                            >
-                                <XCircle className="h-4 w-4" /> Recusar Pedido
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                                onClick={() => setDeleteConfirm({ isOpen: true, orderId: order.id })}
-                                className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-red-500/30 text-red-300 cursor-pointer"
-                            >
-                                <Package className="h-4 w-4" /> Excluir Pedido
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
 
-                <div className="mb-3">
-                    <p className="font-bold text-white text-sm truncate uppercase tracking-tight">{order.customer_name}</p>
-                    {(order.scheduled_date || order.scheduled_time) ? (
-                        <div className="mt-1.5 py-1 px-2.5 rounded-lg bg-[#F4B544]/20 border border-[#F4B544]/30 text-[#F4B544] text-[11px] font-extrabold flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-[#F4B544] shrink-0" />
-                            <span>Agendado: {order.scheduled_date ? new Date(order.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : ""} {order.scheduled_time ? `às ${order.scheduled_time}h` : ""}</span>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-white/10 text-gray-300">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-2xl bg-[#1A1A1A] border-white/10 text-white">
+                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-2">Ações</DropdownMenuLabel>
+                                    <DropdownMenuItem 
+                                        disabled={order.payment_status === "pago"}
+                                        onClick={() => markPaid(order.id)}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-emerald-500/20 text-emerald-400 cursor-pointer"
+                                    >
+                                        <DollarSign className="h-4 w-4" /> Marcar como Pago
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => setSelectedPrintOrder(order)}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-[#F4B544]/20 text-[#F4B544] cursor-pointer"
+                                    >
+                                        <Printer className="h-4 w-4" /> Visualizar Comanda
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator className="my-1 mx-2 bg-white/10" />
+                                    <DropdownMenuItem 
+                                        onClick={() => setConfirmModal({ isOpen: true, orderId: order.id })}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-red-500/20 text-red-400 cursor-pointer"
+                                    >
+                                        <XCircle className="h-4 w-4" /> Recusar Pedido
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => setDeleteConfirm({ isOpen: true, orderId: order.id })}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold focus:bg-red-500/30 text-red-300 cursor-pointer"
+                                    >
+                                        <Package className="h-4 w-4" /> Excluir Pedido
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mt-1">
-                            <Clock className="h-3.5 w-3.5 text-[#F4B544]" />
-                            {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                    )}
-                </div>
+                    </div>
 
-                <div className="space-y-1.5 mb-4 flex-1 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
-                    {(Array.isArray(order.items) ? order.items : []).map((item, i) => (
-                        <div key={i} className="text-xs flex justify-between leading-tight text-gray-300">
-                            <span>
-                                <span className="text-[#F4B544] font-bold mr-1">{item.quantity}x</span> {item.product_name}
+                    <div className="mb-3">
+                        <div className="flex items-center justify-between">
+                            <p className="font-bold text-white text-sm truncate uppercase tracking-tight">{order.customer_name}</p>
+                            <span className="text-[10px] uppercase font-bold text-gray-400">
+                                {order.delivery_type === "entrega" ? "🛵 Entrega" : "🏪 Balcão"}
                             </span>
                         </div>
-                    ))}
-                </div>
 
-                <div className="flex justify-between items-center pt-4 border-t border-white/10 mt-auto">
-                    <span className="text-lg font-black text-[#F4B544] tracking-tighter">R$ {order.total?.toFixed(2)}</span>
-                    <Badge className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border-none ${
-                        order.payment_status === "pago" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                    }`}>
-                        {order.payment_status === "pago" ? "PGTO PAGO" : "PGTO PENDENTE"}
-                    </Badge>
+                        {(order.scheduled_date || order.scheduled_time) ? (
+                            <div className={`mt-2 py-1.5 px-2.5 rounded-lg border text-[11px] font-extrabold flex items-center gap-1.5 ${
+                                isToday
+                                    ? "bg-[#F4B544]/25 border-[#F4B544] text-[#F4B544]"
+                                    : "bg-purple-500/20 border-purple-500/40 text-purple-300"
+                            }`}>
+                                <Calendar className="h-3.5 w-3.5 shrink-0" />
+                                <span>
+                                    {isToday ? "HOJE" : (order.scheduled_date ? new Date(order.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : "")} 
+                                    {order.scheduled_time ? ` às ${order.scheduled_time}h` : ""}
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mt-1">
+                                <Clock className="h-3.5 w-3.5 text-[#F4B544]" />
+                                {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                        )}
+
+                        {/* Informação de Pagamento e Troco */}
+                        <div className="mt-2 text-[10px] text-gray-400 flex items-center justify-between">
+                            <span>
+                                {order.payment_method === "asaas" ? "💳 Online (Asaas)" :
+                                 order.payment_method === "cartao_maquininha" ? "💳 Maquininha" :
+                                 order.payment_method === "dinheiro" ? (
+                                     order.change_for ? `💵 Dinheiro (Troco p/ R$ ${Number(order.change_for).toFixed(2)})` : "💵 Dinheiro (Exato)"
+                                 ) : (order.payment_method || "Online")}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5 mb-4 flex-1 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                        {(Array.isArray(order.items) ? order.items : []).map((item, i) => (
+                            <div key={i} className="text-xs flex justify-between leading-tight text-gray-300">
+                                <span>
+                                    <span className="text-[#F4B544] font-bold mr-1">{item.quantity}x</span> {item.name || item.product_name}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-4 border-t border-white/10 mt-auto">
+                        <span className="text-lg font-black text-[#F4B544] tracking-tighter">R$ {order.total?.toFixed(2)}</span>
+                        <Badge className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border-none ${
+                            order.payment_status === "pago" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                        }`}>
+                            {order.payment_status === "pago" ? "PGTO PAGO" : "PGTO PENDENTE"}
+                        </Badge>
+                    </div>
                 </div>
-            </div>
-        )}
-    </Draggable>
-);
+            )}
+        </Draggable>
+    );
+};
 
 export default function AdminOrdersPage() {
     const [columns, setColumns] = useState({});
     const [activeTab, setActiveTab] = useState("aguardando");
+    const [scheduleFilter, setScheduleFilter] = useState("all"); // 'all', 'today', 'future'
     const [loading, setLoading] = useState(true);
+    const [soundEnabled, setSoundEnabled] = useState(true);
+    const [selectedPrintOrder, setSelectedPrintOrder] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, orderId: null });
     const { token } = useAuth();
+    const headers = { Authorization: `Bearer ${token}` };
+
     const fetchOrders = useCallback(async () => {
         if (!token) return;
         try {
-            const res = await axios.get(`${API}/admin/orders`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await axios.get(`${API}/admin/orders`, { headers });
             const allOrders = Array.isArray(res.data) ? res.data : [];
             
             const grouped = KANBAN_COLUMNS.reduce((acc, status) => {
@@ -168,13 +231,41 @@ export default function AdminOrdersPage() {
             }, {});
             
             setColumns(grouped);
+
+            // Alerta sonoro se tiver pedido pendente
+            const pendingOrders = grouped['aguardando'] || [];
+            if (pendingOrders.length > 0 && soundEnabled) {
+                startOrderAlertLoop();
+            } else {
+                stopOrderAlertLoop();
+            }
+
         } catch (err) { 
             console.error("Erro ao carregar pedidos:", err); 
         }
         finally { setLoading(false); }
-    }, [token]);
+    }, [token, soundEnabled]); // eslint-disable-line
 
-    useEffect(() => { fetchOrders(); const i = setInterval(fetchOrders, 10000); return () => clearInterval(i); }, [fetchOrders]);
+    useEffect(() => { 
+        fetchOrders(); 
+        const i = setInterval(fetchOrders, 10000); 
+        return () => {
+            clearInterval(i);
+            stopOrderAlertLoop();
+        }; 
+    }, [fetchOrders]);
+
+    const toggleSound = () => {
+        if (soundEnabled) {
+            stopOrderAlertLoop();
+            setSoundEnabled(false);
+            toast.info("Alerta sonoro silenciado.");
+        } else {
+            setSoundEnabled(true);
+            playOrderAlertChime();
+            toast.success("Alerta sonoro ativado!");
+        }
+    };
 
     const updateStatus = async (orderId, status) => {
         try { 
@@ -207,67 +298,141 @@ export default function AdminOrdersPage() {
         const orderId = draggableId;
         const newStatus = destination.droppableId;
         
-        const sourceOrders = Array.from(columns[source.droppableId]);
-        const destOrders = Array.from(columns[destination.droppableId]);
+        const sourceOrders = Array.from(columns[source.droppableId] || []);
+        const destOrders = Array.from(columns[destination.droppableId] || []);
         const [movedOrder] = sourceOrders.splice(source.index, 1);
-        destOrders.splice(destination.index, 0, { ...movedOrder, status: newStatus });
-        
-        setColumns({
-            ...columns,
-            [source.droppableId]: sourceOrders,
-            [destination.droppableId]: destOrders
-        });
+        if (movedOrder) {
+            destOrders.splice(destination.index, 0, { ...movedOrder, status: newStatus });
+            
+            setColumns({
+                ...columns,
+                [source.droppableId]: sourceOrders,
+                [destination.droppableId]: destOrders
+            });
 
-        updateStatus(orderId, newStatus);
+            updateStatus(orderId, newStatus);
+        }
+    };
+
+    // Filtro adicional por agendamento
+    const filterOrdersBySchedule = (ordersList) => {
+        if (!Array.isArray(ordersList)) return [];
+        if (scheduleFilter === "all") return ordersList;
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+
+        if (scheduleFilter === "today") {
+            return ordersList.filter(o => o.scheduled_date === todayStr);
+        }
+        if (scheduleFilter === "future") {
+            return ordersList.filter(o => o.scheduled_date && o.scheduled_date > todayStr);
+        }
+        return ordersList;
     };
 
     return (
         <div data-testid="admin-orders-page" className="min-h-[calc(100vh-80px)] bg-[#0A0A0A] text-white flex flex-col">
             {/* Header Estilo Premium JOHB */}
             <div className="pb-6 border-b border-[#D4AF37]/15">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Pedidos em Tempo Real</h1>
-                        <p className="text-gray-400 text-sm font-medium mt-1">Gerencie e acompanhe a preparação e entregas da JOHB.</p>
+                        <p className="text-gray-400 text-sm font-medium mt-1">Painel KDS de produção e entregas JOHB Café & Salgados.</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={fetchOrders} className="rounded-xl h-10 w-10 p-0 bg-[#141414] hover:bg-white/10 border-white/10 text-[#F4B544]">
-                        <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                    </Button>
+
+                    <div className="flex items-center gap-3">
+                        {/* Botão de Som */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={toggleSound}
+                            className={`rounded-xl px-3 h-10 gap-2 font-bold text-xs border ${
+                                soundEnabled 
+                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" 
+                                    : "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
+                            }`}
+                        >
+                            {soundEnabled ? <Volume2 className="h-4 w-4 text-emerald-400" /> : <VolumeX className="h-4 w-4 text-red-400" />}
+                            <span>{soundEnabled ? "Som Ativo" : "Som Mudo"}</span>
+                        </Button>
+
+                        <Button variant="outline" size="sm" onClick={fetchOrders} className="rounded-xl h-10 w-10 p-0 bg-[#141414] hover:bg-white/10 border-white/10 text-[#F4B544]">
+                            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                        </Button>
+                    </div>
                 </div>
-                
-                <div className="flex flex-wrap gap-2.5 mt-6">
-                    {KANBAN_COLUMNS.map(colId => {
-                        const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
-                        const StatusIcon = config.icon || CircleEllipsis;
-                        const isTabActive = activeTab === colId;
-                        const count = Array.isArray(columns[colId]) ? columns[colId].length : 0;
-                        return (
-                            <Button 
-                                key={colId}
-                                variant="outline" 
-                                onClick={() => setActiveTab(colId)} 
-                                className={`rounded-xl px-5 h-10 font-bold text-xs gap-2 transition-all ${
-                                    isTabActive 
-                                        ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 border-none scale-105" 
-                                        : "bg-[#141414] text-gray-300 border-white/10 hover:border-[#D4AF37]/40 hover:text-white"
-                                }`}
-                            >
-                                <StatusIcon className="h-4 w-4" />
-                                {config.label} ({count})
-                            </Button>
-                        );
-                    })}
-                    <Button 
-                        variant="outline" 
-                        onClick={() => setActiveTab("all")} 
-                        className={`rounded-xl px-5 h-10 font-bold text-xs gap-2 transition-all ${
-                            activeTab === "all" 
-                                ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 border-none scale-105" 
-                                : "bg-[#141414] text-gray-300 border-white/10 hover:border-[#D4AF37]/40 hover:text-white"
-                        }`}
-                    >
-                        Todos ({Object.values(columns || {}).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0)})
-                    </Button>
+
+                {/* Filtros de Status */}
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+                    <div className="flex flex-wrap gap-2">
+                        {KANBAN_COLUMNS.map(colId => {
+                            const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
+                            const StatusIcon = config.icon || CircleEllipsis;
+                            const isTabActive = activeTab === colId;
+                            const count = filterOrdersBySchedule(columns[colId] || []).length;
+                            return (
+                                <Button 
+                                    key={colId}
+                                    variant="outline" 
+                                    onClick={() => setActiveTab(colId)} 
+                                    className={`rounded-xl px-4 h-9 font-bold text-xs gap-2 transition-all ${
+                                        isTabActive 
+                                            ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 border-none" 
+                                            : "bg-[#141414] text-gray-300 border-white/10 hover:border-[#D4AF37]/40 hover:text-white"
+                                    }`}
+                                >
+                                    <StatusIcon className="h-3.5 w-3.5" />
+                                    {config.label} ({count})
+                                </Button>
+                            );
+                        })}
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setActiveTab("all")} 
+                            className={`rounded-xl px-4 h-9 font-bold text-xs gap-2 transition-all ${
+                                activeTab === "all" 
+                                    ? "bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold shadow-lg shadow-[#F4B544]/20 border-none" 
+                                    : "bg-[#141414] text-gray-300 border-white/10 hover:border-[#D4AF37]/40 hover:text-white"
+                            }`}
+                        >
+                            Todos
+                        </Button>
+                    </div>
+
+                    {/* Filtros de Agendamento */}
+                    <div className="flex items-center gap-1.5 bg-[#141414] p-1 rounded-xl border border-white/10 text-xs">
+                        <button
+                            type="button"
+                            onClick={() => setScheduleFilter("all")}
+                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                                scheduleFilter === "all" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
+                            }`}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setScheduleFilter("today")}
+                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                                scheduleFilter === "today" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
+                            }`}
+                        >
+                            🗓️ Agendados Hoje
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setScheduleFilter("future")}
+                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                                scheduleFilter === "future" ? "bg-[#F4B544] text-black" : "text-gray-400 hover:text-white"
+                            }`}
+                        >
+                            📅 Futuros
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -280,7 +445,7 @@ export default function AdminOrdersPage() {
                             {KANBAN_COLUMNS.map((colId) => {
                                 const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
                                 const StatusIcon = config.icon || CircleEllipsis;
-                                const orders = Array.isArray(columns[colId]) ? columns[colId] : [];
+                                const orders = filterOrdersBySchedule(columns[colId] || []);
                                 
                                 return (
                                     <div key={colId} className="w-[320px] flex flex-col h-full bg-[#141414] rounded-2xl border border-white/10 p-4 shadow-xl">
@@ -319,6 +484,7 @@ export default function AdminOrdersPage() {
                                                                 markPaid={markPaid} 
                                                                 setConfirmModal={setConfirmModal}
                                                                 setDeleteConfirm={setDeleteConfirm}
+                                                                setSelectedPrintOrder={setSelectedPrintOrder}
                                                             />
                                                         ))
                                                     )}
@@ -334,37 +500,114 @@ export default function AdminOrdersPage() {
                         /* Grid View for Filtered Status */
                         <div className="h-full">
                             <Droppable droppableId={activeTab}>
-                                {(provided) => (
-                                    <div 
-                                        {...provided.droppableProps} 
-                                        ref={provided.innerRef}
-                                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-10"
-                                    >
-                                        {(columns[activeTab] || []).length === 0 ? (
-                                            <div className="col-span-full h-64 border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center bg-[#141414]">
-                                                <p className="text-sm font-bold uppercase tracking-widest text-gray-300 mb-1">Tudo limpo por aqui!</p>
-                                                <p className="text-xs text-gray-500">Nenhum pedido encontrado neste status.</p>
-                                            </div>
-                                        ) : (
-                                            (columns[activeTab] || []).map((order, index) => (
-                                                <OrderCard 
-                                                    key={order.id} 
-                                                    order={order} 
-                                                    index={index} 
-                                                    markPaid={markPaid} 
-                                                    setConfirmModal={setConfirmModal}
-                                                    setDeleteConfirm={setDeleteConfirm}
-                                                />
-                                            ))
-                                        )}
-                                        {provided.placeholder}
-                                    </div>
-                                )}
+                                {(provided) => {
+                                    const filteredList = filterOrdersBySchedule(columns[activeTab] || []);
+                                    return (
+                                        <div 
+                                            {...provided.droppableProps} 
+                                            ref={provided.innerRef}
+                                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-10"
+                                        >
+                                            {filteredList.length === 0 ? (
+                                                <div className="col-span-full h-64 border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center bg-[#141414]">
+                                                    <p className="text-sm font-bold uppercase tracking-widest text-gray-300 mb-1">Tudo limpo por aqui!</p>
+                                                    <p className="text-xs text-gray-500">Nenhum pedido encontrado neste status.</p>
+                                                </div>
+                                            ) : (
+                                                filteredList.map((order, index) => (
+                                                    <OrderCard 
+                                                        key={order.id} 
+                                                        order={order} 
+                                                        index={index} 
+                                                        markPaid={markPaid} 
+                                                        setConfirmModal={setConfirmModal}
+                                                        setDeleteConfirm={setDeleteConfirm}
+                                                        setSelectedPrintOrder={setSelectedPrintOrder}
+                                                    />
+                                                ))
+                                            )}
+                                            {provided.placeholder}
+                                        </div>
+                                    );
+                                }}
                             </Droppable>
                         </div>
                     )}
                 </DragDropContext>
             </div>
+
+            {/* Modal de Comanda de Cozinha (KDS / Impressão) */}
+            {selectedPrintOrder && (
+                <Dialog open={Boolean(selectedPrintOrder)} onOpenChange={() => setSelectedPrintOrder(null)}>
+                    <DialogContent className="max-w-md bg-[#10100F] border border-[#F4B544]/30 text-white rounded-2xl p-6">
+                        <DialogHeader>
+                            <DialogTitle className="font-serif text-xl text-[#F4B544] flex items-center justify-between border-b border-white/10 pb-3">
+                                <span>Comanda #{selectedPrintOrder.order_number}</span>
+                                <Button 
+                                    size="sm"
+                                    onClick={() => window.print()}
+                                    className="bg-[#F4B544] text-black font-bold text-xs gap-1.5"
+                                >
+                                    <Printer className="w-3.5 h-3.5" />
+                                    <span>Imprimir Comanda</span>
+                                </Button>
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-4 pt-2 text-xs">
+                            <div className="bg-[#171612] p-3.5 rounded-xl border border-[#F4B544]/20 space-y-1.5">
+                                <p className="font-bold text-sm text-white">Cliente: {selectedPrintOrder.customer_name}</p>
+                                <p className="text-gray-300">Telefone: {selectedPrintOrder.customer_phone}</p>
+                                <p className="text-gray-300">
+                                    Modalidade: <strong className="text-[#F4B544] uppercase">{selectedPrintOrder.delivery_type}</strong>
+                                </p>
+                                {selectedPrintOrder.address && selectedPrintOrder.delivery_type === "entrega" && (
+                                    <p className="text-gray-300">Endereço: {selectedPrintOrder.address} - {selectedPrintOrder.neighborhood}</p>
+                                )}
+                                {(selectedPrintOrder.scheduled_date || selectedPrintOrder.scheduled_time) && (
+                                    <div className="p-2 rounded-lg bg-[#F4B544]/20 text-[#F4B544] font-black text-xs mt-2">
+                                        🗓️ AGENDADO: {selectedPrintOrder.scheduled_date ? new Date(selectedPrintOrder.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : ""} {selectedPrintOrder.scheduled_time ? `às ${selectedPrintOrder.scheduled_time}h` : ""}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Itens do Pedido */}
+                            <div className="space-y-2">
+                                <p className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">Itens da Cozinha:</p>
+                                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                    {(Array.isArray(selectedPrintOrder.items) ? selectedPrintOrder.items : []).map((it, idx) => (
+                                        <div key={idx} className="p-2.5 rounded-xl bg-[#141414] border border-white/5 flex items-start justify-between">
+                                            <div>
+                                                <span className="font-black text-sm text-white mr-2">{it.quantity}x</span>
+                                                <span className="font-bold text-white text-xs">{it.name || it.product_name}</span>
+                                                {Array.isArray(it.complements) && it.complements.length > 0 && (
+                                                    <p className="text-[11px] text-gray-400 mt-0.5 pl-6">
+                                                        + {it.complements.map(c => c.name || c).join(', ')}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <span className="text-xs font-bold text-[#F4B544]">
+                                                R$ {((it.price || 0) * it.quantity).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {selectedPrintOrder.observation && (
+                                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                                    <strong>Observação:</strong> {selectedPrintOrder.observation}
+                                </div>
+                            )}
+
+                            <div className="pt-3 border-t border-white/10 flex justify-between items-center text-sm font-extrabold">
+                                <span>Total do Pedido:</span>
+                                <span className="text-[#F4B544] text-base">R$ {Number(selectedPrintOrder.total).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
 
             <ConfirmModal 
                 isOpen={confirmModal.isOpen} 

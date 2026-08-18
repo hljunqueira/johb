@@ -65,14 +65,39 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
                     <Heart className={`w-3.5 h-3.5 ${favorited ? "fill-[#F4B544] text-[#F4B544]" : ""}`} />
                 </button>
 
-                {/* Badge de Destaque / Personalizável */}
-                {hasAdditionals && (
-                    <div className="absolute top-2.5 left-2.5">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-[#050505]/85 backdrop-blur-md text-[#F4B544] border border-[#F4B544]/30">
-                            Opções
-                        </span>
-                    </div>
-                )}
+                {/* Badge de Tag Cadastrada pelo Admin */}
+                {(() => {
+                    const tags = Array.isArray(product.tags) ? product.tags : (product.tag ? [product.tag] : []);
+                    const tagMap = {
+                        mais_pedido: { label: "🔥 Mais Pedido", color: "bg-red-500/20 text-red-300 border-red-500/40" },
+                        assado_na_hora: { label: "🥟 Assado na Hora", color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
+                        vegano: { label: "🌱 Vegano", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
+                        vegetariano: { label: "🌱 Vegetariano", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
+                        destaque: { label: "⭐ Especial", color: "bg-[#F4B544]/25 text-[#F4B544] border-[#F4B544]/50" },
+                        novo: { label: "✨ Novidade", color: "bg-blue-500/20 text-blue-300 border-blue-500/40" }
+                    };
+                    const firstTag = tags.find(t => tagMap[t.toLowerCase()]);
+                    if (firstTag) {
+                        const info = tagMap[firstTag.toLowerCase()];
+                        return (
+                            <div className="absolute top-2.5 left-2.5">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider backdrop-blur-md border ${info.color}`}>
+                                    {info.label}
+                                </span>
+                            </div>
+                        );
+                    }
+                    if (hasAdditionals) {
+                        return (
+                            <div className="absolute top-2.5 left-2.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-[#050505]/85 backdrop-blur-md text-[#F4B544] border border-[#F4B544]/30">
+                                    Opções
+                                </span>
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
             </div>
 
             {/* Conteúdo do Card */}

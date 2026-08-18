@@ -163,6 +163,20 @@ export default function OrderConfirmationPage() {
                         <span>Detalhes do Pedido</span>
                     </h3>
 
+                    {/* Lista de itens */}
+                    <div className="space-y-2 pb-3 border-b border-[#F4B544]/10">
+                        {(Array.isArray(order.items) ? order.items : []).map((it, idx) => (
+                            <div key={idx} className="flex justify-between text-xs text-[#FFFAF0]">
+                                <span>
+                                    <strong className="text-[#F4B544] mr-1">{it.quantity}x</strong> {it.name || it.product_name}
+                                </span>
+                                <span className="text-[#B8B1A3]">
+                                    R$ {((it.price || 0) * it.quantity).toFixed(2).replace(".", ",")}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+
                     <div className="space-y-2 text-xs text-[#B8B1A3]">
                         <div className="flex justify-between">
                             <span>Cliente:</span>
@@ -170,14 +184,26 @@ export default function OrderConfirmationPage() {
                         </div>
                         <div className="flex justify-between">
                             <span>Tipo de Entrega:</span>
-                            <span className="font-medium text-[#FFFAF0] capitalize">{order.delivery_type}</span>
+                            <span className="font-medium text-[#FFFAF0] capitalize">
+                                {order.delivery_type === "entrega" ? "Entrega em Domicílio" : "Retirada no Balcão"}
+                            </span>
                         </div>
-                        {order.address && (
+                        {order.address && order.delivery_type === "entrega" && (
                             <div className="flex justify-between">
                                 <span>Endereço:</span>
-                                <span className="font-medium text-[#FFFAF0] text-right">{order.address}</span>
+                                <span className="font-medium text-[#FFFAF0] text-right">{order.address} ({order.neighborhood})</span>
                             </div>
                         )}
+                        <div className="flex justify-between">
+                            <span>Forma de Pagamento:</span>
+                            <span className="font-medium text-[#FFFAF0]">
+                                {order.payment_method === "asaas" ? "Online (PIX / Cartão)" :
+                                 order.payment_method === "cartao_maquininha" ? "Cartão (Maquininha)" :
+                                 order.payment_method === "dinheiro" ? (
+                                     order.change_for ? `Dinheiro (Troco p/ R$ ${floatVal(order.change_for).toFixed(2)})` : "Dinheiro (Sem troco)"
+                                 ) : (order.payment_method || "Online")}
+                            </span>
+                        </div>
                         {(order.scheduled_date || order.scheduled_time) && (
                             <div className="flex justify-between py-2 px-3 rounded-xl bg-[#171612] border border-[#F4B544]/30 text-[#F4B544] font-extrabold my-2">
                                 <span>🗓️ Horário Agendado:</span>
@@ -193,7 +219,13 @@ export default function OrderConfirmationPage() {
 
                 {/* Botão de Suporte WhatsApp */}
                 <a
-                    href={`https://wa.me/message/FUNP4LBHYBA3O1?text=${encodeURIComponent(`Olá, gostaria de confirmar detalhes do meu pedido agendado #${order.order_number}${order.scheduled_time ? ` para às ${order.scheduled_time}h` : ''}`)}`}
+                    href={`https://wa.me/message/FUNP4LBHYBA3O1?text=${encodeURIComponent(
+                        `Olá JOHB! Gostaria de falar sobre o meu pedido agendado #${order.order_number}:\n` +
+                        `• Cliente: ${order.customer_name}\n` +
+                        `• Modalidade: ${order.delivery_type === 'entrega' ? 'Entrega em Casa' : 'Retirada no Balcão'}\n` +
+                        `• Horário: ${order.scheduled_date ? new Date(order.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : "Hoje"}${order.scheduled_time ? ` às ${order.scheduled_time}h` : ''}\n` +
+                        `• Total: R$ ${floatVal(order.total).toFixed(2)}`
+                    )}`}
                     target="_blank"
                     rel="noreferrer"
                     className="w-full py-3.5 px-6 rounded-full bg-[#171612] border border-[#F4B544]/30 hover:border-[#F4B544] text-[#FFFAF0] hover:text-[#F4B544] font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all gold-glow-sm"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "@/context/CartContext";
@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { 
     ArrowLeft, Truck, Store, Check, Loader2, MapPin, 
-    CreditCard, QrCode, ShoppingBag, ShieldCheck, Sparkles 
+    CreditCard, QrCode, ShoppingBag, ShieldCheck, Sparkles,
+    Clock, DollarSign, Banknote, AlertCircle, Tag, X
 } from "lucide-react";
+import { getAvailableScheduleDates, getAvailableTimeSlots } from "@/lib/scheduleUtils";
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -21,11 +23,25 @@ const getImageUrl = (url) => {
     return `${BACKEND_URL}${url}`;
 };
 
+// Bairros padrão de Balneário Arroio do Silva
+const DEFAULT_NEIGHBORHOODS = [
+    { name: "Centro", fee: 5.00 },
+    { name: "Praia dos Golfinhos", fee: 6.00 },
+    { name: "Jardim Atlântico", fee: 6.00 },
+    { name: "Areias Brancas", fee: 7.00 },
+    { name: "Morro dos Conventos", fee: 8.00 },
+    { name: "Zona Nova", fee: 5.00 },
+    { name: "Erechim", fee: 6.00 },
+    { name: "Meta", fee: 6.00 },
+    { name: "Castelo", fee: 7.00 },
+    { name: "Outro Bairro (Balneário Arroio do Silva)", fee: 6.00 }
+];
+
 export default function CheckoutPage() {
     const { items, total, clearCart, scheduledDate, scheduledTime, setScheduleInfo } = useCart();
     const navigate = useNavigate();
     
-    // Dados do cliente vêm do localStorage
+    // Dados do cliente salvos no navegador
     const customerData = (() => {
         try {
             const saved = localStorage.getItem("johb-customer");
@@ -42,9 +58,20 @@ export default function CheckoutPage() {
     const [address, setAddress] = useState(() => localStorage.getItem("johb-address") || "");
     const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("johb-neighborhood") || "Centro");
     const [observation, setObservation] = useState("");
-    const [paymentMethod, setPaymentMethod] = useState("asaas"); // 'asaas' (PIX/Cartão online) ou 'pix_manual'
     
-    const [deliveryFee, setDeliveryFee] = useState(5.00); // Taxa padrã de Balneário Arroio do Silva — SC
+    // Formas de pagamento: 'asaas' (online), 'cartao_maquininha', 'dinheiro'
+    const [paymentMethod, setPaymentMethod] = useState("asaas");
+    const [needsChange, setNeedsChange] = useState(false);
+    const [changeForValue, setChangeForValue] = useState("");
+
+    // Cupons de desconto
+    const [couponInput, setCouponInput] = useState("");
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [couponLoading, setCouponLoading] = useState(false);
+
+    // Configurações do estabelecimento
+    const [deliverySettings, setDeliverySettings] = useState(null);
+    const [loadingSettings, setLoadingSettings] = useState(true);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -54,8 +81,140 @@ export default function CheckoutPage() {
         }
     }, [items, navigate]);
 
-    const finalDeliveryFee = deliveryType === "entrega" ? deliveryFee : 0;
-    const grandTotal = total + finalDeliveryFee;
+    useEffect(() => {
+        axios.get(`${API}/delivery-settings`)
+            .then(res => {
+                const data = res.data || {};
+                setDeliverySettings(data);
+                if (data.active === false) {
+                    setDeliveryType("retirada");
+                }
+            })
+            .catch(err => {
+                console.warn("Erro ao carregar configurações de entrega:", err);
+            })
+            .finally(() => {
+                setLoadingSettings(false);
+            });
+    }, []);
+
+    // Formatar Telefone com Máscara
+    const handlePhoneChange = (e) => {
+        let val = e.target.value.replace(/\D/g, "");
+        if (val.length > 11) val = val.slice(0, 11);
+        if (val.length > 6) {
+            val = `(${val.slice(0, 2)}) ${val.slice(2, 7)}-${val.slice(7)}`;
+        } else if (val.length > 2) {
+            val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
+        }
+        setPhone(val);
+    };
+
+    // Auto-reconhecimento de cliente por WhatsApp
+    const handlePhoneBlur = async () => {
+        const clean = phone.replace(/\D/g, "");
+        if (clean.length >= 10 && !name.trim()) {
+            try {
+                const res = await axios.post(`${API}/customers/login`, { phone: clean });
+                if (res.data && res.data.name) {
+                    setName(res.data.name);
+                    if (res.data.address && !address) {
+                        setAddress(res.data.address);
+                    }
+                    toast.success(`Olá de volta, ${res.data.name}! Preenchemos seus dados habituais.`);
+                }
+            } catch {}
+        }
+    };
+
+    // Lista de Bairros
+    const neighborhoodsList = useMemo(() => {
+        if (deliverySettings?.areas && Array.isArray(deliverySettings.areas) && deliverySettings.areas.length > 0) {
+            return deliverySettings.areas;
+        }
+        return DEFAULT_NEIGHBORHOODS;
+    }, [deliverySettings]);
+
+    // Datas disponíveis
+    const availableDates = useMemo(() => {
+        return getAvailableScheduleDates(deliverySettings);
+    }, [deliverySettings]);
+
+    // Data selecionada
+    const currentSelectedDate = useMemo(() => {
+        if (scheduledDate && availableDates.some(d => d.value === scheduledDate)) {
+            return scheduledDate;
+        }
+        return availableDates[0]?.value || "";
+    }, [scheduledDate, availableDates]);
+
+    // Horários disponíveis
+    const availableTimes = useMemo(() => {
+        return getAvailableTimeSlots(currentSelectedDate, deliverySettings);
+    }, [currentSelectedDate, deliverySettings]);
+
+    // Horário selecionado
+    const currentSelectedTime = useMemo(() => {
+        if (scheduledTime && availableTimes.includes(scheduledTime)) {
+            return scheduledTime;
+        }
+        return availableTimes[0] || "";
+    }, [scheduledTime, availableTimes]);
+
+    // Cálculo da taxa de entrega
+    const selectedNeighborhoodObj = neighborhoodsList.find(n => n.name === neighborhood);
+    const baseFee = selectedNeighborhoodObj?.fee ?? Number(deliverySettings?.delivery_fee ?? 5);
+    const minFree = Number(deliverySettings?.min_free_delivery ?? 0);
+    const isFreeDeliveryEligible = minFree > 0 && total >= minFree;
+
+    const finalDeliveryFee = deliveryType === "entrega" 
+        ? (isFreeDeliveryEligible ? 0 : baseFee) 
+        : 0;
+
+    // Desconto de cupom
+    const discountAmount = appliedCoupon?.calculated_discount || 0;
+    const grandTotal = Math.max(0, total + finalDeliveryFee - discountAmount);
+
+    // Cálculo do troco em dinheiro
+    const parsedChangeFor = parseFloat(changeForValue.replace(",", "."));
+    const calculatedChange = (!isNaN(parsedChangeFor) && parsedChangeFor > grandTotal)
+        ? (parsedChangeFor - grandTotal)
+        : 0;
+
+    const handleDateChange = (dateVal) => {
+        const slots = getAvailableTimeSlots(dateVal, deliverySettings);
+        const nextTime = slots[0] || "";
+        setScheduleInfo(dateVal, nextTime);
+    };
+
+    const handleTimeChange = (timeVal) => {
+        setScheduleInfo(currentSelectedDate, timeVal);
+    };
+
+    // Aplicar Cupom
+    const handleApplyCoupon = async () => {
+        if (!couponInput.trim()) return;
+        setCouponLoading(true);
+        try {
+            const res = await axios.post(`${API}/coupons/validate`, {
+                code: couponInput.trim(),
+                subtotal: total
+            });
+            setAppliedCoupon(res.data);
+            toast.success(res.data.message || "Cupom aplicado com sucesso!");
+        } catch (err) {
+            toast.error(err.response?.data?.detail || "Cupom inválido ou não atingiu o valor mínimo.");
+            setAppliedCoupon(null);
+        } finally {
+            setCouponLoading(false);
+        }
+    };
+
+    const handleRemoveCoupon = () => {
+        setAppliedCoupon(null);
+        setCouponInput("");
+        toast.info("Cupom removido.");
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -73,9 +232,16 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (paymentMethod === "dinheiro" && needsChange) {
+            if (isNaN(parsedChangeFor) || parsedChangeFor < grandTotal) {
+                toast.error(`O valor para troco deve ser maior que o total do pedido (R$ ${grandTotal.toFixed(2)}).`);
+                return;
+            }
+        }
+
         setLoading(true);
         try {
-            // salvar dados no localStorage
+            // Salvar dados do cliente para preenchimento futuro
             localStorage.setItem("johb-name", name);
             localStorage.setItem("johb-phone", phone);
             if (deliveryType === "entrega") {
@@ -84,7 +250,7 @@ export default function CheckoutPage() {
             }
 
             // 1. Criar pedido no backend
-            const res = await axios.post(`${API}/orders`, {
+            const payload = {
                 customer_name: name,
                 customer_phone: phone,
                 delivery_type: deliveryType,
@@ -102,33 +268,44 @@ export default function CheckoutPage() {
                 total: grandTotal,
                 observation: observation,
                 payment_method: paymentMethod,
-                scheduled_date: scheduledDate,
-                scheduled_time: scheduledTime
-            });
+                change_for: (paymentMethod === "dinheiro" && needsChange) ? parsedChangeFor : null,
+                scheduled_date: currentSelectedDate,
+                scheduled_time: currentSelectedTime,
+                coupon_code: appliedCoupon?.code || null,
+                discount_amount: discountAmount
+            };
 
+            const res = await axios.post(`${API}/orders`, payload);
             const createdOrder = res.data;
             const orderId = createdOrder.id;
 
-            // 2. Criar cobrança no Asaas
-            try {
-                const checkoutRes = await axios.post(`${API}/payments/asaas/checkout`, {
-                    order_id: orderId,
-                    billing_type: "UNDEFINED"
-                });
+            // 2. Se o pagamento for Asaas (online)
+            if (paymentMethod === "asaas") {
+                try {
+                    const checkoutRes = await axios.post(`${API}/payments/asaas/checkout`, {
+                        order_id: orderId,
+                        billing_type: "UNDEFINED"
+                    });
 
-                clearCart();
+                    clearCart();
 
-                if (checkoutRes.data?.invoice_url) {
-                    toast.success("Pedido criado com sucesso! Redirecionando para o pagamento...");
-                    window.location.href = checkoutRes.data.invoice_url;
-                } else {
-                    toast.success("Pedido recebido com sucesso!");
+                    if (checkoutRes.data?.invoice_url) {
+                        toast.success("Pedido criado com sucesso! Redirecionando para o pagamento...");
+                        window.location.href = checkoutRes.data.invoice_url;
+                    } else {
+                        toast.success("Pedido recebido com sucesso!");
+                        navigate(`/pedido/${orderId}`);
+                    }
+                } catch (asaasErr) {
+                    console.warn("Asaas Sandbox / Fallback:", asaasErr);
+                    clearCart();
+                    toast.success("Pedido registrado! Acompanhe os detalhes da entrega.");
                     navigate(`/pedido/${orderId}`);
                 }
-            } catch (asaasErr) {
-                console.warn("Asaas Sandbox / Fallback:", asaasErr);
+            } else {
+                // Pagamento presencial (Maquininha ou Dinheiro)
                 clearCart();
-                toast.success("Pedido registrado! Acompanhe o status do pagamento.");
+                toast.success("Pedido recebido com sucesso!");
                 navigate(`/pedido/${orderId}`);
             }
 
@@ -167,158 +344,305 @@ export default function CheckoutPage() {
 
             <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
                 <div className="text-center space-y-2 mb-8">
-                    <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold flex items-center justify-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Balneário Arroio do Silva — SC</span>
+                    <span className="text-xs uppercase tracking-widest text-[#F4B544] font-semibold">
+                        Finalização do Pedido
                     </span>
                     <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#FFFAF0]">
-                        Finalizar Seu Pedido
+                        Quase Pronto para Saborear
                     </h1>
-                    <p className="text-xs sm:text-sm text-[#B8B1A3] font-light">
-                        Salgados artesanais quentinhos preparados especialmente para você.
-                    </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Coluna Principal: Formulário */}
                     <div className="lg:col-span-7 space-y-6">
-                        
-                        {/* 1. Tipo de Entrega */}
-                        <div className="bg-[#10100F] rounded-2xl p-5 border border-[#F4B544]/20 space-y-4">
+
+                        {/* Bloco 1: Modalidade de Entrega */}
+                        <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/20 space-y-4">
                             <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
                                 <Truck className="w-5 h-5 text-[#F4B544]" />
-                                <span>1. Modalidade de Entrega</span>
+                                <span>Como deseja receber seu pedido?</span>
                             </h2>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setDeliveryType("entrega")}
-                                    className={`p-4 rounded-xl border text-left flex items-start gap-3 transition-all ${
+                                    disabled={deliverySettings?.active === false}
+                                    className={`p-4 rounded-xl border text-center transition-all flex flex-col items-center gap-2 ${
                                         deliveryType === "entrega"
-                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
-                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
-                                    }`}
+                                            ? "bg-[#171612] border-[#F4B544] text-[#F4B544] gold-glow-sm"
+                                            : "bg-[#050505] border-[#F4B544]/15 text-[#B8B1A3] hover:border-[#F4B544]/30"
+                                    } ${deliverySettings?.active === false ? "opacity-40 cursor-not-allowed" : ""}`}
                                 >
-                                    <Truck className={`w-5 h-5 mt-0.5 ${deliveryType === "entrega" ? "text-[#F4B544]" : "text-[#B8B1A3]"}`} />
-                                    <div>
-                                        <span className="block font-semibold text-sm text-[#FFFAF0]">Entrega em Casa</span>
-                                        <span className="block text-[11px] text-[#B8B1A3]">Balneário Arroio do Silva</span>
-                                        <span className="block text-xs font-bold text-[#F4B544] mt-1">Taxa: R$ 5,00</span>
-                                    </div>
+                                    <Truck className="w-6 h-6" />
+                                    <span className="font-bold text-xs uppercase tracking-wider">Entrega em Casa</span>
+                                    <span className="text-[11px] text-[#B8B1A3]">Balneário Arroio do Silva</span>
                                 </button>
 
                                 <button
                                     type="button"
                                     onClick={() => setDeliveryType("retirada")}
-                                    className={`p-4 rounded-xl border text-left flex items-start gap-3 transition-all ${
+                                    className={`p-4 rounded-xl border text-center transition-all flex flex-col items-center gap-2 ${
                                         deliveryType === "retirada"
-                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
-                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                            ? "bg-[#171612] border-[#F4B544] text-[#F4B544] gold-glow-sm"
+                                            : "bg-[#050505] border-[#F4B544]/15 text-[#B8B1A3] hover:border-[#F4B544]/30"
                                     }`}
                                 >
-                                    <Store className={`w-5 h-5 mt-0.5 ${deliveryType === "retirada" ? "text-[#F4B544]" : "text-[#B8B1A3]"}`} />
-                                    <div>
-                                        <span className="block font-semibold text-sm text-[#FFFAF0]">Retirada no Balcão</span>
-                                        <span className="block text-[11px] text-[#B8B1A3]">Sem taxa de entrega</span>
-                                        <span className="block text-xs font-bold text-emerald-400 mt-1">Grátis</span>
-                                    </div>
+                                    <Store className="w-6 h-6" />
+                                    <span className="font-bold text-xs uppercase tracking-wider">Retirar no Balcão</span>
+                                    <span className="text-[11px] text-emerald-400 font-medium">Sem taxa de entrega</span>
                                 </button>
                             </div>
                         </div>
 
-                        {/* 2. Seus Dados */}
-                        <div className="bg-[#10100F] rounded-2xl p-5 border border-[#F4B544]/20 space-y-4">
+                        {/* Bloco 2: Agendamento de Data e Horário */}
+                        <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/20 space-y-4">
                             <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
-                                <MapPin className="w-5 h-5 text-[#F4B544]" />
-                                <span>2. Seus Dados de Contato</span>
+                                <Clock className="w-5 h-5 text-[#F4B544]" />
+                                <span>Quando deseja seu pedido?</span>
                             </h2>
 
-                            <div className="space-y-3">
-                                <div>
-                                    <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">Nome Completo</Label>
-                                    <Input
-                                        required
-                                        value={name}
-                                        onChange={e => setName(e.target.value)}
-                                        placeholder="Seu nome"
-                                        className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544]"
-                                    />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-[#B8B1A3]">Data do Pedido</Label>
+                                    <select
+                                        value={currentSelectedDate}
+                                        onChange={e => handleDateChange(e.target.value)}
+                                        className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
+                                    >
+                                        {availableDates.map(d => (
+                                            <option key={d.value} value={d.value} className="bg-[#10100F] text-white">
+                                                {d.label}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
-                                <div>
-                                    <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">WhatsApp (para atualizações)</Label>
-                                    <Input
-                                        required
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value)}
-                                        placeholder="(48) 99999-9999"
-                                        className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544]"
-                                    />
-                                </div>
-
-                                {deliveryType === "entrega" && (
-                                    <>
-                                        <div>
-                                            <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">Endereço Completo (Rua, Número, Apto/Bloco)</Label>
-                                            <Input
-                                                required
-                                                value={address}
-                                                onChange={e => setAddress(e.target.value)}
-                                                placeholder="Ex: Av. Barriga Verde, 123, Apto 102"
-                                                className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544]"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">Bairro</Label>
-                                            <Input
-                                                required
-                                                value={neighborhood}
-                                                onChange={e => setNeighborhood(e.target.value)}
-                                                placeholder="Ex: Centro, Praia dos Golfinhos, etc."
-                                                className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544]"
-                                            />
-                                        </div>
-                                    </>
-                                )}
-
-                                <div>
-                                    <Label className="text-xs uppercase tracking-wider text-[#B8B1A3]">Observações do Pedido (Opcional)</Label>
-                                    <Textarea
-                                        value={observation}
-                                        onChange={e => setObservation(e.target.value)}
-                                        placeholder="Ex: Mandar maionese temperada extra, embalar para presente..."
-                                        className="bg-[#050505] border-[#F4B544]/20 text-[#FFFAF0] mt-1 text-sm focus:border-[#F4B544] min-h-[70px]"
-                                    />
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-[#B8B1A3]">Horário Desejado</Label>
+                                    <select
+                                        value={currentSelectedTime}
+                                        onChange={e => handleTimeChange(e.target.value)}
+                                        className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
+                                    >
+                                        {availableTimes.length > 0 ? (
+                                            availableTimes.map(t => (
+                                                <option key={t} value={t} className="bg-[#10100F] text-white">
+                                                    {t} hs
+                                                </option>
+                                            ))
+                                        ) : (
+                                            <option value="" className="bg-[#10100F] text-white">Sem horários para hoje</option>
+                                        )}
+                                    </select>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 3. Forma de Pagamento (Asaas) */}
-                        <div className="bg-[#10100F] rounded-2xl p-5 border border-[#F4B544]/20 space-y-4">
+                        {/* Bloco 3: Dados de Contato e Endereço */}
+                        <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/20 space-y-4">
                             <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
-                                <CreditCard className="w-5 h-5 text-[#F4B544]" />
-                                <span>3. Forma de Pagamento Online (Asaas)</span>
+                                <MapPin className="w-5 h-5 text-[#F4B544]" />
+                                <span>Dados para Contato & Entrega</span>
                             </h2>
 
-                            <div className="p-4 rounded-xl bg-[#171612] border border-[#F4B544]/30 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
-                                        <QrCode className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <span className="block font-semibold text-sm text-[#FFFAF0]">PIX & Cartão de Crédito</span>
-                                        <span className="block text-xs text-[#B8B1A3]">Pagamento online instantâneo via Asaas</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-[#B8B1A3]">WhatsApp / Telefone *</Label>
+                                    <Input
+                                        placeholder="(48) 99999-9999"
+                                        value={phone}
+                                        onChange={handlePhoneChange}
+                                        onBlur={handlePhoneBlur}
+                                        className="bg-[#050505] border-[#F4B544]/30 text-[#FFFAF0] text-xs focus:border-[#F4B544]"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-[#B8B1A3]">Seu Nome Completo *</Label>
+                                    <Input
+                                        placeholder="Ex: Maria Silva"
+                                        value={name}
+                                        onChange={e => setName(e.target.value)}
+                                        className="bg-[#050505] border-[#F4B544]/30 text-[#FFFAF0] text-xs focus:border-[#F4B544]"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {deliveryType === "entrega" && (
+                                <div className="space-y-4 pt-2 border-t border-[#F4B544]/15">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs text-[#B8B1A3]">Bairro (Balneário Arroio do Silva) *</Label>
+                                            <select
+                                                value={neighborhood}
+                                                onChange={e => setNeighborhood(e.target.value)}
+                                                className="w-full bg-[#050505] border border-[#F4B544]/30 text-[#FFFAF0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#F4B544]"
+                                            >
+                                                {neighborhoodsList.map(n => (
+                                                    <option key={n.name} value={n.name} className="bg-[#10100F] text-white">
+                                                        {n.name} {n.fee ? `(Taxa: R$ ${Number(n.fee).toFixed(2)})` : ""}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs text-[#B8B1A3]">Rua e Número *</Label>
+                                            <Input
+                                                placeholder="Ex: Av. Barriga Verde, 120 - Apto 302"
+                                                value={address}
+                                                onChange={e => setAddress(e.target.value)}
+                                                className="bg-[#050505] border-[#F4B544]/30 text-[#FFFAF0] text-xs focus:border-[#F4B544]"
+                                                required
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <Check className="w-5 h-5 text-[#F4B544]" />
+                            )}
+
+                            <div className="space-y-1.5 pt-2">
+                                <Label className="text-xs text-[#B8B1A3]">Observações do Pedido (Opcional)</Label>
+                                <Textarea
+                                    placeholder="Ex: Ponto de referência, campainha, etc..."
+                                    value={observation}
+                                    onChange={e => setObservation(e.target.value)}
+                                    className="bg-[#050505] border-[#F4B544]/30 text-[#FFFAF0] text-xs focus:border-[#F4B544] h-16"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Bloco 4: Forma de Pagamento */}
+                        <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/20 space-y-4">
+                            <h2 className="font-serif text-lg font-bold text-[#FFFAF0] flex items-center gap-2">
+                                <CreditCard className="w-5 h-5 text-[#F4B544]" />
+                                <span>Forma de Pagamento</span>
+                            </h2>
+
+                            <div className="space-y-2.5">
+                                {/* Opção 1: Asaas (Online) */}
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod("asaas")}
+                                    className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
+                                        paymentMethod === "asaas"
+                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
+                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
+                                            <QrCode className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <span className="block font-semibold text-sm text-[#FFFAF0]">Pagamento Online (PIX / Cartão)</span>
+                                            <span className="block text-xs text-[#B8B1A3]">Liberação instantânea via Asaas</span>
+                                        </div>
+                                    </div>
+                                    {paymentMethod === "asaas" && <Check className="w-5 h-5 text-[#F4B544]" />}
+                                </button>
+
+                                {/* Opção 2: Maquininha na Entrega */}
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod("cartao_maquininha")}
+                                    className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
+                                        paymentMethod === "cartao_maquininha"
+                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
+                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
+                                            <CreditCard className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <span className="block font-semibold text-sm text-[#FFFAF0]">Cartão na Entrega / Retirada</span>
+                                            <span className="block text-xs text-[#B8B1A3]">Débito ou Crédito na maquininha</span>
+                                        </div>
+                                    </div>
+                                    {paymentMethod === "cartao_maquininha" && <Check className="w-5 h-5 text-[#F4B544]" />}
+                                </button>
+
+                                {/* Opção 3: Dinheiro com Troco */}
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod("dinheiro")}
+                                    className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
+                                        paymentMethod === "dinheiro"
+                                            ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
+                                            : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
+                                            <Banknote className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <span className="block font-semibold text-sm text-[#FFFAF0]">Dinheiro</span>
+                                            <span className="block text-xs text-[#B8B1A3]">Pagamento em espécie</span>
+                                        </div>
+                                    </div>
+                                    {paymentMethod === "dinheiro" && <Check className="w-5 h-5 text-[#F4B544]" />}
+                                </button>
+
+                                {paymentMethod === "dinheiro" && (
+                                    <div className="p-4 rounded-xl bg-[#050505] border border-[#F4B544]/30 space-y-3 mt-2 animate-in fade-in">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs font-bold text-[#FFFAF0]">Precisa de troco?</Label>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setNeedsChange(false); setChangeForValue(""); }}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
+                                                        !needsChange ? "bg-[#F4B544] text-black border-[#F4B544]" : "bg-[#10100F] text-[#B8B1A3] border-white/10"
+                                                    }`}
+                                                >
+                                                    Não preciso
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setNeedsChange(true)}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
+                                                        needsChange ? "bg-[#F4B544] text-black border-[#F4B544]" : "bg-[#10100F] text-[#B8B1A3] border-white/10"
+                                                    }`}
+                                                >
+                                                    Sim, preciso
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {needsChange && (
+                                            <div className="space-y-2 pt-2 border-t border-[#F4B544]/15">
+                                                <Label className="text-xs text-[#B8B1A3]">Troco para quanto?</Label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-2.5 text-xs text-[#B8B1A3]">R$</span>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder={`Ex: ${(grandTotal + 20).toFixed(2)}`}
+                                                        value={changeForValue}
+                                                        onChange={e => setChangeForValue(e.target.value)}
+                                                        className="bg-[#10100F] border-[#F4B544]/30 text-[#FFFAF0] pl-9 text-sm focus:border-[#F4B544]"
+                                                    />
+                                                </div>
+                                                {calculatedChange > 0 && (
+                                                    <p className="text-xs text-emerald-400 font-bold">
+                                                        Levar R$ {calculatedChange.toFixed(2).replace(".", ",")} de troco.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                     </div>
 
-                    {/* Coluna Lateral: Resumo do Pedido */}
+                    {/* Coluna Lateral: Resumo do Pedido & Cupom */}
                     <div className="lg:col-span-5 space-y-6">
                         <div className="bg-[#10100F] rounded-2xl p-6 border border-[#F4B544]/30 space-y-6 sticky top-24 gold-glow-sm">
                             <div className="flex items-center justify-between border-b border-[#F4B544]/15 pb-4">
@@ -332,7 +656,7 @@ export default function CheckoutPage() {
                             </div>
 
                             {/* Lista de Itens */}
-                            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                            <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                                 {items.map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl bg-[#171612] border border-[#F4B544]/10">
                                         <img
@@ -352,11 +676,50 @@ export default function CheckoutPage() {
                                 ))}
                             </div>
 
+                            {/* Campo de Cupom de Desconto */}
+                            <div className="p-3.5 rounded-xl bg-[#050505] border border-[#F4B544]/25 space-y-2">
+                                <span className="text-[11px] font-bold uppercase text-[#F4B544] tracking-wider flex items-center gap-1.5">
+                                    <Tag className="w-3.5 h-3.5" /> Cupom de Desconto
+                                </span>
+                                {appliedCoupon ? (
+                                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs">
+                                        <div className="space-y-0.5">
+                                            <span className="font-extrabold text-emerald-400 block">{appliedCoupon.code}</span>
+                                            <span className="text-[10px] text-[#B8B1A3]">Desconto de R$ {appliedCoupon.calculated_discount.toFixed(2)}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveCoupon}
+                                            className="p-1 text-red-400 hover:text-red-300"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Código do cupom"
+                                            value={couponInput}
+                                            onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                                            className="bg-[#10100F] border-[#F4B544]/30 text-[#FFFAF0] text-xs uppercase h-9 focus:border-[#F4B544]"
+                                        />
+                                        <Button
+                                            type="button"
+                                            onClick={handleApplyCoupon}
+                                            disabled={couponLoading || !couponInput.trim()}
+                                            className="bg-[#F4B544] text-[#050505] font-bold text-xs px-4 h-9 rounded-xl hover:bg-[#FFC85C]"
+                                        >
+                                            {couponLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Aplicar"}
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Card de Agendamento */}
                             <div className="p-3.5 rounded-xl bg-[#171612] border border-[#F4B544]/30 space-y-1">
                                 <span className="text-[10px] uppercase font-bold text-[#F4B544] tracking-wider block">🗓️ Horário Agendado</span>
                                 <span className="text-xs font-extrabold text-[#FFFAF0] block">
-                                    Data: {scheduledDate ? new Date(scheduledDate + 'T00:00:00').toLocaleDateString("pt-BR") : "Hoje"} às {scheduledTime || "12:00"} hs
+                                    Data: {currentSelectedDate ? new Date(currentSelectedDate + 'T00:00:00').toLocaleDateString("pt-BR") : "Hoje"} às {currentSelectedTime || "12:00"} hs
                                 </span>
                             </div>
 
@@ -367,9 +730,21 @@ export default function CheckoutPage() {
                                     <span>R$ {total.toFixed(2).replace(".", ",")}</span>
                                 </div>
                                 <div className="flex justify-between text-[#B8B1A3]">
-                                    <span>Taxa de Entrega:</span>
-                                    <span>{finalDeliveryFee > 0 ? `R$ ${finalDeliveryFee.toFixed(2).replace(".", ",")}` : "Grátis"}</span>
+                                    <span>Taxa de Entrega ({neighborhood}):</span>
+                                    <span>
+                                        {finalDeliveryFee > 0 ? (
+                                            `R$ ${finalDeliveryFee.toFixed(2).replace(".", ",")}`
+                                        ) : (
+                                            <span className="text-emerald-400 font-bold">Grátis</span>
+                                        )}
+                                    </span>
                                 </div>
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between text-emerald-400 font-bold">
+                                        <span>Desconto do Cupom ({appliedCoupon?.code}):</span>
+                                        <span>- R$ {discountAmount.toFixed(2).replace(".", ",")}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-base font-bold text-[#FFFAF0] border-t border-[#F4B544]/20 pt-3">
                                     <span className="font-serif">Total do Pedido:</span>
                                     <span className="text-[#F4B544]">R$ {grandTotal.toFixed(2).replace(".", ",")}</span>
@@ -385,11 +760,11 @@ export default function CheckoutPage() {
                                 {loading ? (
                                     <>
                                         <Loader2 className="w-4 h-4 animate-spin text-[#050505]" />
-                                        <span>Processando...</span>
+                                        <span>Processando Pedido...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <span>Ir para o Pagamento Asaas</span>
+                                        <span>{paymentMethod === "asaas" ? "Ir para Pagamento Online" : "Confirmar Pedido Agendado"}</span>
                                         <ArrowLeft className="w-4 h-4 rotate-180" />
                                     </>
                                 )}

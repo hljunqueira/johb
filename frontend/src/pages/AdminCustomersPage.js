@@ -36,8 +36,20 @@ export default function AdminCustomersPage() {
 
     const viewCustomer = async (id) => {
         try {
-            const res = await axios.get(`${API}/admin/customers/${id}`, { headers });
-            setSelectedCustomer(res.data); 
+            const [res, ordersRes] = await Promise.all([
+                axios.get(`${API}/admin/customers/${id}`, { headers }),
+                axios.get(`${API}/admin/customers/${id}/orders`, { headers }).catch(() => ({ data: [] }))
+            ]);
+            
+            const orders = Array.isArray(ordersRes.data) ? ordersRes.data.map(o => {
+                let parsedItems = o.items;
+                if (typeof parsedItems === "string") {
+                    try { parsedItems = JSON.parse(parsedItems); } catch { parsedItems = []; }
+                }
+                return { ...o, items: parsedItems };
+            }) : [];
+
+            setSelectedCustomer({ ...res.data, orders }); 
             setEditData({
                 name: res.data.name,
                 phone: res.data.phone,

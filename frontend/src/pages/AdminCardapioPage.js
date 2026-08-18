@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Plus, Pencil, Trash2, Copy, Upload, Package, Layers, Tag, Grid3X3, X, I
 import { useMenus } from "@/hooks/useCardapioData";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
-import { API, API_URL as BACKEND_URL } from "@/lib/constants";
+import { API, API_URL as BACKEND_URL, TAG_CONFIG } from "@/lib/constants";
 const getImageUrl = (url) => { if (!url) return ""; if (url.startsWith("http")) return url; return `${BACKEND_URL}${url}`; };
 
 export default function AdminCardapioPage() {
@@ -351,9 +351,9 @@ function CategoriesTab({ headers, setConfirmModal }) {
                         <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="cat-desc" /></div>
                         <div><Label>Icone (slug)</Label><Input value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="salad, bowl, juice..." className="mt-1 rounded-lg" data-testid="cat-icon" /></div>
                         <div><Label>Menu</Label>
-                            <select value={form.menu_id} onChange={e => setForm(f => ({ ...f, menu_id: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm">
-                                <option value="">Selecione um menu</option>
-                                {menus.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            <select value={form.menu_id} onChange={e => setForm(f => ({ ...f, menu_id: e.target.value }))} className="w-full mt-1 rounded-xl border border-[#F4B544]/30 bg-[#0D0D0C] text-[#FFFAF0] px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
+                                <option value="" className="bg-[#10100F] text-[#FFFAF0]">Selecione um menu</option>
+                                {menus.map(m => <option key={m.id} value={m.id} className="bg-[#10100F] text-[#FFFAF0]">{m.name}</option>)}
                             </select>
                         </div>
                         <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm">Ativo</span></div>
@@ -433,9 +433,10 @@ function ProductsTab({ headers, setConfirmModal }) {
     const totalInactive = products.filter(p => !p.active).length;
 
     const getOptionalsCount = (p) => {
-        if (Array.isArray(p.additionals) && p.additionals.length > 0) return p.additionals.length;
-        if (Array.isArray(p.complement_ids) && p.complement_ids.length > 0) return p.complement_ids.length;
-        return 0;
+        const compIds = p.complement_ids || [];
+        if (!Array.isArray(compIds) || compIds.length === 0) return 0;
+        const activeComps = complements.filter(c => compIds.includes(c.id));
+        return activeComps.length;
     };
 
     const save = async (e) => {
@@ -498,33 +499,34 @@ function ProductsTab({ headers, setConfirmModal }) {
     
     const edit = (p) => { 
         setEditing(p.id); 
-        // Extrair complement_ids e complement_rules a partir de additionals ou complement_ids existentes
         const existingAdditionals = Array.isArray(p.additionals) ? p.additionals : [];
         const matchedIds = existingAdditionals
             .map(add => { const found = complements.find(c => c.name === add.name); return found?.id; })
             .filter(Boolean);
-        // Construir regras por categoria a partir dos additionals existentes
-        const rules = {};
-        existingAdditionals.forEach(add => {
-            const catKey = add.category || "extras";
-            if (!rules[catKey]) {
-                rules[catKey] = {
-                    required: add.required || false,
-                    min_select: add.min_select || 0,
-                    max_select: add.max_select || 1,
-                };
-            }
-        });
-        // Extrair categorias vinculadas a partir dos additionals
-        const linkedCats = [...new Set(existingAdditionals.map(add => add.category || "extras"))];
+        const allCompIds = [...new Set([...matchedIds, ...(p.complement_ids || [])])];
         
+        const selectedComps = complements.filter(c => allCompIds.includes(c.id));
+        const catKeysFromComps = selectedComps.map(c => c.category || "extras");
+        const catKeysFromAdd = existingAdditionals.map(add => add.category || "extras");
+        const linkedCats = [...new Set([...catKeysFromAdd, ...catKeysFromComps, ...(p.linked_categories || [])])];
+
+        const rules = {};
+        linkedCats.forEach(catKey => {
+            const addRule = existingAdditionals.find(add => (add.category || "extras") === catKey);
+            rules[catKey] = {
+                required: addRule?.required || false,
+                min_select: addRule?.min_select || 0,
+                max_select: addRule?.max_select || 1,
+            };
+        });
+
         setForm({ 
-            name: p.name, description: p.description, price: p.price, 
-            category_id: p.category_id || "", image_url: p.image_url, stock: p.stock, 
+            name: p.name, description: p.description || "", price: p.price, 
+            category_id: p.category_id || "", image_url: p.image_url || "", stock: p.stock ?? -1, 
             tags: p.tags || [], 
-            complement_ids: matchedIds.length > 0 ? matchedIds : (p.complement_ids || []),
+            complement_ids: allCompIds,
             complement_rules: rules,
-            linked_categories: linkedCats.length > 0 ? linkedCats : (p.linked_categories || []),
+            linked_categories: linkedCats,
             active: p.active 
         }); 
         setShowForm(true); 
@@ -649,9 +651,17 @@ function ProductsTab({ headers, setConfirmModal }) {
                                         </div>
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 my-3">
-                                        {p.tags?.map(t => <Badge key={t} variant="secondary" className="text-[10px] rounded-md bg-[#1E1E1E] text-gray-300 border-white/10">{t}</Badge>)}
-                                        {optCount > 0 && <Badge className="bg-[#F4B544]/20 text-[#F4B544] border border-[#D4AF37]/30 text-[10px] rounded-md font-bold">{optCount} adicionais</Badge>}
-                                        {p.stock === 0 && <Badge variant="destructive" className="text-[10px] rounded-md bg-red-500/20 text-red-400 border border-red-500/30">Sem estoque</Badge>}
+                                         {p.tags?.map(t => {
+                                             const conf = TAG_CONFIG[t] || { label: t.replace(/_/g, " ") };
+                                             return (
+                                                 <Badge key={t} variant="secondary" className="text-[10px] rounded-md bg-[#1E1E1E] text-[#FFFAF0] border border-[#F4B544]/20 flex items-center gap-1 font-semibold">
+                                                     {conf.icon && <span>{conf.icon}</span>}
+                                                     <span>{conf.label}</span>
+                                                 </Badge>
+                                             );
+                                         })}
+                                         {optCount > 0 && <Badge className="bg-[#F4B544]/20 text-[#F4B544] border border-[#D4AF37]/30 text-[10px] rounded-md font-bold">{optCount} adicionais</Badge>}
+                                         {p.stock === 0 && <Badge variant="destructive" className="text-[10px] rounded-md bg-red-500/20 text-red-400 border border-red-500/30">Sem estoque</Badge>}
                                     </div>
                                     <div className="flex items-center justify-between pt-2 border-t">
                                         <div className="flex items-center gap-2">
@@ -734,9 +744,9 @@ function ProductsTab({ headers, setConfirmModal }) {
                         {/* Categoria */}
                         <div>
                             <Label className="text-sm font-medium">Categoria <span className="text-destructive">*</span></Label>
-                            <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" required>
-                                <option value="">Selecione uma categoria</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} className="w-full mt-1 rounded-xl border border-[#F4B544]/30 bg-[#0D0D0C] text-[#FFFAF0] px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none" required>
+                                <option value="" className="bg-[#10100F] text-[#FFFAF0]">Selecione uma categoria</option>
+                                {categories.map(c => <option key={c.id} value={c.id} className="bg-[#10100F] text-[#FFFAF0]">{c.name}</option>)}
                             </select>
                         </div>
 
@@ -777,21 +787,30 @@ function ProductsTab({ headers, setConfirmModal }) {
                             <Label className="text-sm font-medium">Tags</Label>
                             <p className="text-xs text-muted-foreground mb-2">Clique para ativar/desativar</p>
                             <div className="flex flex-wrap gap-2 mb-2">
-                                {["vegano", "leve", "mais_pedido", "recomendado"].map(t => (
-                                    <button key={t} type="button" onClick={() => toggleTag(t)}
-                                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-                                            form.tags.includes(t)
-                                                ? "bg-primary text-white border-primary"
-                                                : "bg-white text-foreground border-border hover:border-primary/50"
-                                        }`}>{t}
-                                    </button>
-                                ))}
-                                {form.tags.filter(t => !["vegano", "leve", "mais_pedido", "recomendado"].includes(t)).map(t => (
-                                    <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent/15 text-accent border border-accent/30">
-                                        {t}
-                                        <button type="button" onClick={() => toggleTag(t)} className="hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
-                                    </span>
-                                ))}
+                                {["mais_pedido", "recomendado", "assado", "frito", "doce", "artesanal", "vegano"].map(t => {
+                                    const conf = TAG_CONFIG[t] || { label: t.replace(/_/g, " ") };
+                                    return (
+                                        <button key={t} type="button" onClick={() => toggleTag(t)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all inline-flex items-center gap-1.5 ${
+                                                form.tags.includes(t)
+                                                    ? "bg-[#F4B544] text-[#050505] border-[#F4B544] shadow-sm"
+                                                    : "bg-[#1A1A1A] text-gray-300 border-white/20 hover:border-[#F4B544]/50 hover:text-white"
+                                            }`}>
+                                            {conf.icon && <span>{conf.icon}</span>}
+                                            <span>{conf.label}</span>
+                                        </button>
+                                    );
+                                })}
+                                {form.tags.filter(t => !["mais_pedido", "recomendado", "assado", "frito", "doce", "artesanal", "vegano"].includes(t)).map(t => {
+                                    const conf = TAG_CONFIG[t] || { label: t.replace(/_/g, " ") };
+                                    return (
+                                        <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#F4B544]/20 text-[#F4B544] border border-[#F4B544]/40">
+                                            {conf.icon && <span>{conf.icon}</span>}
+                                            <span>{conf.label}</span>
+                                            <button type="button" onClick={() => toggleTag(t)} className="hover:text-red-400 transition-colors ml-0.5"><X className="h-3 w-3" /></button>
+                                        </span>
+                                    );
+                                })}
                             </div>
                             <div className="flex gap-2">
                                 <Input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Nova tag personalizada..." className="rounded-lg flex-1 text-sm" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }} data-testid="new-tag-input" />
@@ -831,60 +850,64 @@ function ProductsTab({ headers, setConfirmModal }) {
                                         <div className="space-y-3">
                                             {/* Categorias vinculadas */}
                                             {form.linked_categories.map(catKey => {
-                                                const catInfo = compCategories.find(c => c.key === catKey);
-                                                if (!catInfo) return null;
+                                                const catInfo = compCategories.find(c => c.key === catKey || c.id === catKey || (c.name && c.name.toLowerCase() === String(catKey).toLowerCase()))
+                                                    || { name: String(catKey).charAt(0).toUpperCase() + String(catKey).slice(1).replace(/_/g, " "), icon: "🏷️", key: catKey };
                                                 
                                                 // Agrupar complementos desta categoria
-                                                const items = complements.filter(c => c.active && c.category === catKey);
+                                                const items = complements.filter(c => c.active && (
+                                                    c.category === catKey || 
+                                                    (c.category && c.category.toLowerCase() === String(catKey).toLowerCase()) ||
+                                                    (catInfo.id && c.category_id === catInfo.id)
+                                                ));
                                                 const rule = form.complement_rules[catKey] || { required: false, min_select: 0, max_select: 1 };
                                                 const selectedInCat = items.filter(c => form.complement_ids.includes(c.id)).length;
                                                 const hasSomeSelected = selectedInCat > 0;
                                                 
                                                 return (
                                                     <div key={catKey} className={`rounded-xl border-2 overflow-hidden transition-all ${
-                                                        hasSomeSelected ? "border-primary/40" : "border-border"
+                                                        hasSomeSelected ? "border-[#F4B544]/50" : "border-[#F4B544]/20"
                                                     }`}>
                                                         {/* Cabeçalho da categoria */}
                                                         <div className={`flex items-center justify-between px-3 py-2 ${
-                                                            hasSomeSelected ? "bg-primary/5" : "bg-muted/30"
+                                                            hasSomeSelected ? "bg-[#F4B544]/10" : "bg-[#10100F]"
                                                         }`}>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-base">{catInfo.icon || "➕"}</span>
-                                                                <span className="text-sm font-semibold">{catInfo.name}</span>
+                                                                <span className="text-sm font-semibold text-[#FFFAF0]">{catInfo.name}</span>
                                                                 {hasSomeSelected && (
-                                                                    <span className="text-xs bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">{selectedInCat} item{selectedInCat > 1 ? "ns" : ""}</span>
+                                                                    <span className="text-xs bg-[#F4B544]/20 text-[#F4B544] px-2 py-0.5 rounded-full font-bold">{selectedInCat} item{selectedInCat > 1 ? "s" : ""}</span>
                                                                 )}
                                                             </div>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => unlinkCategory(catKey)}
-                                                                className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                                                                className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2 py-1 rounded transition-colors"
                                                             >
                                                                 Remover
                                                             </button>
                                                         </div>
 
                                                         {/* Itens da categoria */}
-                                                        <div className="p-2 space-y-1.5 max-h-48 overflow-y-auto">
+                                                        <div className="p-2 space-y-1.5 max-h-48 overflow-y-auto bg-[#050505]">
                                                             {items.length === 0 ? (
-                                                                <p className="text-xs text-muted-foreground text-center py-2">Nenhum item nesta categoria</p>
+                                                                <p className="text-xs text-[#B8B1A3] text-center py-2">Nenhum item nesta categoria</p>
                                                             ) : (
                                                                 items.map(c => (
                                                                     <button key={c.id} type="button" onClick={() => toggleComp(c.id)}
-                                                                        className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-sm transition-all ${
+                                                                        className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-all ${
                                                                             form.complement_ids.includes(c.id)
-                                                                                ? "border-primary bg-primary/5 shadow-sm"
-                                                                                : "border-border hover:border-primary/30 bg-white"
+                                                                                ? "border-[#F4B544] bg-[#F4B544]/15 text-[#F4B544] shadow-sm font-semibold"
+                                                                                : "border-[#F4B544]/20 hover:border-[#F4B544]/40 bg-[#0D0D0C] text-[#FFFAF0]"
                                                                         }`} data-testid={`comp-select-${c.id}`}>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className={`h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center ${
-                                                                                form.complement_ids.includes(c.id) ? "bg-primary border-primary" : "border-gray-300"
+                                                                        <div className="flex items-center gap-2.5">
+                                                                            <div className={`h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${
+                                                                                form.complement_ids.includes(c.id) ? "bg-[#F4B544] border-[#F4B544]" : "border-[#F4B544]/40 bg-[#050505]"
                                                                             }`}>
-                                                                                {form.complement_ids.includes(c.id) && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                                {form.complement_ids.includes(c.id) && <svg className="h-2.5 w-2.5 text-[#050505]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                                                                             </div>
-                                                                            <span className="font-medium">{c.name}</span>
+                                                                            <span>{c.name}</span>
                                                                         </div>
-                                                                        <span className="text-primary font-semibold">R$ {parseFloat(c.price).toFixed(2)}</span>
+                                                                        <span className="text-[#F4B544] font-bold">R$ {parseFloat(c.price).toFixed(2)}</span>
                                                                     </button>
                                                                 ))
                                                             )}
@@ -892,8 +915,8 @@ function ProductsTab({ headers, setConfirmModal }) {
 
                                                         {/* Regras da categoria — só aparece se tem algum selecionado */}
                                                         {hasSomeSelected && (
-                                                            <div className="border-t border-primary/20 bg-primary/3 px-3 py-2.5 space-y-2">
-                                                                <p className="text-xs font-semibold text-primary/80">Regras para "{catInfo.name}"</p>
+                                                            <div className="border-t border-[#F4B544]/20 bg-[#0D0D0C] px-3 py-2.5 space-y-2">
+                                                                <p className="text-xs font-semibold text-[#F4B544]">Regras para "{catInfo.name}"</p>
                                                                 <div className="flex flex-wrap items-center gap-3">
                                                                     {/* Obrigatório */}
                                                                     <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -902,44 +925,44 @@ function ProductsTab({ headers, setConfirmModal }) {
                                                                             aria-checked={rule.required}
                                                                             onClick={() => updateCatRule(catKey, "required", !rule.required)}
                                                                             className={`h-4 w-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${
-                                                                                rule.required ? "bg-amber-500 border-amber-500" : "border-gray-300 bg-white"
+                                                                                rule.required ? "bg-[#F4B544] border-[#F4B544]" : "border-[#F4B544]/40 bg-[#050505]"
                                                                             }`}>
-                                                                            {rule.required && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                            {rule.required && <svg className="h-2.5 w-2.5 text-[#050505]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                                                                         </div>
-                                                                        <span className="text-xs font-medium text-gray-700">
+                                                                        <span className="text-xs font-medium text-[#FFFAF0]">
                                                                             Seleção obrigatória
-                                                                            {rule.required && <span className="ml-1 text-xs text-amber-600">(cliente deve escolher)</span>}
+                                                                            {rule.required && <span className="ml-1 text-xs text-[#F4B544]">(cliente deve escolher)</span>}
                                                                         </span>
                                                                     </label>
                                                                 </div>
                                                                 <div className="flex items-center gap-4">
                                                                     {/* Mínimo */}
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-xs text-gray-600 whitespace-nowrap">Mín:</span>
+                                                                        <span className="text-xs text-[#B8B1A3] whitespace-nowrap">Mín:</span>
                                                                         <div className="flex items-center gap-1">
                                                                             <button type="button"
                                                                                 onClick={() => updateCatRule(catKey, "min_select", Math.max(0, (rule.min_select || 0) - 1))}
-                                                                                className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">−</button>
-                                                                            <span className="w-6 text-center text-sm font-semibold">{rule.min_select || 0}</span>
+                                                                                className="h-6 w-6 rounded border border-[#F4B544]/30 bg-[#1A1A1A] text-[#FFFAF0] flex items-center justify-center hover:bg-[#F4B544] hover:text-black transition-colors text-sm font-bold">−</button>
+                                                                            <span className="w-6 text-center text-sm font-bold text-[#F4B544]">{rule.min_select || 0}</span>
                                                                             <button type="button"
                                                                                 onClick={() => updateCatRule(catKey, "min_select", Math.min(rule.max_select || 1, (rule.min_select || 0) + 1))}
-                                                                                className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">+</button>
+                                                                                className="h-6 w-6 rounded border border-[#F4B544]/30 bg-[#1A1A1A] text-[#FFFAF0] flex items-center justify-center hover:bg-[#F4B544] hover:text-black transition-colors text-sm font-bold">+</button>
                                                                         </div>
                                                                     </div>
                                                                     {/* Máximo */}
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-xs text-gray-600 whitespace-nowrap">Máx:</span>
+                                                                        <span className="text-xs text-[#B8B1A3] whitespace-nowrap">Máx:</span>
                                                                         <div className="flex items-center gap-1">
                                                                             <button type="button"
                                                                                 onClick={() => updateCatRule(catKey, "max_select", Math.max(rule.min_select || 0, Math.max(1, (rule.max_select || 1) - 1)))}
-                                                                                className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">−</button>
-                                                                            <span className="w-6 text-center text-sm font-semibold">{rule.max_select || 1}</span>
+                                                                                className="h-6 w-6 rounded border border-[#F4B544]/30 bg-[#1A1A1A] text-[#FFFAF0] flex items-center justify-center hover:bg-[#F4B544] hover:text-black transition-colors text-sm font-bold">−</button>
+                                                                            <span className="w-6 text-center text-sm font-bold text-[#F4B544]">{rule.max_select || 1}</span>
                                                                             <button type="button"
                                                                                 onClick={() => updateCatRule(catKey, "max_select", (rule.max_select || 1) + 1)}
-                                                                                className="h-6 w-6 rounded border border-border bg-white flex items-center justify-center hover:bg-muted text-sm">+</button>
+                                                                                className="h-6 w-6 rounded border border-[#F4B544]/30 bg-[#1A1A1A] text-[#FFFAF0] flex items-center justify-center hover:bg-[#F4B544] hover:text-black transition-colors text-sm font-bold">+</button>
                                                                         </div>
                                                                     </div>
-                                                                    <span className="text-xs text-muted-foreground">
+                                                                    <span className="text-xs text-[#B8B1A3]">
                                                                         {rule.max_select > 1 ? `cliente pode escolher até ${rule.max_select}` : "apenas 1 escolha"}
                                                                     </span>
                                                                 </div>
@@ -953,10 +976,10 @@ function ProductsTab({ headers, setConfirmModal }) {
                                             <button
                                                 type="button"
                                                 onClick={() => setShowLinkCategoriesModal(true)}
-                                                className="w-full py-3 border border-dashed border-border rounded-xl text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
+                                                className="w-full py-3 border border-dashed border-[#F4B544]/40 rounded-xl text-[#F4B544] hover:border-[#F4B544] hover:bg-[#F4B544]/10 transition-all flex items-center justify-center gap-2 font-medium text-sm"
                                             >
                                                 <Plus className="h-4 w-4" />
-                                                <span className="text-sm">Vincular mais categorias</span>
+                                                <span>Vincular mais categorias</span>
                                             </button>
                                         </div>
                                     )}
@@ -1162,8 +1185,27 @@ function OptionalsTab({ headers, setConfirmModal }) {
         }
     };
 
-    // Categorias ordenadas
-    const sortedCategories = [...compCategories].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+    // Categorias ordenadas com fallback inteligente
+    const sortedCategories = useMemo(() => {
+        const list = [...compCategories];
+        const knownKeys = new Set(list.map(c => c.key));
+        
+        complements.forEach(comp => {
+            const key = comp.category || "extras";
+            if (!knownKeys.has(key)) {
+                knownKeys.add(key);
+                list.push({
+                    id: `fallback-${key}`,
+                    key: key,
+                    name: key === "molhos" ? "Molhos & Cremes" : key === "adicionais" ? "Adicionais & Recheios Extra" : key,
+                    icon: key === "molhos" ? "🥣" : key === "adicionais" ? "🧀" : "📦",
+                    order_index: 99
+                });
+            }
+        });
+
+        return list.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+    }, [compCategories, complements]);
 
     // Mapear categorias para dropdown
     const complementCategories = sortedCategories.reduce((acc, cat) => {
@@ -1274,20 +1316,22 @@ function OptionalsTab({ headers, setConfirmModal }) {
                     const count = complements.filter(c => c.category === cat.key).length;
                     const isActive = count > 0;
                     return (
-                        <div key={cat.id} className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${isActive ? "bg-white border-primary/20 hover:border-primary/40" : "bg-muted/30 border-border hover:border-muted-foreground/30"}`}>
+                        <div key={cat.id} className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${
+                            isActive ? "bg-[#10100F] border-[#F4B544]/40 hover:border-[#F4B544] shadow-sm" : "bg-[#0D0D0C] border-[#F4B544]/15 hover:border-[#F4B544]/30"
+                        }`}>
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-2xl">{cat.icon || "📦"}</span>
                                 {cat.required && (
-                                    <span className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full" title="Obrigatório" />
+                                    <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#F4B544] rounded-full shadow-sm" title="Obrigatório" />
                                 )}
                             </div>
-                            <p className="font-medium text-sm truncate">{cat.name}</p>
-                            <p className="text-xs text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</p>
+                            <p className="font-semibold text-sm truncate text-[#FFFAF0]">{cat.name}</p>
+                            <p className="text-xs text-[#B8B1A3]">{count} item{count !== 1 ? "s" : ""}</p>
                             <div className="mt-2 flex gap-1">
-                                <button onClick={() => editCategory(cat)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Editar">
-                                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                <button onClick={() => editCategory(cat)} className="p-1.5 rounded-lg hover:bg-[#F4B544]/15 transition-colors" title="Editar">
+                                    <Pencil className="h-3.5 w-3.5 text-[#F4B544]" />
                                 </button>
-                                <button onClick={() => delCategory(cat.id, cat.name)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Excluir">
+                                <button onClick={() => delCategory(cat.id, cat.name)} className="p-1.5 rounded-lg hover:bg-red-500/20 transition-colors" title="Excluir">
                                     <Trash2 className="h-3.5 w-3.5 text-red-400" />
                                 </button>
                             </div>
@@ -1296,25 +1340,25 @@ function OptionalsTab({ headers, setConfirmModal }) {
                 })}
                 
                 {/* Card para adicionar nova categoria */}
-                <button onClick={openNewCategory} className="p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 min-h-[120px]">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Plus className="h-5 w-5 text-primary" />
+                <button onClick={openNewCategory} className="p-4 rounded-xl border-2 border-dashed border-[#F4B544]/30 hover:border-[#F4B544] hover:bg-[#F4B544]/10 transition-all flex flex-col items-center justify-center gap-2 min-h-[120px]">
+                    <div className="w-10 h-10 rounded-full bg-[#F4B544]/15 flex items-center justify-center">
+                        <Plus className="h-5 w-5 text-[#F4B544]" />
                     </div>
-                    <span className="text-sm font-medium text-primary">Nova Categoria</span>
+                    <span className="text-sm font-semibold text-[#F4B544]">Nova Categoria</span>
                 </button>
             </div>
 
             {/* Barra de busca */}
             <div className="relative mb-6">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#F4B544]" />
                 <Input 
                     placeholder="Buscar complementos..." 
                     value={search} 
                     onChange={e => setSearch(e.target.value)} 
-                    className="pl-10 rounded-full max-w-md"
+                    className="pl-10 rounded-full max-w-md bg-[#10100F] border-[#F4B544]/30 text-[#FFFAF0] placeholder:text-[#B8B1A3]"
                 />
                 {search && (
-                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20">
+                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-[#1A1A1A] flex items-center justify-center hover:bg-[#F4B544] text-[#FFFAF0] hover:text-black">
                         <X className="h-3 w-3" />
                     </button>
                 )}
@@ -1331,11 +1375,11 @@ function OptionalsTab({ headers, setConfirmModal }) {
                             <div className="flex items-center gap-3 mb-4">
                                 <span className="text-xl">{cat.icon || "📦"}</span>
                                 <div>
-                                    <h4 className="font-semibold text-foreground">{cat.name}</h4>
-                                    <p className="text-xs text-muted-foreground">{comps.length} item{comps.length !== 1 ? "s" : ""}</p>
+                                    <h4 className="font-semibold text-[#FFFAF0] text-base">{cat.name}</h4>
+                                    <p className="text-xs text-[#B8B1A3]">{comps.length} item{comps.length !== 1 ? "s" : ""}</p>
                                 </div>
                                 {cat.required && (
-                                    <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100">Obrigatório</Badge>
+                                    <Badge variant="secondary" className="bg-[#F4B544]/20 text-[#F4B544] border border-[#F4B544]/30 font-bold">Obrigatório</Badge>
                                 )}
                             </div>
                             
@@ -1343,34 +1387,34 @@ function OptionalsTab({ headers, setConfirmModal }) {
                                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                                     {comps.map(c => (
                                         <div key={c.id} 
-                                            className="bg-white rounded-2xl border border-border p-4 flex items-center justify-between hover:shadow-md transition-shadow"
+                                            className="bg-[#10100F] rounded-2xl border border-[#F4B544]/20 p-4 flex items-center justify-between hover:border-[#F4B544]/50 hover:shadow-md transition-all"
                                             data-testid={`complement-${c.id}`}>
                                             <div className="flex items-center gap-3">
                                                 {c.image_url ? (
                                                     <img src={getImageUrl(c.image_url)} alt={c.name} className="h-12 w-12 rounded-xl object-cover" />
                                                 ) : (
-                                                    <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
-                                                        <Tag className="h-5 w-5 text-muted-foreground" />
+                                                    <div className="h-12 w-12 rounded-xl bg-[#1A1A1A] border border-[#F4B544]/20 flex items-center justify-center">
+                                                        <Tag className="h-5 w-5 text-[#F4B544]" />
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <h3 className="font-semibold font-heading text-sm">{c.name}</h3>
-                                                    {c.description && <p className="text-xs text-muted-foreground line-clamp-1">{c.description}</p>}
-                                                    <span className="text-sm font-bold text-primary">R$ {c.price?.toFixed(2)}</span>
+                                                    <h3 className="font-semibold font-heading text-sm text-[#FFFAF0]">{c.name}</h3>
+                                                    {c.description && <p className="text-xs text-[#B8B1A3] line-clamp-1">{c.description}</p>}
+                                                    <span className="text-sm font-bold text-[#F4B544]">R$ {c.price?.toFixed(2)}</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Switch checked={c.active} onCheckedChange={() => toggle(c)} />
-                                                <Button size="icon" variant="ghost" onClick={() => edit(c)} className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => del(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
+                                                <Button size="icon" variant="ghost" onClick={() => edit(c)} className="h-8 w-8 text-[#F4B544] hover:bg-[#F4B544]/15"><Pencil className="h-4 w-4" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:bg-red-500/15" onClick={() => del(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8 bg-muted/30 rounded-xl border-2 border-dashed border-border">
-                                    <p className="text-sm text-muted-foreground">Nenhum complemento nesta categoria</p>
-                                    <Button variant="link" onClick={() => { setEditing(null); setForm({ ...form, category: cat.key }); setShowForm(true); }} className="text-primary">
+                                <div className="text-center py-8 bg-[#10100F] rounded-xl border-2 border-dashed border-[#F4B544]/20">
+                                    <p className="text-sm text-[#B8B1A3]">Nenhum complemento nesta categoria</p>
+                                    <Button variant="link" onClick={() => { setEditing(null); setForm({ ...form, category: cat.key }); setShowForm(true); }} className="text-[#F4B544] font-bold">
                                         Adicionar primeiro item
                                     </Button>
                                 </div>
@@ -1381,10 +1425,10 @@ function OptionalsTab({ headers, setConfirmModal }) {
             </div>
             
             {complements.length === 0 && (
-                <div className="text-center py-12 bg-muted/30 rounded-2xl">
-                    <Tag className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nenhum complemento cadastrado</p>
-                    <p className="text-xs text-muted-foreground mt-1">Crie um complemento para começar</p>
+                <div className="text-center py-12 bg-[#10100F] rounded-2xl border border-[#F4B544]/20">
+                    <Tag className="h-10 w-10 text-[#F4B544] mx-auto mb-3 opacity-60" />
+                    <p className="text-[#FFFAF0] font-semibold">Nenhum complemento cadastrado</p>
+                    <p className="text-xs text-[#B8B1A3] mt-1">Crie um complemento para começar</p>
                 </div>
             )}
 
@@ -1432,9 +1476,9 @@ function OptionalsTab({ headers, setConfirmModal }) {
                                 <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="comp-desc" /></div>
                                 
                                 <div><Label>Categoria</Label>
-                                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full mt-1 rounded-lg border border-input bg-white px-3 py-2 text-sm">
+                                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full mt-1 rounded-xl border border-[#F4B544]/30 bg-[#0D0D0C] text-[#FFFAF0] px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
                                         {sortedCategories.map(cat => (
-                                            <option key={cat.key} value={cat.key}>{cat.icon} {cat.name}</option>
+                                            <option key={cat.key} value={cat.key} className="bg-[#10100F] text-[#FFFAF0]">{cat.icon} {cat.name}</option>
                                         ))}
                                     </select>
                                 </div>

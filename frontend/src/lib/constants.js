@@ -1,7 +1,7 @@
 const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
 export const API_URL = (rawBackend && rawBackend.includes('hljdev.com.br'))
     ? rawBackend
-    : 'https://api.hljdev.com.br';
+    : 'https://johb-api.hljdev.com.br';
 export const API = `${API_URL}/api`;
 
 // Helper to get full image URL
@@ -13,14 +13,18 @@ export const getImageUrl = (url) => {
 
 // Product tag configuration
 export const TAG_CONFIG = {
-    vegano: { label: "Vegano", color: "bg-emerald-100 text-emerald-700", icon: "🌱" },
-    leve: { label: "Leve", color: "bg-sky-100 text-sky-700", icon: "🍃" },
-    mais_pedido: { label: "Popular", color: "bg-orange-100 text-orange-700", icon: "🔥" },
-    recomendado: { label: "Recomendado", color: "bg-amber-100 text-amber-700", icon: "⭐" },
-    personalizavel: { label: "Personalizavel", color: "bg-purple-100 text-purple-700", icon: "🎨" },
-    novo: { label: "Novo", color: "bg-pink-100 text-pink-700", icon: "✨" },
-    sem_gluten: { label: "Sem Gluten", color: "bg-yellow-100 text-yellow-700", icon: "🌾" },
-    sem_lactose: { label: "Sem Lactose", color: "bg-blue-100 text-blue-700", icon: "🥛" }
+    mais_pedido: { label: "Mais Pedido", color: "bg-amber-500/20 text-amber-300 border border-amber-500/30", icon: "🔥" },
+    recomendado: { label: "Recomendado", color: "bg-amber-500/20 text-amber-300 border border-amber-500/30", icon: "⭐" },
+    assado: { label: "Assado", color: "bg-amber-500/20 text-amber-300 border border-amber-500/30", icon: "🥖" },
+    frito: { label: "Frito", color: "bg-amber-500/20 text-amber-300 border border-amber-500/30", icon: "🥟" },
+    doce: { label: "Doce", color: "bg-pink-500/20 text-pink-300 border border-pink-500/30", icon: "🍰" },
+    artesanal: { label: "Artesanal", color: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30", icon: "✨" },
+    vegano: { label: "Vegano", color: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30", icon: "🌱" },
+    leve: { label: "Leve", color: "bg-sky-500/20 text-sky-300 border border-sky-500/30", icon: "🍃" },
+    personalizavel: { label: "Personalizável", color: "bg-purple-500/20 text-purple-300 border border-purple-500/30", icon: "⚙️" },
+    novo: { label: "Novo", color: "bg-pink-500/20 text-pink-300 border border-pink-500/30", icon: "✨" },
+    sem_gluten: { label: "Sem Glúten", color: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30", icon: "🌾" },
+    sem_lactose: { label: "Sem Lactose", color: "bg-blue-500/20 text-blue-300 border border-blue-500/30", icon: "🥛" }
 };
 
 export const getTagStyle = (tag) => TAG_CONFIG[tag] || { label: tag, color: "bg-gray-100 text-gray-700", icon: "🏷️" };

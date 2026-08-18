@@ -2,10 +2,10 @@
  * API Client with consistent error handling
  * Provides standardized error messages and request/response interceptors
  */
-const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
+const rawBackend = process.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_API_URL || '';
 const API_BASE_URL = (rawBackend && rawBackend.includes('hljdev.com.br'))
     ? rawBackend
-    : 'https://api.hljdev.com.br';
+    : 'https://johb-api.hljdev.com.br';
 
 // Create axios instance
 const apiClient = axios.create({

@@ -11,13 +11,11 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.desc
 -- 2. Inserir Categorias Reais
 INSERT INTO categories (id, name, description, menu_id, "order", active)
 VALUES 
-    ('c1111111-1111-1111-1111-111111111111', 'Salgados', 'Salgados fritos e assados artesanais quentinhos com recheios generosos.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 0, true),
-    ('c2222222-2222-2222-2222-222222222222', 'Assados', 'Folhados e assados dourados e crocantes saindo do forno.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 1, true),
-    ('c3333333-3333-3333-3333-333333333333', 'Doces / Cucas', 'Cucas tradicionais, bolos fofinhos e brownies artesanais.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 2, true),
-    ('c4444444-4444-4444-4444-444444444444', 'Combos', 'Combinações perfeitas de salgados + bebida para o seu momento.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 3, true),
-    ('c5555555-5555-5555-5555-555555555555', 'Congelados', 'Pacotes congelados para assar ou fritar em casa.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 4, true),
-    ('c6666666-6666-6666-6666-666666666666', 'Bebidas', 'Refrigerantes, sucos naturais e águas geladas.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 5, true)
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, menu_id = EXCLUDED.menu_id;
+    ('c1111111-1111-1111-1111-111111111111', 'Salgados', 'Salgados fritos e empadas artesanais quentinhas com recheios generosos.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 0, true),
+    ('c2222222-2222-2222-2222-222222222222', 'Assados', 'Joelhinhos, folhados e mini pizzas assadas douradas saindo do forno.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 1, true),
+    ('c3333333-3333-3333-3333-333333333333', 'Doces / Cucas', 'Cucas tradicionais de farofa, bolos fofinhos e brownies artesanais.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 2, true),
+    ('c6666666-6666-6666-6666-666666666666', 'Bebidas', 'Refrigerantes, sucos naturais e águas geladas.', 'a1b2c3d4-e5f6-7890-abcd-111111111111', 3, true)
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, menu_id = EXCLUDED.menu_id, "order" = EXCLUDED."order";
 
 -- 3. Inserir Tabela de Complementos / Opcionais
 INSERT INTO complements (id, name, price, description, category, active)
@@ -28,17 +26,17 @@ VALUES
     ('f4444444-4444-4444-4444-444444444444', 'Cheddar Cremoso Extra', 3.50, 'Cheddar derretido extra', 'adicionais', true)
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price;
 
--- 4. Inserir Produtos Reais JOHB com Opcionais / Complementos em JSONB
+-- 4. Inserir Produtos Reais JOHB com Opcionais / Complementos em JSONB (UUIDs válidos em hex)
 INSERT INTO products (id, name, description, price, category_id, image_url, tags, additionals, active, "order")
 VALUES 
     -- Salgados
     (
-        'p1010101-1111-1111-1111-111111111111', 
+        '10101010-1111-1111-1111-111111111111', 
         'Coxinha Cremosa de Frango', 
         'Frango desfiado temperado na casa com recheio cremoso e casca crocante.', 
         9.90, 
         'c1111111-1111-1111-1111-111111111111', 
-        'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80', 
+        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 
         ARRAY['mais_pedido', 'personalizavel'], 
         '[
             {"name": "Maionese Caseira Temperada", "price": 2.50, "category": "molhos", "required": false, "min_select": 0, "max_select": 1},
@@ -49,31 +47,31 @@ VALUES
         0
     ),
     (
-        'p1010102-1111-1111-1111-111111111111', 
+        '10101020-1111-1111-1111-111111111111', 
         'Empada de Palmito', 
         'Massa podra amanteigada que derrete na boca com recheio de palmito cremoso.', 
         10.90, 
         'c1111111-1111-1111-1111-111111111111', 
-        'https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&auto=format&fit=crop&q=80', 
+        'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=500&auto=format&fit=crop&q=80', 
         ARRAY['recomendado'], 
         '[]'::jsonb,
         true, 
         1
     ),
     (
-        'p1010103-1111-1111-1111-111111111111', 
+        '10101030-1111-1111-1111-111111111111', 
         'Esfiha Aberta de Carne', 
         'Massa leve e fofinha com carne bovina temperada com tomate e especiarias.', 
         8.90, 
         'c1111111-1111-1111-1111-111111111111', 
-        'https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=500&auto=format&fit=crop&q=80', 
+        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80', 
         ARRAY[]::text[], 
         '[]'::jsonb,
         true, 
         2
     ),
     (
-        'p1010104-1111-1111-1111-111111111111', 
+        '10101040-1111-1111-1111-111111111111', 
         'Pão de Queijo Canastra (6 un)', 
         'Porção de pães de queijo Canastra curado, crocantes por fora e macios por dentro.', 
         12.90, 
@@ -87,12 +85,12 @@ VALUES
 
     -- Assados
     (
-        'p2020201-2222-2222-2222-222222222222', 
-        'Folhado de Presunto e Queijo', 
-        'Massa folhada amanteigada e dourada recheada com presunto e queijo derretido.', 
-        10.50, 
+        '20202010-2222-2222-2222-222222222222', 
+        'Joelhinho de Presunto e Queijo', 
+        'Massa assada amanteigada e dourada recheada com presunto suculento e bastante queijo derretido.', 
+        11.50, 
         'c2222222-2222-2222-2222-222222222222', 
-        'https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&auto=format&fit=crop&q=80', 
+        'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&auto=format&fit=crop&q=80', 
         ARRAY['mais_pedido', 'personalizavel'], 
         '[
             {"name": "Maionese Caseira Temperada", "price": 2.50, "category": "molhos", "required": false, "min_select": 0, "max_select": 1}
@@ -101,24 +99,24 @@ VALUES
         0
     ),
     (
-        'p2020202-2222-2222-2222-222222222222', 
-        'Enroladinho Assado de Salsicha', 
-        'Massa assada fofinha com salsicha artesanal e toque de orégano.', 
-        8.90, 
+        '20202020-2222-2222-2222-222222222222', 
+        'Mini Pizza Artesanal de Calabresa', 
+        'Massa artesanal assada no ponto, molho de tomate temperado, mussarela e calabresa fatiada.', 
+        12.90, 
         'c2222222-2222-2222-2222-222222222222', 
-        'https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=500&auto=format&fit=crop&q=80', 
-        ARRAY[]::text[], 
+        'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=80', 
+        ARRAY['mais_pedido'], 
         '[]'::jsonb,
         true, 
         1
     ),
     (
-        'p2020203-2222-2222-2222-222222222222', 
-        'Empadão de Frango com Requeijão', 
-        'Fatia generosa de empadão amanteigado recheado com frango e requeijão.', 
-        12.90, 
+        '20202030-2222-2222-2222-222222222222', 
+        'Folhado Assado de Frango com Catupiry', 
+        'Massa folhada super leve e crocante com frango cremoso.', 
+        11.90, 
         'c2222222-2222-2222-2222-222222222222', 
-        'https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&auto=format&fit=crop&q=80', 
+        'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&auto=format&fit=crop&q=80', 
         ARRAY[]::text[], 
         '[]'::jsonb,
         true, 
@@ -127,9 +125,9 @@ VALUES
 
     -- Doces / Cucas
     (
-        'p3030301-3333-3333-3333-333333333333', 
+        '30303010-3333-3333-3333-333333333333', 
         'Fatia de Cuca Tradicional de Farofa', 
-        'Cuca alemã artesanal com massa fofinha e generosa camada de farofa crocante.', 
+        'Cuca alemã artesanal com massa fofinha e generosa camada de farofa crocante de canela.', 
         11.90, 
         'c3333333-3333-3333-3333-333333333333', 
         'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&auto=format&fit=crop&q=80', 
@@ -139,71 +137,21 @@ VALUES
         0
     ),
     (
-        'p3030302-3333-3333-3333-333333333333', 
-        'Fatia de Bolo de Cenoura c/ Brigadeiro', 
-        'Bolo fofinho de cenoura coberto com generosa camada de brigadeiro gourmet.', 
-        12.90, 
+        '30303020-3333-3333-3333-333333333333', 
+        'Fatia de Cuca de Banana com Doce de Leite', 
+        'Cuca de banana fresquinha com farofa e recheio cremoso de doce de leite.', 
+        13.90, 
         'c3333333-3333-3333-3333-333333333333', 
         'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&auto=format&fit=crop&q=80', 
-        ARRAY[]::text[], 
+        ARRAY['recomendado'], 
         '[]'::jsonb,
         true, 
         1
-    ),
-
-    -- Combos com Escolha Obrigatória de Salgados e Bebidas
-    (
-        'p4040401-4444-4444-4444-444444444444', 
-        'Combo JOHB Individual', 
-        '2 Salgados à sua escolha + 1 Bebida 350ml geladinha.', 
-        17.90, 
-        'c4444444-4444-4444-4444-444444444444', 
-        'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80', 
-        ARRAY['mais_pedido', 'personalizavel'], 
-        '[
-            {"name": "Salgado 1: Coxinha Cremosa", "price": 0.00, "category": "sabor_salgado", "required": true, "min_select": 1, "max_select": 2},
-            {"name": "Salgado 2: Empada de Palmito", "price": 0.00, "category": "sabor_salgado", "required": true, "min_select": 1, "max_select": 2},
-            {"name": "Salgado 3: Folhado Presunto e Queijo", "price": 0.00, "category": "sabor_salgado", "required": true, "min_select": 1, "max_select": 2},
-            {"name": "Bebida: Guaraná Antarctica 350ml", "price": 0.00, "category": "bebida_combo", "required": true, "min_select": 1, "max_select": 1},
-            {"name": "Bebida: Coca-Cola Zero 350ml", "price": 0.00, "category": "bebida_combo", "required": true, "min_select": 1, "max_select": 1},
-            {"name": "Bebida: Suco de Laranja 400ml", "price": 3.00, "category": "bebida_combo", "required": false, "min_select": 0, "max_select": 1}
-        ]'::jsonb,
-        true, 
-        0
-    ),
-    (
-        'p4040402-4444-4444-4444-444444444444', 
-        'Combo Pra Dois', 
-        '4 Salgados à sua escolha + 2 Bebidas 350ml.', 
-        34.90, 
-        'c4444444-4444-4444-4444-444444444444', 
-        'https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&auto=format&fit=crop&q=80', 
-        ARRAY['recomendado', 'personalizavel'], 
-        '[
-            {"name": "Salgados Variados (4 unidades)", "price": 0.00, "category": "sabor_salgado", "required": true, "min_select": 1, "max_select": 4},
-            {"name": "Bebidas Geladas (2 latas 350ml)", "price": 0.00, "category": "bebida_combo", "required": true, "min_select": 1, "max_select": 2}
-        ]'::jsonb,
-        true, 
-        1
-    ),
-
-    -- Congelados
-    (
-        'p5050501-5555-5555-5555-555555555555', 
-        'Pacote Coxinhas Congeladas (10 un)', 
-        'Coxinhas artesanais moldadas e empanadas, prontas para fritar em casa.', 
-        29.90, 
-        'c5555555-5555-5555-5555-555555555555', 
-        'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80', 
-        ARRAY[]::text[], 
-        '[]'::jsonb,
-        true, 
-        0
     ),
 
     -- Bebidas
     (
-        'p6060601-6666-6666-6666-666666666666', 
+        '60606010-6666-6666-6666-666666666666', 
         'Guaraná Antarctica 350ml', 
         'Lata 350ml trincando de gelada.', 
         6.50, 
@@ -215,7 +163,7 @@ VALUES
         0
     ),
     (
-        'p6060602-6666-6666-6666-666666666666', 
+        '60606020-6666-6666-6666-666666666666', 
         'Coca-Cola Zero 350ml', 
         'Lata 350ml gelada.', 
         6.50, 

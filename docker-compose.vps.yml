@@ -6,14 +6,14 @@ services:
     build: 
       context: ./backend
       dockerfile: Dockerfile
-    container_name: saladasoul_backend
+    container_name: johb_backend
     restart: always
     ports:
       - "8001:8001"
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@saladasoul_db:5432/saladasoul
-      - DB_HOST=saladasoul_db
-      - DB_NAME=saladasoul
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@johb_db:5432/johb
+      - DB_HOST=johb_db
+      - DB_NAME=johb
       - DB_USER=postgres
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_PORT=5432
@@ -24,33 +24,33 @@ services:
       db:
         condition: service_healthy
     networks:
-      - saladasoul_network
+      - johb_network
     volumes:
       - ./backend/uploads:/app/uploads
 
   # ==================== DATABASE ====================
   db:
     image: postgres:15-alpine
-    container_name: saladasoul_db
+    container_name: johb_db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d saladasoul"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d johb"]
       interval: 10s
       timeout: 5s
       retries: 5
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: saladasoul
+      POSTGRES_DB: johb
     volumes:
-      - saladasoul_postgres_data:/var/lib/postgresql/data
+      - johb_postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
-      - saladasoul_network
+      - johb_network
 
 volumes:
-  saladasoul_postgres_data:
+  johb_postgres_data:
 
 networks:
-  saladasoul_network:
-    name: saladasoul_network
+  johb_network:
+    name: johb_network
     driver: bridge

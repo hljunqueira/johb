@@ -82,11 +82,21 @@ export function CartProvider({ children }) {
         });
     };
 
-    const removeItem = (cartId) => setItems(prev => prev.filter(i => i.cart_id !== cartId));
+    const removeItem = (identifier) => setItems(prev => {
+        if (typeof identifier === "number") {
+            return prev.filter((_, idx) => idx !== identifier);
+        }
+        return prev.filter(i => (i.cart_id || i.id || i.product_id) !== identifier);
+    });
 
-    const updateQuantity = (cartId, quantity) => {
-        if (quantity <= 0) { removeItem(cartId); return; }
-        setItems(prev => prev.map(i => i.cart_id === cartId ? { ...i, quantity } : i));
+    const updateQuantity = (identifier, quantity) => {
+        if (quantity <= 0) { removeItem(identifier); return; }
+        setItems(prev => {
+            if (typeof identifier === "number") {
+                return prev.map((item, idx) => idx === identifier ? { ...item, quantity } : item);
+            }
+            return prev.map(i => (i.cart_id || i.id || i.product_id) === identifier ? { ...i, quantity } : i);
+        });
     };
 
     const updateObservation = (cartId, observation) => {

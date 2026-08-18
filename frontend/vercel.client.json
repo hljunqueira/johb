@@ -6,11 +6,11 @@
   "framework": "create-react-app",
   "env": {
     "REACT_APP_MODE": "cliente",
-    "REACT_APP_BACKEND_URL": "https://api.hljdev.com.br",
-    "REACT_APP_API_URL": "https://api.hljdev.com.br/api"
+    "REACT_APP_BACKEND_URL": "https://johb-api.hljdev.com.br",
+    "REACT_APP_API_URL": "https://johb-api.hljdev.com.br/api"
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://api.hljdev.com.br/api/$1" }
+    { "source": "/api/(.*)", "destination": "https://johb-api.hljdev.com.br/api/$1" }
   ],
   "headers": [
     {
