@@ -599,11 +599,16 @@ def format_delivery_settings_row(row):
     d["allow_immediate_orders"] = bool(d.get("allow_immediate_orders", True))
     d["allow_scheduled_orders"] = bool(d.get("allow_scheduled_orders", True))
     d["allow_pickup"] = bool(d.get("allow_pickup", True))
-    d["min_lead_hours"] = float(d["min_lead_hours"] if d.get("min_lead_hours") is not None else 0.5)
-    d["max_schedule_days"] = int(d["max_schedule_days"] if d.get("max_schedule_days") is not None else 7)
-    d["delivery_fee"] = float(d["delivery_fee"] if d.get("delivery_fee") is not None else 5.0)
-    d["min_free_delivery"] = float(d["min_free_delivery"] if d.get("min_free_delivery") is not None else 0.0)
-    d["max_delivery_distance"] = float(d["max_delivery_distance"] if d.get("max_delivery_distance") is not None else 10.5)
+    val_lead = d.get("min_lead_hours")
+    d["min_lead_hours"] = float(val_lead) if val_lead is not None else 0.5
+    val_sched = d.get("max_schedule_days")
+    d["max_schedule_days"] = int(val_sched) if val_sched is not None else 7
+    val_fee = d.get("delivery_fee")
+    d["delivery_fee"] = float(val_fee) if val_fee is not None else 5.0
+    val_free = d.get("min_free_delivery")
+    d["min_free_delivery"] = float(val_free) if val_free is not None else 0.0
+    val_max_dist = d.get("max_delivery_distance")
+    d["max_delivery_distance"] = float(val_max_dist) if val_max_dist is not None else 10.5
     return d
 
 
@@ -2550,10 +2555,39 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
 @app.get("/api/admin/pix-settings")
 async def admin_get_pix_settings(user=Depends(get_current_user)):
     """Configurações do PIX"""
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT * FROM pix_settings WHERE id = 1")
-        return dict(row) if row else {}
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            try:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS pix_settings (
+                        id SERIAL PRIMARY KEY,
+                        pix_key VARCHAR(255) DEFAULT '',
+                        pix_name VARCHAR(255) DEFAULT 'JOHB Café & Salgados',
+                        qr_code_url TEXT DEFAULT '',
+                        pix_key_type VARCHAR(50) DEFAULT 'cpf'
+                    );
+                    INSERT INTO pix_settings (id, pix_key, pix_name, qr_code_url, pix_key_type)
+                    VALUES (1, '', 'JOHB Café & Salgados', '', 'cpf')
+                    ON CONFLICT (id) DO NOTHING;
+                """)
+            except Exception:
+                pass
+            row = await conn.fetchrow("SELECT * FROM pix_settings WHERE id = 1")
+            return dict(row) if row else {
+                "pix_key": "",
+                "pix_name": "JOHB Café & Salgados",
+                "qr_code_url": "",
+                "pix_key_type": "cpf"
+            }
+    except Exception as e:
+        logger.error(f"Erro em admin_get_pix_settings: {e}")
+        return {
+            "pix_key": "",
+            "pix_name": "JOHB",
+            "qr_code_url": "",
+            "pix_key_type": "cpf"
+        }
 
 
 @app.put("/api/admin/pix-settings")

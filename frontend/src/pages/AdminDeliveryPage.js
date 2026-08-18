@@ -21,11 +21,6 @@ const DAYS = [
     { key: "dom", label: "Domingo" },
 ];
 
-const DEFAULT_HOURS = DAYS.reduce((acc, d) => ({
-    ...acc,
-    [d.key]: { open: true, start: "11:00", end: "22:00" }
-}), {});
-
 const PIX_KEY_TYPES = [
     { value: "cpf", label: "CPF" },
     { value: "cnpj", label: "CNPJ" },
@@ -34,30 +29,30 @@ const PIX_KEY_TYPES = [
     { value: "aleatoria", label: "Chave aleatória" },
 ];
 
-// Helper para garantir que business_hours seja sempre um objeto estruturado
+// Helper para garantir que business_hours seja sempre um objeto estruturado sem fallbacks artificiais
 const parseBusinessHoursClient = (raw) => {
-    if (!raw) return DEFAULT_HOURS;
-    if (typeof raw === "object" && !Array.isArray(raw)) {
-        if ("seg" in raw) return raw;
-        if ("0" in raw && "1" in raw) {
-            try {
-                const sortedKeys = Object.keys(raw).filter(k => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b));
-                const str = sortedKeys.map(k => raw[k]).join("");
-                const parsed = JSON.parse(str);
-                const obj = typeof parsed === "string" ? JSON.parse(parsed) : parsed;
-                if (obj && typeof obj === "object" && "seg" in obj) return obj;
-            } catch {}
-        }
-        return raw;
-    }
+    if (!raw) return {};
+    let parsed = raw;
     if (typeof raw === "string") {
         try {
-            const parsed = JSON.parse(raw);
-            const obj = typeof parsed === "string" ? JSON.parse(parsed) : parsed;
-            if (obj && typeof obj === "object" && "seg" in obj) return obj;
-        } catch {}
+            parsed = JSON.parse(raw);
+            if (typeof parsed === "string") parsed = JSON.parse(parsed);
+        } catch {
+            return {};
+        }
     }
-    return DEFAULT_HOURS;
+    if (typeof parsed === "object" && !Array.isArray(parsed)) {
+        if ("0" in parsed && "1" in parsed) {
+            try {
+                const sortedKeys = Object.keys(parsed).filter(k => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b));
+                const str = sortedKeys.map(k => parsed[k]).join("");
+                const reconstructed = JSON.parse(str);
+                parsed = typeof reconstructed === "string" ? JSON.parse(reconstructed) : reconstructed;
+            } catch {}
+        }
+        return parsed || {};
+    }
+    return {};
 };
 
 export default function AdminDeliveryPage() {
@@ -68,7 +63,7 @@ export default function AdminDeliveryPage() {
         min_free_delivery: 0, 
         active: true, 
         allow_pickup: true,
-        business_hours: DEFAULT_HOURS,
+        business_hours: {},
         restaurant_address: "",
         always_open: false,
         temporarily_closed: false,
@@ -173,13 +168,16 @@ export default function AdminDeliveryPage() {
 
     const removeArea = (i) => setSettings(s => ({ ...s, areas: s.areas.filter((_, idx) => idx !== i) }));
 
-    const updateHour = (day, field, value) => setSettings(s => ({
-        ...s,
-        business_hours: {
-            ...s.business_hours,
-            [day]: { ...(s.business_hours[day] || { open: true, start: "11:00", end: "22:00" }), [field]: value }
-        }
-    }));
+    const updateHour = (day, field, value) => setSettings(s => {
+        const current = s.business_hours?.[day] || { open: false, start: "11:00", end: "22:00" };
+        return {
+            ...s,
+            business_hours: {
+                ...(s.business_hours || {}),
+                [day]: { ...current, [field]: value }
+            }
+        };
+    });
 
     const handleQrUpload = async (e) => {
         const file = e.target.files?.[0];
@@ -618,7 +616,7 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
 
             <div className="space-y-3">
                 {DAYS.map(({ key, label }) => {
-                    const h = settings.business_hours?.[key] || { open: true, start: "11:00", end: "22:00" };
+                    const h = settings.business_hours?.[key] || { open: false, start: "11:00", end: "22:00" };
                     return (
                         <div key={key} className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all ${h.open ? "border-[#F4B544]/30 bg-[#1E1E1E]" : "border-white/10 bg-[#141414] opacity-60"}`}>
                             {/* Toggle */}
