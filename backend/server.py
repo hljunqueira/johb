@@ -607,6 +607,8 @@ def format_delivery_settings_row(row):
     d["delivery_fee"] = float(val_fee) if val_fee is not None else 5.0
     val_free = d.get("min_free_delivery")
     d["min_free_delivery"] = float(val_free) if val_free is not None else 0.0
+    val_min_order = d.get("min_order_value")
+    d["min_order_value"] = float(val_min_order) if val_min_order is not None else 0.0
     val_max_dist = d.get("max_delivery_distance")
     d["max_delivery_distance"] = float(val_max_dist) if val_max_dist is not None else 10.5
     return d
@@ -723,7 +725,7 @@ def format_relative_date(dt):
 
 @app.get("/api/reviews/summary")
 async def get_reviews_summary():
-    """Resumo de avaliações 100% reais para prova social no cardápio com cache"""
+    """Resumo de avaliações para prova social no cardápio com cache"""
     cached = get_cached("reviews_summary", 60)
     if cached is not None:
         return cached
@@ -734,22 +736,22 @@ async def get_reviews_summary():
             SELECT 
                 COUNT(*) as total_reviews,
                 AVG(rating) as avg_rating
-            FROM orders 
+            FROM feedbacks 
             WHERE rating IS NOT NULL AND rating > 0
         """)
         
         recent_comments = await conn.fetch("""
-            SELECT customer_name, rating, rating_comment, created_at
-            FROM orders 
+            SELECT id, customer_name, rating, rating_comment, created_at
+            FROM feedbacks 
             WHERE rating IS NOT NULL AND rating_comment IS NOT NULL AND LENGTH(TRIM(rating_comment)) >= 2
             ORDER BY created_at DESC 
-            LIMIT 9
+            LIMIT 50
         """)
 
-        # Processar avaliações 100% reais
         real_testimonials = []
         for c in recent_comments:
             c_dict = dict(c)
+            c_dict["id"] = str(c_dict["id"])
             c_dict["created_at"] = format_relative_date(c_dict.get("created_at"))
             real_testimonials.append(c_dict)
 
@@ -1256,17 +1258,39 @@ async def create_order(request: CreateOrderRequest):
                 "line_total": item_line_total
             })
 
-        # 2. Recalcular Taxa de Entrega no Backend com regra de frete grátis
+        # 2. Validar Pedido Mínimo e Recalcular Taxa de Entrega no Backend
+        settings_row = await conn.fetchrow("SELECT delivery_fee, min_free_delivery, min_order_value, areas FROM delivery_settings WHERE id = 1")
+        min_order_val = float(settings_row['min_order_value']) if (settings_row and settings_row['min_order_value'] is not None) else 0.0
+        
+        if min_order_val > 0 and recalculated_subtotal < min_order_val:
+            raise HTTPException(
+                status_code=400,
+                detail=f"O valor mínimo para pedidos é de R$ {min_order_val:.2f}. Seu subtotal atual é R$ {recalculated_subtotal:.2f}."
+            )
+
         recalculated_delivery_fee = 0.0
         if request.delivery_type == "entrega":
-            settings_row = await conn.fetchrow("SELECT delivery_fee, min_free_delivery FROM delivery_settings WHERE id = 1")
             base_fee = float(settings_row['delivery_fee']) if (settings_row and settings_row['delivery_fee'] is not None) else 5.00
             min_free = float(settings_row['min_free_delivery']) if (settings_row and settings_row['min_free_delivery'] is not None) else 0.0
+            areas_raw = parse_jsonb_field(settings_row.get('areas') if settings_row else [], [])
             
+            # Buscar se o bairro informado possui taxa específica cadastrada
+            req_neigh = (request.neighborhood or "").strip().lower()
+            matched_fee = None
+            if areas_raw and isinstance(areas_raw, list):
+                for area in areas_raw:
+                    if isinstance(area, dict) and area.get("name") and area.get("name").strip().lower() == req_neigh:
+                        try:
+                            matched_fee = float(area.get("fee", base_fee))
+                        except Exception:
+                            matched_fee = base_fee
+                        break
+            
+            final_base_fee = matched_fee if matched_fee is not None else base_fee
             if min_free > 0 and recalculated_subtotal >= min_free:
                 recalculated_delivery_fee = 0.0
             else:
-                recalculated_delivery_fee = base_fee
+                recalculated_delivery_fee = final_base_fee
 
         # 3. Aplicar cupom de desconto se fornecido
         calculated_discount = 0.0
@@ -1474,6 +1498,17 @@ async def rate_order(order_id: str, request: Request):
             "UPDATE orders SET rating = $1, rating_comment = $2 WHERE id = $3",
             rating, clean_comment, order_uuid
         )
+        # Sincronizar na tabela feedbacks
+        order_info = await conn.fetchrow("SELECT customer_name, customer_phone FROM orders WHERE id = $1", order_uuid)
+        c_name = order_info['customer_name'] if order_info and order_info['customer_name'] else "Cliente"
+        c_phone = order_info['customer_phone'] if order_info else None
+        
+        await conn.execute("""
+            INSERT INTO feedbacks (customer_name, customer_phone, rating, rating_comment, order_id, created_at)
+            VALUES ($1, $2, $3, $4, $5, NOW())
+        """, c_name, c_phone, rating, clean_comment or "Ótimo atendimento!", order_uuid)
+        
+        invalidate_cache()
         return {"success": True, "rating": rating, "comment": clean_comment}
 
 
@@ -2515,6 +2550,7 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
 
         try:
             await conn.execute("ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS allow_pickup BOOLEAN DEFAULT TRUE")
+            await conn.execute("ALTER TABLE delivery_settings ADD COLUMN IF NOT EXISTS min_order_value NUMERIC(10,2) DEFAULT 0.0")
         except Exception:
             pass
 
@@ -2526,7 +2562,7 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
                min_lead_hours = $11, max_schedule_days = $12, allowed_schedule_days = $13::jsonb,
                accept_online_payment = $14, accept_card_machine = $15, accept_cash = $16,
                allow_immediate_orders = $17, allow_scheduled_orders = $18,
-               allow_pickup = $19
+               allow_pickup = $19, min_order_value = $20
                WHERE id = 1 RETURNING *""",
             json.dumps(sanitize_json_input(request.get('areas'), [])),
             float(request.get('delivery_fee') if request.get('delivery_fee') is not None else 5.0),
@@ -2546,7 +2582,8 @@ async def admin_update_delivery_settings(request: dict, user=Depends(get_current
             bool(request.get('accept_cash', True)),
             bool(request.get('allow_immediate_orders', True)),
             bool(request.get('allow_scheduled_orders', True)),
-            bool(request.get('allow_pickup', True))
+            bool(request.get('allow_pickup', True)),
+            float(request.get('min_order_value') if request.get('min_order_value') is not None else 0.0)
         )
         invalidate_cache()
         return format_delivery_settings_row(row)
@@ -2731,6 +2768,158 @@ async def admin_get_customer_orders(customer_id: str, user=Depends(get_current_u
             customer['phone']
         )
         return [dict(r) for r in rows]
+
+
+# ============================================
+# ADMIN - FEEDBACKS & REVIEWS MANAGEMENT CRUD
+# ============================================
+
+@app.get("/api/admin/feedbacks")
+async def admin_get_feedbacks(
+    rating: Optional[int] = None,
+    search: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """Listar todos os feedbacks para gestão no admin com filtros"""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        try:
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS feedbacks (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    customer_name TEXT NOT NULL,
+                    customer_phone TEXT,
+                    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+                    rating_comment TEXT NOT NULL,
+                    order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+            """)
+        except Exception:
+            pass
+
+        query = "SELECT f.*, o.order_number FROM feedbacks f LEFT JOIN orders o ON f.order_id = o.id WHERE 1=1"
+        params = []
+        if rating and 1 <= rating <= 5:
+            params.append(rating)
+            query += f" AND f.rating = ${len(params)}"
+        if search and search.strip():
+            params.append(f"%{search.strip().lower()}%")
+            query += f" AND (LOWER(f.customer_name) LIKE ${len(params)} OR LOWER(f.rating_comment) LIKE ${len(params)} OR LOWER(COALESCE(f.customer_phone, '')) LIKE ${len(params)})"
+        
+        query += " ORDER BY f.created_at DESC LIMIT 200"
+        rows = await conn.fetch(query, *params)
+        
+        feedbacks = []
+        for r in rows:
+            d = dict(r)
+            d["id"] = str(d["id"])
+            d["order_id"] = str(d["order_id"]) if d.get("order_id") else None
+            d["created_at_formatted"] = d["created_at"].strftime("%d/%m/%Y %H:%M") if d.get("created_at") else ""
+            feedbacks.append(d)
+        
+        stats = await conn.fetchrow("SELECT COUNT(*) as total, AVG(rating) as avg_rating FROM feedbacks")
+        total_count = int(stats["total"]) if stats and stats["total"] else 0
+        avg_rating = round(float(stats["avg_rating"]), 1) if stats and stats["avg_rating"] else 0.0
+
+        return {
+            "feedbacks": feedbacks,
+            "stats": {
+                "total": total_count,
+                "avg_rating": avg_rating
+            }
+        }
+
+
+@app.post("/api/admin/feedbacks")
+async def admin_create_feedback(
+    payload: dict,
+    user=Depends(get_current_user)
+):
+    """Cria um novo feedback manualmente pelo admin"""
+    name = (payload.get("customer_name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Nome do cliente é obrigatório")
+    comment = (payload.get("rating_comment") or "").strip()
+    if not comment:
+        raise HTTPException(status_code=400, detail="Comentário da avaliação é obrigatório")
+    try:
+        rating = int(payload.get("rating", 5))
+        if rating < 1 or rating > 5:
+            rating = 5
+    except Exception:
+        rating = 5
+
+    phone = payload.get("customer_phone")
+
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            INSERT INTO feedbacks (customer_name, customer_phone, rating, rating_comment, created_at)
+            VALUES ($1, $2, $3, $4, NOW())
+            RETURNING *
+        """, name, phone, rating, comment)
+        
+        invalidate_cache()
+        d = dict(row)
+        d["id"] = str(d["id"])
+        d["created_at_formatted"] = d["created_at"].strftime("%d/%m/%Y %H:%M") if d.get("created_at") else ""
+        return d
+
+
+@app.put("/api/admin/feedbacks/{feedback_id}")
+async def admin_update_feedback(
+    feedback_id: str,
+    payload: dict,
+    user=Depends(get_current_user)
+):
+    """Atualiza um feedback existente"""
+    try:
+        f_uuid = uuid.UUID(feedback_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
+    name = (payload.get("customer_name") or "").strip()
+    comment = (payload.get("rating_comment") or "").strip()
+    phone = payload.get("customer_phone")
+    rating = int(payload.get("rating", 5))
+
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            UPDATE feedbacks 
+            SET customer_name = $1, customer_phone = $2, rating = $3, rating_comment = $4
+            WHERE id = $5
+            RETURNING *
+        """, name, phone, rating, comment, f_uuid)
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Feedback não encontrado")
+
+        invalidate_cache()
+        d = dict(row)
+        d["id"] = str(d["id"])
+        d["created_at_formatted"] = d["created_at"].strftime("%d/%m/%Y %H:%M") if d.get("created_at") else ""
+        return d
+
+
+@app.delete("/api/admin/feedbacks/{feedback_id}")
+async def admin_delete_feedback(
+    feedback_id: str,
+    user=Depends(get_current_user)
+):
+    """Exclui um feedback"""
+    try:
+        f_uuid = uuid.UUID(feedback_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        res = await conn.execute("DELETE FROM feedbacks WHERE id = $1", f_uuid)
+        invalidate_cache()
+        return {"success": True, "deleted": res}
+
 
 
 # ============================================

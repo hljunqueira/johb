@@ -497,10 +497,10 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
         navigate("/historico");
     };
 
-    const minFreeDelivery = deliverySettings?.min_free_delivery || 60.0;
-    const isFreeDelivery = total >= minFreeDelivery;
-    const diffToFree = Math.max(0, minFreeDelivery - total);
-    const progressPercent = Math.min(100, Math.round((total / minFreeDelivery) * 100));
+    const minFreeDelivery = Number(deliverySettings?.min_free_delivery ?? 0);
+    const isFreeDelivery = minFreeDelivery > 0 && total >= minFreeDelivery;
+    const diffToFree = minFreeDelivery > 0 ? Math.max(0, minFreeDelivery - total) : 0;
+    const progressPercent = minFreeDelivery > 0 ? Math.min(100, Math.round((total / minFreeDelivery) * 100)) : 0;
 
     // Dias disponíveis para agendamento
     const availableDates = useMemo(() => {
@@ -904,6 +904,7 @@ export default function MenuPage() {
     const [cartAnimating, setCartAnimating] = useState(false);
 
     const [reviewsData, setReviewsData] = useState({ avg_rating: 0, total_reviews: 0, testimonials: [] });
+    const [currentReviewPage, setCurrentReviewPage] = useState(0);
     const [quickTagFilter, setQuickTagFilter] = useState("all");
 
     const { items, addItem, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
@@ -1189,26 +1190,91 @@ export default function MenuPage() {
                 </div>
 
                 {reviewsData?.testimonials && reviewsData.testimonials.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {reviewsData.testimonials.map((t, idx) => (
-                            <div key={idx} className="p-6 rounded-2xl bg-[#10100F] border border-[#F4B544]/20 space-y-4 shadow-lg gold-glow-sm flex flex-col justify-between">
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-1 text-[#F4B544] text-sm">
-                                        {Array.from({ length: t.rating || 5 }).map((_, i) => (
-                                            <span key={i}>⭐</span>
-                                        ))}
+                    (() => {
+                        const REVIEWS_PER_PAGE = 5;
+                        const allTestimonials = reviewsData.testimonials;
+                        const totalPages = Math.ceil(allTestimonials.length / REVIEWS_PER_PAGE);
+                        const displayedTestimonials = allTestimonials.slice(
+                            currentReviewPage * REVIEWS_PER_PAGE,
+                            (currentReviewPage + 1) * REVIEWS_PER_PAGE
+                        );
+
+                        return (
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {displayedTestimonials.map((t, idx) => (
+                                        <div 
+                                            key={t.id || idx} 
+                                            className={`p-6 rounded-2xl bg-[#10100F] border border-[#F4B544]/20 space-y-4 shadow-lg gold-glow-sm flex flex-col justify-between transition-all hover:border-[#F4B544]/50 ${
+                                                displayedTestimonials.length === 5 && idx === 0 ? "lg:col-span-2 lg:flex-row lg:items-center lg:gap-6 lg:space-y-0" : ""
+                                            }`}
+                                        >
+                                            <div className="space-y-3 flex-1">
+                                                <div className="flex items-center gap-1 text-[#F4B544] text-sm">
+                                                    {Array.from({ length: t.rating || 5 }).map((_, i) => (
+                                                        <span key={i}>⭐</span>
+                                                    ))}
+                                                </div>
+                                                <p className="text-xs sm:text-sm text-[#FFFAF0] italic font-light leading-relaxed">
+                                                    "{t.rating_comment}"
+                                                </p>
+                                            </div>
+                                            <div className="pt-3 border-t lg:border-t-0 lg:pt-0 lg:border-l lg:pl-6 border-white/10 flex lg:flex-col items-center lg:items-start justify-between text-xs text-[#B8B1A3] shrink-0">
+                                                <span className="font-bold text-[#F4B544] text-sm">{t.customer_name}</span>
+                                                <span className="text-[11px] text-gray-400">{t.created_at}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Controles de Paginação de 5 em 5 */}
+                                {totalPages > 1 && (
+                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10">
+                                        <span className="text-xs text-[#B8B1A3]">
+                                            Mostrando <strong className="text-[#FFFAF0]">{currentReviewPage * REVIEWS_PER_PAGE + 1}</strong> a <strong className="text-[#FFFAF0]">{Math.min((currentReviewPage + 1) * REVIEWS_PER_PAGE, allTestimonials.length)}</strong> de <strong className="text-[#F4B544]">{allTestimonials.length}</strong> avaliações
+                                        </span>
+
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCurrentReviewPage(p => Math.max(0, p - 1))}
+                                                disabled={currentReviewPage === 0}
+                                                className="px-4 py-2 rounded-xl bg-[#171612] border border-white/10 text-xs font-bold text-[#FFFAF0] hover:border-[#F4B544] hover:text-[#F4B544] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                                            >
+                                                ‹ Anterior
+                                            </button>
+
+                                            <div className="flex items-center gap-1">
+                                                {Array.from({ length: totalPages }).map((_, pageIdx) => (
+                                                    <button
+                                                        key={pageIdx}
+                                                        type="button"
+                                                        onClick={() => setCurrentReviewPage(pageIdx)}
+                                                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                                            currentReviewPage === pageIdx
+                                                                ? "bg-[#F4B544] text-black shadow-md font-extrabold"
+                                                                : "bg-[#171612] text-gray-400 border border-white/10 hover:text-white"
+                                                        }`}
+                                                    >
+                                                        {pageIdx + 1}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setCurrentReviewPage(p => Math.min(totalPages - 1, p + 1))}
+                                                disabled={currentReviewPage >= totalPages - 1}
+                                                className="px-4 py-2 rounded-xl bg-[#171612] border border-white/10 text-xs font-bold text-[#FFFAF0] hover:border-[#F4B544] hover:text-[#F4B544] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                                            >
+                                                Próxima ›
+                                            </button>
+                                        </div>
                                     </div>
-                                    <p className="text-xs sm:text-sm text-[#FFFAF0] italic font-light leading-relaxed">
-                                        "{t.rating_comment}"
-                                    </p>
-                                </div>
-                                <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-[#B8B1A3]">
-                                    <span className="font-bold text-[#F4B544]">{t.customer_name}</span>
-                                    <span>{t.created_at}</span>
-                                </div>
+                                )}
                             </div>
-                        ))}
-                    </div>
+                        );
+                    })()
                 ) : (
                     <div className="max-w-xl mx-auto p-8 rounded-3xl bg-[#10100F] border border-[#F4B544]/30 text-center space-y-4 shadow-xl gold-glow-sm">
                         <div className="space-y-1.5">

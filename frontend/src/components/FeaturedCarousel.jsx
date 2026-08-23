@@ -11,8 +11,8 @@ import {
 import { Flame, Star } from "lucide-react";
 
 const getImageUrl = (url, backendUrl) => {
-    if (!url) return "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400";
-    if (url.startsWith("http")) return url;
+    if (!url) return "/logo-semfundo.png";
+    if (url.startsWith("http") || url.startsWith("/")) return url;
     return `${backendUrl}${url}`;
 };
 

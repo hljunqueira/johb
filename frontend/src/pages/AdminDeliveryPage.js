@@ -61,6 +61,7 @@ export default function AdminDeliveryPage() {
         areas: [], 
         delivery_fee: 5, 
         min_free_delivery: 0, 
+        min_order_value: 0,
         active: true, 
         allow_pickup: true,
         business_hours: {},
@@ -105,6 +106,7 @@ export default function AdminDeliveryPage() {
                     allow_pickup: data.allow_pickup !== false,
                     delivery_fee: Number(data.delivery_fee ?? 5),
                     min_free_delivery: Number(data.min_free_delivery ?? 0),
+                    min_order_value: Number(data.min_order_value ?? 0),
                     min_lead_hours: Number(data.min_lead_hours ?? 0.5),
                     max_schedule_days: parseInt(data.max_schedule_days) || 7
                 }));
@@ -335,7 +337,7 @@ function DeliveryTab({
             </div>
 
             {/* Valores Gerais */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
                     <Label className="text-xs font-bold text-gray-300">Taxa Padrão de Entrega (R$)</Label>
                     <div className="relative mt-2">
@@ -368,6 +370,23 @@ function DeliveryTab({
                         />
                     </div>
                     <p className="text-[10px] text-gray-400 mt-1.5">Defina 0 se não quiser oferecer frete grátis.</p>
+                </div>
+
+                <div className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+                    <Label className="text-xs font-bold text-gray-300">Valor Mínimo do Pedido (R$)</Label>
+                    <div className="relative mt-2">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">R$</span>
+                        <Input 
+                            type="number" 
+                            step="5.00" 
+                            min="0" 
+                            value={settings.min_order_value}
+                            onChange={e => setSettings(s => ({ ...s, min_order_value: parseFloat(e.target.value) || 0 }))}
+                            className="rounded-xl bg-[#141414] text-white border-white/10 pl-10 focus:border-[#F4B544] font-bold" 
+                            data-testid="min-order" 
+                        />
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5">Subtotal mínimo para aceitar pedidos (0 = sem mínimo).</p>
                 </div>
             </div>
 

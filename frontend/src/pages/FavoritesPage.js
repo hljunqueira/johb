@@ -8,8 +8,8 @@ import { ArrowLeft, Heart, ShoppingCart, Trash2, Plus } from "lucide-react";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 const getImageUrl = (url) => {
-    if (!url) return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400";
-    if (url.startsWith("http")) return url;
+    if (!url) return "/logo-semfundo.png";
+    if (url.startsWith("http") || url.startsWith("/")) return url;
     return `${BACKEND_URL}${url}`;
 };
 

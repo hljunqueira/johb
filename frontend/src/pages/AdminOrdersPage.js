@@ -2,14 +2,17 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { 
     Clock, Package, CheckCircle2, DollarSign, RefreshCw, 
     ThumbsUp, Timer, Truck, XCircle, CircleEllipsis,
     MoreVertical, ChevronRight, GripVertical, Volume2, VolumeX,
-    Printer, ReceiptText, MapPin, Phone, Banknote, Calendar
+    Printer, ReceiptText, MapPin, Phone, Banknote, Calendar,
+    Search, MessageCircle, ExternalLink, User, AlertCircle, X, Sparkles,
+    Trash2
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -66,7 +69,28 @@ const isDelayed = (order) => {
     return (now - created) > (order.estimated_time || 30) * 60 * 1000;
 };
 
-const OrderCard = ({ order, index, markPaid, updateStatus, setConfirmModal, setDeleteConfirm, setSelectedPrintOrder }) => {
+const getElapsedTime = (createdAt) => {
+    if (!createdAt) return "";
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffMin = Math.floor((now - created) / 60000);
+    if (diffMin < 1) return "Agora";
+    if (diffMin < 60) return `${diffMin}m`;
+    const hours = Math.floor(diffMin / 60);
+    const mins = diffMin % 60;
+    return `${hours}h${mins > 0 ? `${mins}m` : ''}`;
+};
+
+const OrderCard = ({ 
+    order, 
+    index, 
+    markPaid, 
+    updateStatus, 
+    setConfirmModal, 
+    setDeleteConfirm, 
+    setSelectedPrintOrder,
+    setSelectedDetailOrder 
+}) => {
     const isToday = (() => {
         if (!order.scheduled_date) return false;
         const now = new Date();
@@ -77,170 +101,194 @@ const OrderCard = ({ order, index, markPaid, updateStatus, setConfirmModal, setD
         return order.scheduled_date === todayStr;
     })();
 
+    const itemsList = Array.isArray(order.items) ? order.items : [];
+    const totalItemCount = itemsList.reduce((sum, it) => sum + (it.quantity || 1), 0);
+    const delayed = isDelayed(order);
+    const elapsed = getElapsedTime(order.created_at);
+
     return (
         <Draggable key={order.id} draggableId={order.id} index={index}>
             {(provided, snapshot) => (
                 <div
                     ref={provided.innerRef}
                     {...provided.draggableProps}
-                    {...provided.dragHandleProps}
-                    className={`bg-[#1E1E1E] rounded-2xl border p-5 shadow-lg transition-all h-full flex flex-col ${
-                        snapshot.isDragging ? "shadow-2xl ring-2 ring-[#F4B544] border-[#F4B544] scale-105 rotate-1" : "border-white/10 hover:border-[#D4AF37]/40"
-                    } ${isDelayed(order) ? "border-red-500/40 bg-red-950/10" : ""}`}
+                    className={`bg-[#181714] rounded-2xl border p-3.5 shadow-md transition-all flex flex-col gap-2.5 ${
+                        snapshot.isDragging 
+                            ? "shadow-2xl ring-2 ring-[#F4B544] border-[#F4B544] scale-105 rotate-1" 
+                            : "border-white/10 hover:border-[#F4B544]/40"
+                    } ${delayed ? "border-red-500/50 bg-red-950/15" : ""}`}
                 >
-                    <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2">
-                            <GripVertical className="h-4 w-4 text-gray-500 cursor-grab" />
-                            <span className="text-lg font-black text-[#F4B544] leading-none">#{order.order_number}</span>
+                    {/* Header Compacto: Drag, #Pedido, Tempo & Ações */}
+                    <div className="flex justify-between items-center gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <div {...provided.dragHandleProps} className="cursor-grab text-gray-500 hover:text-gray-300">
+                                <GripVertical className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="text-base font-black text-[#F4B544] leading-none tracking-tight">
+                                #{order.order_number}
+                            </span>
+                            <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-md bg-[#10100F] border border-white/10 text-gray-300">
+                                {order.delivery_type === "entrega" ? "🛵 Entrega" : "🏪 Balcão"}
+                            </span>
                         </div>
-                        
-                        <div className="flex items-center gap-1">
+
+                        <div className="flex items-center gap-1 shrink-0">
+                            {/* Indicador de Tempo Decorrido */}
+                            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center gap-1 ${
+                                delayed 
+                                    ? "bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse" 
+                                    : "bg-white/5 text-gray-400 border border-white/10"
+                            }`}>
+                                <Clock className="h-2.5 w-2.5" />
+                                {elapsed}
+                            </span>
+
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                title="Ver Comanda de Cozinha / Imprimir"
+                                title="Imprimir Comanda Térmica"
                                 onClick={() => setSelectedPrintOrder(order)}
-                                className="h-8 w-8 rounded-xl hover:bg-white/10 text-gray-300 hover:text-[#F4B544]"
+                                className="h-7 w-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-[#F4B544]"
                             >
-                                <Printer className="h-4 w-4" />
+                                <Printer className="h-3.5 w-3.5" />
                             </Button>
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-white/10 text-gray-300">
-                                        <MoreVertical className="h-4 w-4" />
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-white/10 text-gray-400">
+                                        <MoreVertical className="h-3.5 w-3.5" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-60 rounded-xl p-2 shadow-2xl bg-[#1A1A1A] border-white/10 text-white">
-                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-1.5">Mover Status</DropdownMenuLabel>
+                                <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-2xl bg-[#1A1A1A] border-white/10 text-white">
+                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-1">Ações</DropdownMenuLabel>
                                     <DropdownMenuItem 
-                                        onClick={() => updateStatus(order.id, "aguardando")}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-amber-400 focus:bg-amber-500/20 cursor-pointer"
+                                        onClick={() => setSelectedDetailOrder(order)}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#F4B544] focus:bg-[#F4B544]/20 cursor-pointer"
                                     >
-                                        <CircleEllipsis className="h-3.5 w-3.5" /> Pendente
+                                        <Package className="h-3.5 w-3.5" /> Ver Detalhes Completos
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 
-                                        onClick={() => updateStatus(order.id, "confirmado")}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-purple-400 focus:bg-purple-500/20 cursor-pointer"
+                                        onClick={() => setSelectedPrintOrder(order)}
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold focus:bg-white/10 cursor-pointer"
                                     >
-                                        <ThumbsUp className="h-3.5 w-3.5" /> Aceito
+                                        <Printer className="h-3.5 w-3.5" /> Imprimir Comanda
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem 
-                                        onClick={() => updateStatus(order.id, "preparando")}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-orange-400 focus:bg-orange-500/20 cursor-pointer"
-                                    >
-                                        <Timer className="h-3.5 w-3.5" /> Em Preparo
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem 
-                                        onClick={() => updateStatus(order.id, "saiu_entrega")}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-blue-400 focus:bg-blue-500/20 cursor-pointer"
-                                    >
-                                        <Truck className="h-3.5 w-3.5" /> Saiu para Entrega
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem 
-                                        onClick={() => updateStatus(order.id, "entregue")}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-400 focus:bg-emerald-500/20 cursor-pointer"
-                                    >
-                                        <CheckCircle2 className="h-3.5 w-3.5" /> Concluído
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem 
-                                        onClick={() => updateStatus(order.id, "cancelado")}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-red-400 focus:bg-red-500/20 cursor-pointer"
-                                    >
-                                        <XCircle className="h-3.5 w-3.5" /> Cancelar Pedido
-                                    </DropdownMenuItem>
-
-                                    <DropdownMenuSeparator className="my-1 mx-2 bg-white/10" />
-
-                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-1.5">Ações Rápidas</DropdownMenuLabel>
                                     <DropdownMenuItem 
                                         disabled={order.payment_status === "pago"}
                                         onClick={() => markPaid(order.id)}
                                         className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold focus:bg-emerald-500/20 text-emerald-400 cursor-pointer"
                                     >
-                                        <DollarSign className="h-4 w-4" /> Marcar como Pago
+                                        <DollarSign className="h-3.5 w-3.5" /> Marcar como Pago
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem 
-                                        onClick={() => setSelectedPrintOrder(order)}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold focus:bg-[#F4B544]/20 text-[#F4B544] cursor-pointer"
-                                    >
-                                        <Printer className="h-4 w-4" /> Imprimir Comanda
+                                    
+                                    <DropdownMenuSeparator className="my-1 bg-white/10" />
+                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-1">Mover Status</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => updateStatus(order.id, "aguardando")} className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-amber-400 focus:bg-amber-500/20 cursor-pointer">
+                                        <CircleEllipsis className="h-3 w-3" /> Pendente
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateStatus(order.id, "confirmado")} className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-purple-400 focus:bg-purple-500/20 cursor-pointer">
+                                        <ThumbsUp className="h-3 w-3" /> Aceito
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateStatus(order.id, "preparando")} className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-orange-400 focus:bg-orange-500/20 cursor-pointer">
+                                        <Timer className="h-3 w-3" /> Em Preparo
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateStatus(order.id, "saiu_entrega")} className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-blue-400 focus:bg-blue-500/20 cursor-pointer">
+                                        <Truck className="h-3 w-3" /> Saiu p/ Entrega
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateStatus(order.id, "entregue")} className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-emerald-400 focus:bg-emerald-500/20 cursor-pointer">
+                                        <CheckCircle2 className="h-3 w-3" /> Concluído
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateStatus(order.id, "cancelado")} className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-red-400 focus:bg-red-500/20 cursor-pointer">
+                                        <XCircle className="h-3 w-3" /> Cancelar
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator className="my-1 bg-white/10" />
                                     <DropdownMenuItem 
                                         onClick={() => setDeleteConfirm({ isOpen: true, orderId: order.id })}
-                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold focus:bg-red-500/30 text-red-300 cursor-pointer"
+                                        className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-bold text-red-300 focus:bg-red-500/30 cursor-pointer"
                                     >
-                                        <Package className="h-4 w-4" /> Excluir Registro
+                                        <Trash2 className="h-3.5 w-3.5" /> Excluir Registro
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
                     </div>
 
-                    <div className="mb-3">
-                        <div className="flex items-center justify-between">
-                            <p className="font-bold text-white text-sm truncate uppercase tracking-tight">{order.customer_name}</p>
-                            <span className="text-[10px] uppercase font-bold text-gray-400">
-                                {order.delivery_type === "entrega" ? "🛵 Entrega" : "🏪 Balcão"}
+                    {/* Cliente e Agendamento */}
+                    <div 
+                        onClick={() => setSelectedDetailOrder(order)}
+                        className="cursor-pointer group"
+                    >
+                        <div className="flex items-center justify-between gap-1">
+                            <span className="font-extrabold text-white text-xs truncate uppercase group-hover:text-[#F4B544] transition-colors">
+                                {order.customer_name}
+                            </span>
+                            <span className="text-[10px] font-bold text-[#B8B1A3] shrink-0">
+                                ({totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'})
                             </span>
                         </div>
 
-                        {(order.scheduled_date || order.scheduled_time) ? (
-                            <div className={`mt-2 py-1.5 px-2.5 rounded-lg border text-[11px] font-extrabold flex items-center gap-1.5 ${
+                        {(order.scheduled_date || order.scheduled_time) && (
+                            <div className={`mt-1.5 py-1 px-2 rounded-lg border text-[10px] font-extrabold flex items-center gap-1 ${
                                 isToday
-                                    ? "bg-[#F4B544]/25 border-[#F4B544] text-[#F4B544]"
+                                    ? "bg-[#F4B544]/20 border-[#F4B544] text-[#F4B544]"
                                     : "bg-purple-500/20 border-purple-500/40 text-purple-300"
                             }`}>
-                                <Calendar className="h-3.5 w-3.5 shrink-0" />
+                                <Calendar className="h-3 w-3 shrink-0" />
                                 <span>
                                     {isToday ? "HOJE" : (order.scheduled_date ? new Date(order.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : "")} 
                                     {order.scheduled_time ? ` às ${order.scheduled_time}h` : ""}
                                 </span>
                             </div>
-                        ) : (
-                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mt-1">
-                                <Clock className="h-3.5 w-3.5 text-[#F4B544]" />
-                                {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                            </div>
                         )}
-
-                        {/* Informação de Pagamento e Troco */}
-                        <div className="mt-2 text-[10px] text-gray-400 flex items-center justify-between">
-                            <span>
-                                {order.payment_method === "asaas" ? "💳 Online (Asaas)" :
-                                 order.payment_method === "cartao_maquininha" ? "💳 Maquininha" :
-                                 order.payment_method === "dinheiro" ? (
-                                     order.change_for ? `💵 Dinheiro (Troco p/ R$ ${Number(order.change_for).toFixed(2)})` : "💵 Dinheiro (Exato)"
-                                 ) : (order.payment_method || "Online")}
-                            </span>
-                        </div>
                     </div>
 
-                    <div className="space-y-1.5 mb-4 flex-1 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
-                        {(Array.isArray(order.items) ? order.items : []).map((item, i) => (
-                            <div key={i} className="text-xs flex justify-between leading-tight text-gray-300">
-                                <span>
-                                    <span className="text-[#F4B544] font-bold mr-1">{item.quantity}x</span> {item.name || item.product_name}
+                    {/* Lista Compacta de Itens (Máximo 2 com indicador +X) */}
+                    <div 
+                        onClick={() => setSelectedDetailOrder(order)}
+                        className="space-y-1 bg-[#10100F] p-2 rounded-xl border border-white/5 cursor-pointer hover:border-white/15 transition-all text-xs"
+                    >
+                        {itemsList.slice(0, 2).map((item, i) => (
+                            <div key={i} className="flex justify-between items-center text-[11px] leading-tight text-gray-300 truncate">
+                                <span className="truncate">
+                                    <strong className="text-[#F4B544] mr-1">{item.quantity}x</strong> {item.name || item.product_name}
                                 </span>
                             </div>
                         ))}
+
+                        {itemsList.length > 2 && (
+                            <span className="text-[10px] font-extrabold text-gray-400 block pt-0.5">
+                                + {itemsList.length - 2} outros {itemsList.length - 2 === 1 ? 'item' : 'itens'}...
+                            </span>
+                        )}
+
+                        {order.observation && (
+                            <span className="text-[10px] text-amber-300/90 font-medium block truncate pt-0.5">
+                                💬 "{order.observation}"
+                            </span>
+                        )}
                     </div>
 
-                    <div className="flex justify-between items-center pt-3 border-t border-white/10 mt-auto">
-                        <span className="text-lg font-black text-[#F4B544] tracking-tighter">R$ {order.total?.toFixed(2)}</span>
-                        <Badge className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border-none ${
-                            order.payment_status === "pago" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                    {/* Rodapé: Total e Status de Pagamento */}
+                    <div className="flex justify-between items-center pt-1 text-xs">
+                        <span className="font-black text-[#F4B544] text-base tracking-tight">
+                            R$ {(order.total || 0).toFixed(2).replace('.', ',')}
+                        </span>
+                        <Badge className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border-none ${
+                            order.payment_status === "pago" 
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
+                                : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                         }`}>
                             {order.payment_status === "pago" ? "PGTO PAGO" : "PGTO PENDENTE"}
                         </Badge>
                     </div>
 
-                    {/* Botão de Avanço Rápido de Status */}
+                    {/* Botão de Avanço Rápido de 1 Toque */}
                     {order.status === "aguardando" && (
                         <button
                             type="button"
                             onClick={() => updateStatus(order.id, "confirmado")}
-                            className="w-full mt-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="w-full py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                             <ThumbsUp className="h-3.5 w-3.5" /> Aceitar Pedido
                         </button>
@@ -249,7 +297,7 @@ const OrderCard = ({ order, index, markPaid, updateStatus, setConfirmModal, setD
                         <button
                             type="button"
                             onClick={() => updateStatus(order.id, "preparando")}
-                            className="w-full mt-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="w-full py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                             <Timer className="h-3.5 w-3.5" /> Iniciar Preparo
                         </button>
@@ -258,16 +306,16 @@ const OrderCard = ({ order, index, markPaid, updateStatus, setConfirmModal, setD
                         <button
                             type="button"
                             onClick={() => updateStatus(order.id, "saiu_entrega")}
-                            className="w-full mt-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="w-full py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >
-                            <Truck className="h-3.5 w-3.5" /> Despachar / Saiu p/ Entrega
+                            <Truck className="h-3.5 w-3.5" /> Despachar Pedido
                         </button>
                     )}
                     {order.status === "saiu_entrega" && (
                         <button
                             type="button"
                             onClick={() => updateStatus(order.id, "entregue")}
-                            className="w-full mt-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                             <CheckCircle2 className="h-3.5 w-3.5" /> Concluir Pedido
                         </button>
@@ -282,9 +330,11 @@ export default function AdminOrdersPage() {
     const [columns, setColumns] = useState({});
     const [activeTab, setActiveTab] = useState("all"); // Modo Kanban completo como padrão
     const [scheduleFilter, setScheduleFilter] = useState("today"); // 'today' (padrão: zera automaticamente a cada novo dia), 'all', 'future'
+    const [orderSearch, setOrderSearch] = useState("");
     const [loading, setLoading] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [selectedPrintOrder, setSelectedPrintOrder] = useState(null);
+    const [selectedDetailOrder, setSelectedDetailOrder] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, orderId: null });
     const { token } = useAuth();
@@ -523,7 +573,27 @@ export default function AdminOrdersPage() {
                         <p className="text-gray-400 text-sm font-medium mt-1">Painel operacional com separação automática de pedidos do dia e agendamentos futuros.</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                        {/* Busca Operacional Instantânea */}
+                        <div className="relative flex-1 sm:w-64 min-w-[200px]">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                            <Input 
+                                value={orderSearch}
+                                onChange={e => setOrderSearch(e.target.value)}
+                                placeholder="Buscar por #nº ou cliente..."
+                                className="pl-9 h-10 rounded-xl bg-[#141414] border-white/10 text-xs text-white focus:border-[#F4B544]"
+                            />
+                            {orderSearch && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setOrderSearch("")} 
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            )}
+                        </div>
+
                         {/* Seletor de Visão Operacional Inteligente */}
                         <div className="flex items-center gap-1 bg-[#141414] p-1 rounded-2xl border border-[#F4B544]/20 text-xs shadow-inner">
                             <button
@@ -650,7 +720,15 @@ export default function AdminOrdersPage() {
                                 {KANBAN_COLUMNS.map((colId) => {
                                     const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
                                     const StatusIcon = config.icon || CircleEllipsis;
-                                    const orders = filterOrdersBySchedule(columns[colId] || []);
+                                    let orders = filterOrdersBySchedule(columns[colId] || []);
+                                    if (orderSearch.trim()) {
+                                        const q = orderSearch.trim().toLowerCase();
+                                        orders = orders.filter(o => 
+                                            String(o.order_number).includes(q) ||
+                                            (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
+                                            (o.customer_phone && o.customer_phone.includes(q))
+                                        );
+                                    }
                                     
                                     return (
                                         <div key={colId} className="w-[330px] shrink-0 flex flex-col h-[calc(100vh-235px)] bg-[#141414] rounded-2xl border border-white/10 p-4 shadow-xl">
@@ -691,6 +769,7 @@ export default function AdminOrdersPage() {
                                                                     setConfirmModal={setConfirmModal}
                                                                     setDeleteConfirm={setDeleteConfirm}
                                                                     setSelectedPrintOrder={setSelectedPrintOrder}
+                                                                    setSelectedDetailOrder={setSelectedDetailOrder}
                                                                 />
                                                             ))
                                                         )}
@@ -708,7 +787,15 @@ export default function AdminOrdersPage() {
                         <div className="flex-1 w-full overflow-y-auto custom-scrollbar pb-10">
                             <Droppable droppableId={activeTab}>
                                 {(provided) => {
-                                    const filteredList = filterOrdersBySchedule(columns[activeTab] || []);
+                                    let filteredList = filterOrdersBySchedule(columns[activeTab] || []);
+                                    if (orderSearch.trim()) {
+                                        const q = orderSearch.trim().toLowerCase();
+                                        filteredList = filteredList.filter(o => 
+                                            String(o.order_number).includes(q) ||
+                                            (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
+                                            (o.customer_phone && o.customer_phone.includes(q))
+                                        );
+                                    }
                                     return (
                                         <div 
                                             {...provided.droppableProps} 
@@ -731,6 +818,7 @@ export default function AdminOrdersPage() {
                                                         setConfirmModal={setConfirmModal}
                                                         setDeleteConfirm={setDeleteConfirm}
                                                         setSelectedPrintOrder={setSelectedPrintOrder}
+                                                        setSelectedDetailOrder={setSelectedDetailOrder}
                                                     />
                                                 ))
                                             )}
@@ -973,6 +1061,323 @@ export default function AdminOrdersPage() {
                     </div>
                 </>
             )}
+
+            {/* Modal de Detalhes Completos do Pedido */}
+            <Dialog open={Boolean(selectedDetailOrder)} onOpenChange={() => setSelectedDetailOrder(null)}>
+                <DialogContent className="max-w-2xl bg-[#12110E] border border-[#F4B544]/30 text-white rounded-3xl p-0 shadow-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
+                    {selectedDetailOrder && (() => {
+                        const ord = selectedDetailOrder;
+                        const cleanPhone = (ord.customer_phone || "").replace(/\D/g, "");
+                        const waNumber = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+                        const statusInfo = statusConfig[ord.status] || { label: ord.status, color: "text-gray-300" };
+                        const items = Array.isArray(ord.items) ? ord.items : [];
+
+                        const waMessage = encodeURIComponent(
+                            `Olá *${ord.customer_name}*! Tudo bem? Acompanhe seu pedido *#${ord.order_number}* no JOHB Café & Salgados:\n\n` +
+                            `*Status Atual:* ${statusInfo.label}\n` +
+                            `*Total:* R$ ${(ord.total || 0).toFixed(2).replace('.', ',')}\n\n` +
+                            `Qualquer dúvida estamos à disposição!`
+                        );
+
+                        return (
+                            <div className="flex flex-col">
+                                {/* Header do Modal */}
+                                <div className="p-6 bg-[#181714] border-b border-white/10 rounded-t-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                    <div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-2xl font-black text-[#F4B544] tracking-tight">
+                                                Pedido #{ord.order_number}
+                                            </span>
+                                            <Badge className={`px-2.5 py-0.5 rounded-lg text-xs font-black uppercase ${
+                                                ord.status === "entregue" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
+                                                ord.status === "preparando" ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" :
+                                                ord.status === "saiu_entrega" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" :
+                                                ord.status === "cancelado" ? "bg-red-500/20 text-red-400 border border-red-500/30" :
+                                                "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                            }`}>
+                                                {statusInfo.label}
+                                            </Badge>
+                                            <span className="text-xs uppercase font-extrabold px-2 py-0.5 rounded-md bg-black/40 border border-white/10 text-gray-300">
+                                                {ord.delivery_type === "entrega" ? "🛵 Entrega" : "🏪 Balcão / Retirada"}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                                            <span>📅 Criado em {new Date(ord.created_at || new Date()).toLocaleString("pt-BR")}</span>
+                                            <span>•</span>
+                                            <span className="text-[#F4B544] font-bold">⏱️ Há {getElapsedTime(ord.created_at)}</span>
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            onClick={() => setSelectedPrintOrder(ord)}
+                                            className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl h-9 gap-1.5 cursor-pointer border border-white/15"
+                                        >
+                                            <Printer className="h-4 w-4 text-[#F4B544]" /> Imprimir
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="p-6 space-y-6">
+                                    {/* Alerta de Agendamento */}
+                                    {(ord.scheduled_date || ord.scheduled_time) && (
+                                        <div className="p-3.5 rounded-2xl bg-[#F4B544]/15 border border-[#F4B544]/30 flex items-center gap-3">
+                                            <Calendar className="h-5 w-5 text-[#F4B544] shrink-0" />
+                                            <div>
+                                                <p className="text-xs font-black text-[#F4B544] uppercase tracking-wide">Pedido com Entrega / Retirada Agendada</p>
+                                                <p className="text-xs text-gray-200 mt-0.5">
+                                                    Data: <strong>{ord.scheduled_date ? new Date(ord.scheduled_date + 'T00:00:00').toLocaleDateString("pt-BR") : "Hoje"}</strong>
+                                                    {ord.scheduled_time && <span> às <strong>{ord.scheduled_time}h</strong></span>}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Dados do Cliente */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="p-4 rounded-2xl bg-[#181714] border border-white/10 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
+                                                    <User className="h-3.5 w-3.5 text-[#F4B544]" /> Cliente
+                                                </span>
+                                                {cleanPhone && (
+                                                    <a
+                                                        href={`https://wa.me/${waNumber}?text=${waMessage}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-[11px] font-extrabold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/30"
+                                                    >
+                                                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                                                    </a>
+                                                )}
+                                            </div>
+                                            <p className="text-base font-extrabold text-white">{ord.customer_name}</p>
+                                            <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                                                <Phone className="h-3.5 w-3.5 text-[#F4B544]" /> {ord.customer_phone || "Não informado"}
+                                            </p>
+                                        </div>
+
+                                        <div className="p-4 rounded-2xl bg-[#181714] border border-white/10 space-y-2">
+                                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
+                                                <MapPin className="h-3.5 w-3.5 text-[#F4B544]" /> Local de Entrega
+                                            </span>
+                                            {ord.delivery_type === "entrega" ? (
+                                                <div className="text-xs text-gray-300 space-y-1">
+                                                    <p className="font-bold text-white">{ord.address || "Endereço não informado"}</p>
+                                                    {ord.neighborhood && <p className="text-gray-400">Bairro: <strong className="text-gray-200">{ord.neighborhood}</strong></p>}
+                                                    {ord.complement && <p className="text-gray-400">Compl: <strong className="text-gray-200">{ord.complement}</strong></p>}
+                                                    {ord.reference && <p className="text-gray-400">Ref: <strong className="text-gray-200">{ord.reference}</strong></p>}
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-gray-300">
+                                                    <p className="font-bold text-amber-300">🏪 Retirada no Balcão da Loja</p>
+                                                    <p className="text-gray-400 text-[11px] mt-0.5">O cliente irá buscar o pedido no balcão.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Itens do Pedido */}
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs font-extrabold uppercase tracking-widest text-gray-400">
+                                                Itens do Pedido ({items.length})
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-2.5">
+                                            {items.map((item, idx) => (
+                                                <div key={idx} className="p-3.5 rounded-2xl bg-[#181714] border border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                                    <div className="space-y-1 flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="bg-[#F4B544]/20 text-[#F4B544] font-black text-xs px-2 py-0.5 rounded-lg border border-[#F4B544]/30">
+                                                                {item.quantity}x
+                                                            </span>
+                                                            <span className="font-extrabold text-sm text-white">
+                                                                {item.name || item.product_name}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Complementos */}
+                                                        {Array.isArray(item.complements) && item.complements.length > 0 && (
+                                                            <div className="pl-8 text-xs text-gray-400 space-y-0.5">
+                                                                {item.complements.map((c, cIdx) => (
+                                                                    <p key={cIdx} className="text-[11px] text-[#B8B1A3]">
+                                                                        + {c.name || c} {c.price ? `(R$ ${Number(c.price).toFixed(2).replace('.', ',')})` : ''}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {item.observation && (
+                                                            <p className="pl-8 text-[11px] text-amber-300 italic">
+                                                                Obs: "{item.observation}"
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="text-right sm:self-center self-end">
+                                                        <span className="text-sm font-black text-white">
+                                                            R$ {((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',')}
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-500 block">
+                                                            (R$ {(item.price || 0).toFixed(2).replace('.', ',')} un.)
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Observação Geral */}
+                                    {ord.observation && (
+                                        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-1">
+                                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
+                                                <AlertCircle className="h-3.5 w-3.5" /> Observação do Pedido
+                                            </span>
+                                            <p className="text-xs text-amber-200 font-medium">
+                                                "{ord.observation}"
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Resumo Financeiro e Pagamento */}
+                                    <div className="p-4 rounded-2xl bg-[#181714] border border-white/10 space-y-3">
+                                        <div className="flex justify-between items-center text-xs text-gray-400">
+                                            <span>Subtotal dos Itens:</span>
+                                            <span className="text-white font-bold">R$ {Number(ord.subtotal || ord.total).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+
+                                        {Number(ord.delivery_fee) > 0 && (
+                                            <div className="flex justify-between items-center text-xs text-gray-400">
+                                                <span>Taxa de Entrega:</span>
+                                                <span className="text-white font-bold">R$ {Number(ord.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                            </div>
+                                        )}
+
+                                        {Number(ord.discount_amount) > 0 && (
+                                            <div className="flex justify-between items-center text-xs text-emerald-400">
+                                                <span>Desconto Aplicado {ord.coupon_code ? `(${ord.coupon_code})` : ''}:</span>
+                                                <span className="font-bold">- R$ {Number(ord.discount_amount).toFixed(2).replace('.', ',')}</span>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between items-center pt-2 border-t border-white/10 text-base font-black">
+                                            <span className="text-white">Total do Pedido:</span>
+                                            <span className="text-[#F4B544] text-xl">R$ {Number(ord.total).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-white/10 flex flex-wrap justify-between items-center gap-2 text-xs">
+                                            <div className="space-y-0.5">
+                                                <span className="text-[10px] uppercase font-bold text-gray-400 block">Forma de Pagamento</span>
+                                                <span className="font-extrabold text-white">
+                                                    {ord.payment_method === "asaas" ? "💳 Pix / Cartão Online (Asaas)" :
+                                                     ord.payment_method === "cartao_maquininha" ? "💳 Cartão na Maquininha" :
+                                                     ord.payment_method === "dinheiro" ? (
+                                                         ord.change_for ? `💵 Dinheiro (Troco p/ R$ ${Number(ord.change_for).toFixed(2).replace('.', ',')})` : "💵 Dinheiro (Valor Exato)"
+                                                     ) : (ord.payment_method || "Não informado")}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <Badge className={`px-3 py-1 rounded-xl text-xs font-black uppercase ${
+                                                    ord.payment_status === "pago" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                                }`}>
+                                                    {ord.payment_status === "pago" ? "PAGO" : "PENDENTE"}
+                                                </Badge>
+
+                                                {ord.payment_status !== "pago" && (
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            markPaid(ord.id);
+                                                            setSelectedDetailOrder(prev => ({ ...prev, payment_status: "pago" }));
+                                                        }}
+                                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl h-8 gap-1 shadow-md cursor-pointer"
+                                                    >
+                                                        <DollarSign className="h-3.5 w-3.5" /> Marcar Pago
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Barra de Ações Rápidas no Rodapé */}
+                                <div className="p-4 bg-[#181714] border-t border-white/10 rounded-b-3xl flex flex-wrap justify-between items-center gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-400 font-bold">Mudar Status:</span>
+                                        <select
+                                            value={ord.status}
+                                            onChange={(e) => {
+                                                const newStatus = e.target.value;
+                                                updateStatus(ord.id, newStatus);
+                                                setSelectedDetailOrder(prev => ({ ...prev, status: newStatus }));
+                                            }}
+                                            className="bg-[#10100F] text-white border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold focus:border-[#F4B544] outline-none cursor-pointer"
+                                        >
+                                            <option value="aguardando">⏳ Pendente</option>
+                                            <option value="confirmado">👍 Aceito</option>
+                                            <option value="preparando">⏱️ Em Preparo</option>
+                                            <option value="saiu_entrega">🛵 Saiu p/ Entrega</option>
+                                            <option value="entregue">✅ Concluído</option>
+                                            <option value="cancelado">❌ Cancelado</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        {ord.status === "aguardando" && (
+                                            <Button
+                                                onClick={() => {
+                                                    updateStatus(ord.id, "confirmado");
+                                                    setSelectedDetailOrder(prev => ({ ...prev, status: "confirmado" }));
+                                                }}
+                                                className="bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs rounded-xl h-9 px-4 gap-1.5 cursor-pointer shadow-md"
+                                            >
+                                                <ThumbsUp className="h-3.5 w-3.5" /> Aceitar Pedido
+                                            </Button>
+                                        )}
+                                        {ord.status === "confirmado" && (
+                                            <Button
+                                                onClick={() => {
+                                                    updateStatus(ord.id, "preparando");
+                                                    setSelectedDetailOrder(prev => ({ ...prev, status: "preparando" }));
+                                                }}
+                                                className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold text-xs rounded-xl h-9 px-4 gap-1.5 cursor-pointer shadow-md"
+                                            >
+                                                <Timer className="h-3.5 w-3.5" /> Iniciar Preparo
+                                            </Button>
+                                        )}
+                                        {ord.status === "preparando" && (
+                                            <Button
+                                                onClick={() => {
+                                                    updateStatus(ord.id, "saiu_entrega");
+                                                    setSelectedDetailOrder(prev => ({ ...prev, status: "saiu_entrega" }));
+                                                }}
+                                                className="bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl h-9 px-4 gap-1.5 cursor-pointer shadow-md"
+                                            >
+                                                <Truck className="h-3.5 w-3.5" /> Despachar Pedido
+                                            </Button>
+                                        )}
+                                        {ord.status === "saiu_entrega" && (
+                                            <Button
+                                                onClick={() => {
+                                                    updateStatus(ord.id, "entregue");
+                                                    setSelectedDetailOrder(prev => ({ ...prev, status: "entregue" }));
+                                                }}
+                                                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl h-9 px-4 gap-1.5 cursor-pointer shadow-md"
+                                            >
+                                                <CheckCircle2 className="h-3.5 w-3.5" /> Concluir Pedido
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </DialogContent>
+            </Dialog>
 
             <ConfirmModal 
                 isOpen={confirmModal.isOpen} 

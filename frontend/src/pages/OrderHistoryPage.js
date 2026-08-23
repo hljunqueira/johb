@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export default function OrderHistoryPage() {
         if (saved && saved.replace(/\D/g, "").length >= 8) {
             searchOrders(saved);
         }
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const repeatOrder = (order) => {
         let itemsList = order.items;

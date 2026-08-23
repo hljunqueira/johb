@@ -17,10 +17,6 @@ const CAROUSEL_SLIDES = [
     {
         src: "/joelhinho.jpg",
         alt: "Joelhinhos Artesanais JOHB"
-    },
-    {
-        src: "/minipizza.jpg",
-        alt: "Mini Pizzas Artesanais JOHB"
     }
 ];
 

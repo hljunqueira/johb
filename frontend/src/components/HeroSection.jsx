@@ -170,10 +170,7 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
 
                         <div className="flex flex-wrap gap-2.5 pt-1">
                             <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
-                                🥐 Joelhinhos
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
-                                🍕 Mini Pizzas
+                                🥐 Joelhinhos & Folhados
                             </span>
                             <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171612] border border-[#F4B544]/20 text-xs font-semibold text-[#FFFAF0]">
                                 🥟 Esfirras & Coxinhas

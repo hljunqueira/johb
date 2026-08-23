@@ -18,8 +18,8 @@ const API = `${(process.env.REACT_APP_BACKEND_URL || '')}/api`;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 const getImageUrl = (url) => {
-    if (!url) return "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=200";
-    if (url.startsWith("http")) return url;
+    if (!url) return "/logo-semfundo.png";
+    if (url.startsWith("http") || url.startsWith("/")) return url;
     return `${BACKEND_URL}${url}`;
 };
 
@@ -168,14 +168,21 @@ export default function CheckoutPage() {
     }, [scheduledTime, availableTimes]);
 
     // Cálculo da taxa de entrega
-    const selectedNeighborhoodObj = neighborhoodsList.find(n => n.name === neighborhood);
-    const baseFee = selectedNeighborhoodObj?.fee ?? Number(deliverySettings?.delivery_fee ?? 5);
+    const selectedNeighborhoodObj = neighborhoodsList.find(
+        n => (n.name || "").trim().toLowerCase() === (neighborhood || "").trim().toLowerCase()
+    );
+    const baseFee = selectedNeighborhoodObj?.fee != null ? Number(selectedNeighborhoodObj.fee) : Number(deliverySettings?.delivery_fee ?? 5);
     const minFree = Number(deliverySettings?.min_free_delivery ?? 0);
     const isFreeDeliveryEligible = minFree > 0 && total >= minFree;
 
     const finalDeliveryFee = deliveryType === "entrega" 
         ? (isFreeDeliveryEligible ? 0 : baseFee) 
         : 0;
+
+    // Validação de Pedido Mínimo
+    const minOrderValue = Number(deliverySettings?.min_order_value ?? 0);
+    const isBelowMinOrder = minOrderValue > 0 && total < minOrderValue;
+    const diffToMinOrder = minOrderValue > 0 ? Math.max(0, minOrderValue - total) : 0;
 
     // Desconto de cupom
     const discountAmount = appliedCoupon?.calculated_discount || 0;
@@ -224,6 +231,11 @@ export default function CheckoutPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (isBelowMinOrder) {
+            toast.error(`O valor mínimo para pedidos é de R$ ${minOrderValue.toFixed(2).replace(".", ",")}. Faltam R$ ${diffToMinOrder.toFixed(2).replace(".", ",")}.`);
+            return;
+        }
 
         if (!name.trim()) {
             toast.error("Por favor, informe seu nome.");
@@ -748,11 +760,14 @@ export default function CheckoutPage() {
                             <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                                 {items.map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl bg-[#171612] border border-[#F4B544]/10">
-                                        <img
-                                            src={getImageUrl(item.image_url)}
-                                            alt={item.name}
-                                            className="w-12 h-12 rounded-lg object-cover border border-[#F4B544]/20"
-                                        />
+                                        <div className="w-12 h-12 rounded-lg bg-[#050505] border border-[#F4B544]/20 flex items-center justify-center p-1 overflow-hidden shrink-0">
+                                            <img
+                                                src={getImageUrl(item.image_url)}
+                                                alt={item.name}
+                                                onError={(e) => { e.currentTarget.src = "/logo-semfundo.png"; }}
+                                                className="w-full h-full object-contain"
+                                            />
+                                        </div>
                                         <div className="flex-1 min-w-0">
                                             <span className="block font-medium text-xs text-[#FFFAF0] truncate">
                                                 {item.quantity}x {item.name || item.product_name}
@@ -850,10 +865,22 @@ export default function CheckoutPage() {
                                 </div>
                             </div>
 
+                            {/* Alerta de Pedido Mínimo se aplicável */}
+                            {isBelowMinOrder && (
+                                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1 text-xs text-amber-300">
+                                    <span className="font-bold flex items-center gap-1.5">
+                                        <AlertCircle className="w-4 h-4 text-amber-400" /> Pedido Mínimo: R$ {minOrderValue.toFixed(2).replace(".", ",")}
+                                    </span>
+                                    <p className="text-[11px] text-[#B8B1A3]">
+                                        Adicione mais <strong className="text-amber-400">R$ {diffToMinOrder.toFixed(2).replace(".", ",")}</strong> em itens para finalizar o pedido.
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Botão de Finalização */}
                             <button
                                 type="submit"
-                                disabled={loading || (isScheduled && (!currentSelectedDate || !currentSelectedTime))}
+                                disabled={loading || isBelowMinOrder || (isScheduled && (!currentSelectedDate || !currentSelectedTime))}
                                 className="w-full py-4 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
                             >
                                 {loading ? (
@@ -864,11 +891,13 @@ export default function CheckoutPage() {
                                 ) : (
                                     <>
                                         <span>
-                                            {paymentMethod === "asaas" 
-                                                ? "Ir para Pagamento Online" 
-                                                : isScheduled 
-                                                    ? (currentSelectedTime ? "Confirmar Pedido Agendado" : "Selecione um Horário Válido")
-                                                    : "Confirmar Pedido Agora"
+                                            {isBelowMinOrder 
+                                                ? `Mínimo: R$ ${minOrderValue.toFixed(2).replace(".", ",")} (Faltam R$ ${diffToMinOrder.toFixed(2).replace(".", ",")})`
+                                                : paymentMethod === "asaas" 
+                                                    ? "Ir para Pagamento Online" 
+                                                    : isScheduled 
+                                                        ? (currentSelectedTime ? "Confirmar Pedido Agendado" : "Selecione um Horário Válido")
+                                                        : "Confirmar Pedido Agora"
                                             }
                                         </span>
                                         <ArrowLeft className="w-4 h-4 rotate-180" />
