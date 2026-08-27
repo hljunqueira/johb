@@ -19,21 +19,21 @@ const apiClient = axios.create({
 // Error message mapping
 const ERROR_MESSAGES = {
     // HTTP Status codes
-    400: 'Dados inválidos. Verifique as informações e tente novamente.',
-    401: 'Sessão expirada. Faça login novamente.',
+    400: 'Dados inválidos. Por favor, verifique as informações e tente novamente.',
+    401: 'Sessão expirada. Por favor, faça login novamente.',
     403: 'Você não tem permissão para realizar esta ação.',
-    404: 'Recurso não encontrado.',
-    409: 'Conflito de dados. O recurso já existe.',
-    422: 'Dados inválidos. Verifique os campos obrigatórios.',
-    429: 'Muitas requisições. Aguarde um momento e tente novamente.',
-    500: 'Erro interno do servidor. Tente novamente mais tarde.',
-    502: 'Serviço temporariamente indisponível.',
-    503: 'Serviço em manutenção. Tente novamente mais tarde.',
+    404: 'Item ou página não encontrada.',
+    409: 'Já existe um registro com estes dados.',
+    422: 'Preencha todos os campos obrigatórios corretamente.',
+    429: 'Muitas tentativas simultâneas. Por favor, aguarde alguns segundos.',
+    500: 'O servidor está temporariamente ocupado. Por favor, tente novamente em instantes.',
+    502: 'Serviço temporariamente indisponível. Estamos restabelecendo a conexão.',
+    503: 'Sistema em manutenção rápida. Por favor, tente em instantes.',
     
     // Network errors
-    NETWORK_ERROR: 'Erro de conexão. Verifique sua internet.',
-    TIMEOUT: 'A requisição demorou muito. Tente novamente.',
-    UNKNOWN: 'Ocorreu um erro inesperado. Tente novamente.',
+    NETWORK_ERROR: 'Não foi possível conectar ao servidor. Verifique sua conexão com a internet.',
+    TIMEOUT: 'O servidor demorou para responder. Por favor, tente novamente em instantes.',
+    UNKNOWN: 'Ocorreu uma instabilidade temporária. Por favor, tente novamente.',
 };
 
 /**
@@ -42,8 +42,8 @@ const ERROR_MESSAGES = {
 export function getErrorMessage(error) {
     if (!error) return ERROR_MESSAGES.UNKNOWN;
     
-    // Network error (no response)
-    if (error.code === 'ECONNABORTED') {
+    // Network error / Timeout (no response or timed out)
+    if (error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'))) {
         return ERROR_MESSAGES.TIMEOUT;
     }
     

@@ -1448,51 +1448,48 @@ function OptionalsTab({ headers, setConfirmModal }) {
                 </div>
             )}
 
-            {/* Modal de Complemento */}
+            {/* Modal de Complemento (Compacto e Dark) */}
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="rounded-2xl max-w-3xl bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="font-extrabold text-white text-lg">{editing ? "Editar Complemento" : "Novo Complemento"}</DialogTitle>
+                <DialogContent className="rounded-2xl max-w-xl max-h-[90vh] overflow-y-auto bg-[#141414] text-white border border-[#F4B544]/30 shadow-2xl p-5">
+                    <DialogHeader className="pb-1 border-b border-white/10">
+                        <DialogTitle className="font-extrabold text-white text-base">{editing ? "Editar Complemento" : "Novo Complemento"}</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={save} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
+                    <form onSubmit={save} className="space-y-3.5 pt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
                                 <Label className="text-gray-300 font-medium text-xs">Foto do Complemento</Label>
                                 <div 
-                                    className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-[#F4B544]/50 hover:bg-white/5 transition-all cursor-pointer relative bg-[#1E1E1E]"
+                                    className="border-2 border-dashed border-white/15 rounded-xl p-4 text-center hover:border-[#F4B544]/50 hover:bg-white/5 transition-all cursor-pointer relative bg-[#1A1A1A] flex flex-col items-center justify-center min-h-[140px]"
                                     onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-[#F4B544]", "bg-[#F4B544]/5"); }}
                                     onDragLeave={e => { e.currentTarget.classList.remove("border-[#F4B544]", "bg-[#F4B544]/5"); }}
                                     onDrop={handleImageDrop}
                                     onClick={() => document.getElementById("comp-image-upload").click()}
                                 >
                                     {form.image_url ? (
-                                        <div className="relative">
-                                            <img src={form.image_url.startsWith("http") ? form.image_url : `${BACKEND_URL}${form.image_url}`} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
-                                            <button type="button" onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, image_url: "" })); }} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
-                                                <X className="h-4 w-4" />
+                                        <div className="relative w-full">
+                                            <img src={form.image_url.startsWith("http") ? form.image_url : `${BACKEND_URL}${form.image_url}`} alt="Preview" className="w-full h-28 object-cover rounded-lg" />
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, image_url: "" })); }} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md">
+                                                <X className="h-3.5 w-3.5" />
                                             </button>
                                         </div>
                                     ) : (
-                                        <div className="space-y-2">
-                                            <div className="mx-auto w-16 h-16 rounded-full bg-[#141414] border border-white/10 flex items-center justify-center">
-                                                <Image className="h-8 w-8 text-gray-400" />
+                                        <div className="space-y-1">
+                                            <div className="mx-auto w-10 h-10 rounded-full bg-[#10100F] border border-white/10 flex items-center justify-center">
+                                                <Image className="h-5 w-5 text-gray-400" />
                                             </div>
-                                            <p className="text-sm text-gray-300">Arraste uma imagem aqui</p>
-                                            <p className="text-xs text-gray-500">ou clique para selecionar</p>
+                                            <p className="text-xs text-gray-300 font-medium">Clique para selecionar imagem</p>
+                                            <p className="text-[10px] text-gray-500">JPG, PNG, WEBP (max 2MB)</p>
                                         </div>
                                     )}
                                     <input id="comp-image-upload" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                                 </div>
-                                <div className="text-xs text-gray-500 text-center">Formatos: JPG, PNG, WEBP (max 2MB)</div>
                             </div>
                             
-                            <div className="space-y-4">
-                                <div><Label className="text-gray-300 font-medium text-xs">Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required data-testid="comp-name" placeholder="Ex: Catupiry Extra" /></div>
-                                <div><Label className="text-gray-300 font-medium text-xs">Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required data-testid="comp-price" /></div>
-                                <div><Label className="text-gray-300 font-medium text-xs">Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="comp-desc" placeholder="Ex: Porção adicional de 50g" /></div>
-                                
+                            <div className="space-y-2.5">
+                                <div><Label className="text-gray-300 font-medium text-xs">Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" required data-testid="comp-name" placeholder="Ex: Catupiry Extra" /></div>
+                                <div><Label className="text-gray-300 font-medium text-xs">Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" required data-testid="comp-price" placeholder="0.00" /></div>
                                 <div><Label className="text-gray-300 font-medium text-xs">Categoria</Label>
-                                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full mt-1 rounded-xl border border-white/10 bg-[#1E1E1E] text-white px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
+                                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full mt-1 h-9 rounded-xl border border-white/10 bg-[#1A1A1A] text-white px-3 text-xs focus:border-[#F4B544] focus:outline-none cursor-pointer">
                                         {sortedCategories.map(cat => (
                                             <option key={cat.key} value={cat.key} className="bg-[#10100F] text-white">{cat.icon} {cat.name}</option>
                                         ))}
@@ -1500,30 +1497,36 @@ function OptionalsTab({ headers, setConfirmModal }) {
                                 </div>
                             </div>
                         </div>
+
+                        <div><Label className="text-gray-300 font-medium text-xs">Descrição (opcional)</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" data-testid="comp-desc" placeholder="Ex: Porção adicional de 50g" /></div>
                         
-                        <div className="flex items-center gap-3 p-4 bg-[#1E1E1E] rounded-xl border border-[#F4B544]/30">
-                            <Switch checked={form.required} onCheckedChange={v => setForm(f => ({ ...f, required: v }))} />
-                            <div className="flex flex-col">
-                                <span className="text-sm font-bold text-white">Obrigatório no pedido</span>
-                                <span className="text-xs text-gray-400">Cliente deve selecionar pelo menos um item desta categoria</span>
+                        <div className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-xl border border-white/10">
+                            <div className="space-y-0.5">
+                                <span className="text-xs font-bold text-white block">Obrigatório no pedido</span>
+                                <span className="text-[10px] text-gray-400 block">Cliente deve selecionar pelo menos um item desta categoria</span>
                             </div>
+                            <Switch checked={form.required} onCheckedChange={v => setForm(f => ({ ...f, required: v }))} />
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <Label className="text-xs font-medium text-gray-300">Mínimo para selecionar</Label>
-                                <Input type="number" min="0" value={form.min_select || 0} onChange={e => setForm(f => ({ ...f, min_select: parseInt(e.target.value) || 0 }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" />
+                                <Input type="number" min="0" value={form.min_select || 0} onChange={e => setForm(f => ({ ...f, min_select: parseInt(e.target.value) || 0 }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" />
                             </div>
                             <div>
                                 <Label className="text-xs font-medium text-gray-300">Máximo permitido</Label>
-                                <Input type="number" min="1" value={form.max_select || 1} onChange={e => setForm(f => ({ ...f, max_select: parseInt(e.target.value) || 1 }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" />
+                                <Input type="number" min="1" value={form.max_select || 1} onChange={e => setForm(f => ({ ...f, max_select: parseInt(e.target.value) || 1 }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" />
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm font-semibold text-gray-300">Ativo</span></div>
-                        <div className="flex gap-3 pt-3 border-t border-white/10">
-                            <Button type="button" variant="ghost" className="flex-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10" onClick={() => setShowForm(false)}>Cancelar</Button>
-                            <Button type="submit" className="flex-1 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all" data-testid="save-comp-btn">{editing ? "Atualizar" : "Criar"}</Button>
+                        <div className="flex items-center justify-between p-2.5 bg-[#1A1A1A] rounded-xl border border-white/10">
+                            <span className="text-xs font-semibold text-gray-300">Complemento Ativo no Cardápio</span>
+                            <Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} />
+                        </div>
+
+                        <div className="flex gap-2.5 pt-2 border-t border-white/10">
+                            <Button type="button" variant="ghost" className="flex-1 h-10 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs font-bold" onClick={() => setShowForm(false)}>Cancelar</Button>
+                            <Button type="submit" className="flex-1 h-10 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all text-xs" data-testid="save-comp-btn">{editing ? "Atualizar" : "Criar Complemento"}</Button>
                         </div>
                     </form>
                 </DialogContent>
@@ -1595,59 +1598,55 @@ function OptionalsTab({ headers, setConfirmModal }) {
                 </DialogContent>
             </Dialog>
             
-            {/* Modal de Categoria (Nova/Editar) */}
+            {/* Modal de Categoria (Nova/Editar - Compacto & Dark) */}
             <Dialog open={showCategoryForm} onOpenChange={setShowCategoryForm}>
-                <DialogContent className="rounded-2xl max-w-lg bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="font-extrabold text-white text-lg">{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
+                <DialogContent className="rounded-2xl max-w-md bg-[#141414] text-white border border-[#F4B544]/30 shadow-2xl p-5">
+                    <DialogHeader className="pb-1 border-b border-white/10">
+                        <DialogTitle className="font-extrabold text-white text-base">{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
                     </DialogHeader>
                     
-                    <form onSubmit={saveCategory} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                    <form onSubmit={saveCategory} className="space-y-3 pt-1">
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <Label className="text-xs font-medium text-gray-300">Código da categoria*</Label>
-                                <Input value={categoryForm.key} onChange={e => setCategoryForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="ex: molhos_especiais" required disabled={!!editingCategory} />
-                                <p className="text-[10px] text-gray-500 mt-1">Usado internamente, não pode ter espaços</p>
+                                <Label className="text-xs font-medium text-gray-300">Código interno*</Label>
+                                <Input value={categoryForm.key} onChange={e => setCategoryForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" placeholder="ex: salgados_assados" required disabled={!!editingCategory} />
+                                <p className="text-[9px] text-gray-500 mt-0.5">Sem espaços/acentos</p>
                             </div>
                             <div>
-                                <Label className="text-xs font-medium text-gray-300">Nome da categoria*</Label>
-                                <Input value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="ex: Molhos & Acompanhamentos" required />
-                                <p className="text-[10px] text-gray-500 mt-1">Nome exibido no cardápio</p>
+                                <Label className="text-xs font-medium text-gray-300">Nome exibido*</Label>
+                                <Input value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" placeholder="ex: Salgados Assados" required />
+                                <p className="text-[9px] text-gray-500 mt-0.5">Exibido no cardápio</p>
                             </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <Label className="text-xs font-medium text-gray-300">Ícone (emoji)</Label>
-                                <Input value={categoryForm.icon} onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544] text-lg" placeholder="🥟" maxLength={2} />
-                                <p className="text-[10px] text-gray-500 mt-1">Emoji que aparece antes do nome</p>
+                                <Input value={categoryForm.icon} onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-sm text-center" placeholder="🥐" maxLength={2} />
                             </div>
                             <div>
-                                <Label className="text-xs font-medium text-gray-300">Posição na lista</Label>
+                                <Label className="text-xs font-medium text-gray-300">Posição / Ordem</Label>
                                 <Input 
                                     type="number"
                                     min="0"
                                     value={categoryForm.order_index} 
                                     onChange={e => setCategoryForm(f => ({ ...f, order_index: parseInt(e.target.value) || 0 }))} 
-                                    className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" 
+                                    className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" 
                                     placeholder="0"
                                 />
-                                <p className="text-[10px] text-gray-500 mt-1">0 = primeiro, 1 = segundo, etc.</p>
                             </div>
                         </div>
                         
                         {/* Obrigatoriedade */}
-                        <div className="flex items-center gap-3 p-3.5 bg-[#1E1E1E] rounded-xl border border-white/10">
-                            <div className="flex items-center gap-3">
-                                <input 
-                                    type="checkbox" 
-                                    id="cat-required"
-                                    checked={categoryForm.required}
-                                    onChange={e => setCategoryForm(f => ({ ...f, required: e.target.checked }))}
-                                    className="h-4 w-4 rounded border-white/20 bg-[#141414] text-[#F4B544] accent-[#F4B544] cursor-pointer"
-                                />
-                                <Label htmlFor="cat-required" className="text-sm font-bold text-white cursor-pointer">Categoria obrigatória</Label>
+                        <div className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-xl border border-white/10">
+                            <div className="space-y-0.5">
+                                <span className="text-xs font-bold text-white block">Categoria obrigatória</span>
+                                <span className="text-[10px] text-gray-400 block">Exige que o cliente escolha ao menos 1 item</span>
                             </div>
+                            <Switch 
+                                checked={categoryForm.required} 
+                                onCheckedChange={v => setCategoryForm(f => ({ ...f, required: v }))} 
+                            />
                         </div>
                         
                         {/* Min/Max selection - só aparece se for obrigatório */}
@@ -1660,11 +1659,10 @@ function OptionalsTab({ headers, setConfirmModal }) {
                                         min={1}
                                         value={categoryForm.min_select} 
                                         onChange={e => setCategoryForm(f => ({ ...f, min_select: parseInt(e.target.value) || 1 }))} 
-                                        className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" 
+                                        className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" 
                                         placeholder="1"
                                         required={categoryForm.required}
                                     />
-                                    <p className="text-[10px] text-gray-500 mt-1">Mínimo de itens que o cliente deve escolher</p>
                                 </div>
                                 <div>
                                     <Label className="text-xs font-medium text-gray-300">Máximo de seleções*</Label>
@@ -1673,23 +1671,20 @@ function OptionalsTab({ headers, setConfirmModal }) {
                                         min={1}
                                         value={categoryForm.max_select} 
                                         onChange={e => setCategoryForm(f => ({ ...f, max_select: parseInt(e.target.value) || 1 }))} 
-                                        className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" 
+                                        className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" 
                                         placeholder="1"
                                         required={categoryForm.required}
                                     />
-                                    <p className="text-[10px] text-gray-500 mt-1">Máximo de itens que o cliente pode escolher</p>
                                 </div>
                             </div>
                         )}
-                        <div className="flex gap-2 pt-2">
-                            <Button type="submit" className="flex-1 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all">
-                                {editingCategory ? "Atualizar" : "Criar"} Categoria
+                        <div className="flex gap-2.5 pt-2 border-t border-white/10">
+                            <Button type="button" variant="ghost" onClick={() => { setShowCategoryForm(false); setEditingCategory(null); }} className="flex-1 h-10 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs font-bold">
+                                Cancelar
                             </Button>
-                            {editingCategory && (
-                                <Button type="button" variant="ghost" onClick={() => { setEditingCategory(null); setCategoryForm({ key: "", name: "", icon: "", order_index: 0 }); }} className="rounded-xl text-gray-400 hover:text-white hover:bg-white/10">
-                                    Cancelar
-                                </Button>
-                            )}
+                            <Button type="submit" className="flex-1 h-10 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all text-xs">
+                                {editingCategory ? "Atualizar" : "Criar Categoria"}
+                            </Button>
                         </div>
                     </form>
                 </DialogContent>
@@ -1771,36 +1766,36 @@ function BannersTab({ headers }) {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-6">
                 <div>
-                    <p className="text-sm text-muted-foreground">Gerencie os banners promocionais do cardápio.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Os banners aparecem no topo da página inicial.</p>
+                    <h3 className="text-base font-bold text-white">Banners Promocionais</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Banners em destaque no topo da página inicial do cardápio.</p>
                 </div>
-                <Button onClick={() => { setEditing(null); setForm({ title: "", subtitle: "", image_url: "", cta_text: "Ver mais", cta_link: "#", active: true, order: 0 }); setShowForm(true); }} className="bg-primary text-white rounded-full"><Plus className="h-4 w-4 mr-1" />Novo Banner</Button>
+                <Button onClick={() => { setEditing(null); setForm({ title: "", subtitle: "", image_url: "", cta_text: "Ver mais", cta_link: "#", active: true, order: 0 }); setShowForm(true); }} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all text-xs h-9 px-4"><Plus className="h-4 w-4 mr-1.5" />Novo Banner</Button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
                 {banners.map(b => (
-                    <div key={b.id} className="bg-white dark:bg-card rounded-2xl border border-border overflow-hidden">
+                    <div key={b.id} className="bg-[#141414] rounded-2xl border border-white/10 overflow-hidden hover:border-[#F4B544]/30 transition-all shadow-xl">
                         {b.image_url && (
-                            <div className="h-32 bg-muted">
+                            <div className="h-36 bg-[#1A1A1A] relative">
                                 <img src={getImageUrl(b.image_url)} alt={b.title} className="w-full h-full object-cover" />
                             </div>
                         )}
                         <div className="p-4">
                             <div className="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 className="font-semibold font-heading">{b.title}</h3>
-                                    <p className="text-xs text-muted-foreground">{b.subtitle}</p>
+                                    <h3 className="font-bold text-white text-base">{b.title}</h3>
+                                    <p className="text-xs text-gray-400">{b.subtitle}</p>
                                 </div>
-                                <div className="flex gap-1">
+                                <div className="flex items-center gap-1">
                                     <Switch checked={b.active} onCheckedChange={() => toggle(b)} />
-                                    <Button size="icon" variant="ghost" onClick={() => edit(b)}><Pencil className="h-4 w-4" /></Button>
-                                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => del(b.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => edit(b)} className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"><Pencil className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg" onClick={() => del(b.id)}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>CTA: {b.cta_text}</span>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                                <span className="px-2 py-0.5 rounded-md bg-[#1A1A1A] border border-white/5 text-[#F4B544] font-medium">CTA: {b.cta_text}</span>
                             </div>
                         </div>
                     </div>
@@ -1808,32 +1803,42 @@ function BannersTab({ headers }) {
             </div>
 
             {banners.length === 0 && (
-                <div className="text-center py-12 bg-muted/30 rounded-2xl">
-                    <Image className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nenhum banner cadastrado</p>
-                    <p className="text-xs text-muted-foreground mt-1">Crie um banner para aparecer no cardápio</p>
+                <div className="text-center py-12 bg-[#141414] rounded-2xl border border-white/10">
+                    <Image className="h-10 w-10 text-gray-500 mx-auto mb-3" />
+                    <p className="text-gray-300 font-semibold">Nenhum banner cadastrado</p>
+                    <p className="text-xs text-gray-500 mt-1">Crie um banner para aparecer no cardápio</p>
                 </div>
             )}
 
+            {/* Modal de Banner (Compacto & Dark) */}
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="rounded-2xl max-w-lg">
-                    <DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Banner" : "Novo Banner"}</DialogTitle></DialogHeader>
-                    <form onSubmit={save} className="space-y-4">
-                        <div><Label>Titulo</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="mt-1 rounded-lg" required /></div>
-                        <div><Label>Subtitulo</Label><Input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} className="mt-1 rounded-lg" /></div>
-                        <div><Label>Imagem</Label>
+                <DialogContent className="rounded-2xl max-w-md bg-[#141414] text-white border border-[#F4B544]/30 shadow-2xl p-5">
+                    <DialogHeader className="pb-1 border-b border-white/10">
+                        <DialogTitle className="font-extrabold text-white text-base">{editing ? "Editar Banner" : "Novo Banner"}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={save} className="space-y-3.5 pt-1">
+                        <div><Label className="text-xs font-medium text-gray-300">Título *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" required /></div>
+                        <div><Label className="text-xs font-medium text-gray-300">Subtítulo</Label><Input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" /></div>
+                        <div>
+                            <Label className="text-xs font-medium text-gray-300">Imagem do Banner</Label>
                             <div className="mt-1 flex gap-2 items-center">
-                                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="rounded-lg flex-1" />
-                                <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
+                                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] flex-1 text-xs" />
+                                <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-xl border-white/10 bg-[#1A1A1A] text-white hover:bg-white/10" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
                             </div>
-                            {form.image_url && <img src={getImageUrl(form.image_url)} alt="" className="mt-2 h-20 w-full object-cover rounded-lg" />}
+                            {form.image_url && <img src={getImageUrl(form.image_url)} alt="" className="mt-2 h-24 w-full object-cover rounded-lg border border-white/10" />}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div><Label>Texto do Botao</Label><Input value={form.cta_text} onChange={e => setForm(f => ({ ...f, cta_text: e.target.value }))} className="mt-1 rounded-lg" /></div>
-                            <div><Label>Link do Botao</Label><Input value={form.cta_link} onChange={e => setForm(f => ({ ...f, cta_link: e.target.value }))} className="mt-1 rounded-lg" /></div>
+                            <div><Label className="text-xs font-medium text-gray-300">Texto do Botão</Label><Input value={form.cta_text} onChange={e => setForm(f => ({ ...f, cta_text: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" /></div>
+                            <div><Label className="text-xs font-medium text-gray-300">Link do Botão</Label><Input value={form.cta_link} onChange={e => setForm(f => ({ ...f, cta_link: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" /></div>
                         </div>
-                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm">Ativo</span></div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full">{editing ? "Atualizar" : "Criar"}</Button>
+                        <div className="flex items-center justify-between p-2.5 bg-[#1A1A1A] rounded-xl border border-white/10">
+                            <span className="text-xs font-semibold text-gray-300">Banner Ativo</span>
+                            <Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} />
+                        </div>
+                        <div className="flex gap-2.5 pt-2 border-t border-white/10">
+                            <Button type="button" variant="ghost" onClick={() => setShowForm(false)} className="flex-1 h-10 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs font-bold">Cancelar</Button>
+                            <Button type="submit" className="flex-1 h-10 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all text-xs">{editing ? "Atualizar" : "Criar Banner"}</Button>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>
@@ -1885,7 +1890,7 @@ function CombosTab({ headers }) {
             description: `Deseja realmente excluir o combo "${name}"?`,
             onConfirm: async () => {
                 await axios.delete(`${API}/admin/combos/${id}`, { headers }); 
-                toast.success("Excluido"); 
+                toast.success("Excluído"); 
                 fetch(); 
             }
         });
@@ -1936,46 +1941,46 @@ function CombosTab({ headers }) {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-6">
                 <div>
-                    <p className="text-sm text-muted-foreground">Gerencie os combos promocionais.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Os combos permitem criar ofertas especiais no cardápio.</p>
+                    <h3 className="text-base font-bold text-white">Combos Promocionais</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Crie ofertas especiais combinando diferentes categorias do cardápio.</p>
                 </div>
-                <Button onClick={() => { setEditing(null); setForm({ name: "", description: "", image_url: "", base_price: "", discount_percent: 0, active: true, items: [] }); setShowForm(true); }} className="bg-primary text-white rounded-full"><Plus className="h-4 w-4 mr-1" />Novo Combo</Button>
+                <Button onClick={() => { setEditing(null); setForm({ name: "", description: "", image_url: "", base_price: "", discount_percent: 0, active: true, items: [] }); setShowForm(true); }} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all text-xs h-9 px-4"><Plus className="h-4 w-4 mr-1.5" />Novo Combo</Button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
                 {combos.map(c => (
-                    <div key={c.id} className="bg-white dark:bg-card rounded-2xl border border-border overflow-hidden">
+                    <div key={c.id} className="bg-[#141414] rounded-2xl border border-white/10 overflow-hidden hover:border-[#F4B544]/30 transition-all shadow-xl">
                         {c.image_url && (
-                            <div className="h-32 bg-muted">
+                            <div className="h-36 bg-[#1A1A1A] relative">
                                 <img src={getImageUrl(c.image_url)} alt={c.name} className="w-full h-full object-cover" />
                             </div>
                         )}
                         <div className="p-4">
                             <div className="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 className="font-semibold font-heading">{c.name}</h3>
-                                    <p className="text-xs text-muted-foreground">{c.description}</p>
+                                    <h3 className="font-bold text-white text-base">{c.name}</h3>
+                                    <p className="text-xs text-gray-400 line-clamp-1">{c.description}</p>
                                 </div>
-                                <div className="flex gap-1">
+                                <div className="flex items-center gap-1">
                                     <Switch checked={c.active} onCheckedChange={() => toggle(c)} />
-                                    <Button size="icon" variant="ghost" onClick={() => edit(c)}><Pencil className="h-4 w-4" /></Button>
-                                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => del(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => edit(c)} className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"><Pencil className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg" onClick={() => del(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between mt-3">
-                                <span className="font-bold text-primary">R$ {c.base_price?.toFixed(2)}</span>
+                                <span className="font-extrabold text-[#F4B544] text-base">R$ {c.base_price?.toFixed(2)}</span>
                                 {c.discount_percent > 0 && (
-                                    <Badge className="bg-green-100 text-green-700">-{c.discount_percent}%</Badge>
+                                    <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs font-bold">-{c.discount_percent}% OFF</Badge>
                                 )}
                             </div>
                             {c.items?.length > 0 && (
-                                <div className="mt-3 pt-3 border-t">
-                                    <p className="text-xs text-muted-foreground mb-1">Itens do combo:</p>
-                                    <div className="flex flex-wrap gap-1">
+                                <div className="mt-3 pt-3 border-t border-white/10">
+                                    <p className="text-[11px] text-gray-400 mb-1.5 font-medium">Itens inclusos:</p>
+                                    <div className="flex flex-wrap gap-1.5">
                                         {c.items.map((item, i) => (
-                                            <Badge key={i} variant="secondary" className="text-xs">
+                                            <Badge key={i} className="text-[10px] bg-[#1A1A1A] text-gray-300 border border-white/10">
                                                 {item.quantity}x {item.category_name || getCategoryName(item.category_id)}
                                             </Badge>
                                         ))}
@@ -1988,54 +1993,64 @@ function CombosTab({ headers }) {
             </div>
 
             {combos.length === 0 && (
-                <div className="text-center py-12 bg-muted/30 rounded-2xl">
-                    <Gift className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nenhum combo cadastrado</p>
-                    <p className="text-xs text-muted-foreground mt-1">Crie um combo para oferecer no cardápio</p>
+                <div className="text-center py-12 bg-[#141414] rounded-2xl border border-white/10">
+                    <Gift className="h-10 w-10 text-gray-500 mx-auto mb-3" />
+                    <p className="text-gray-300 font-semibold">Nenhum combo cadastrado</p>
+                    <p className="text-xs text-gray-500 mt-1">Crie um combo para oferecer no cardápio</p>
                 </div>
             )}
 
+            {/* Modal de Combo (Compacto & Dark) */}
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="rounded-2xl max-w-lg max-h-[90vh] overflow-y-auto bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl">
-                    <DialogHeader><DialogTitle className="font-extrabold text-white text-lg">{editing ? "Editar Combo" : "Novo Combo"}</DialogTitle></DialogHeader>
-                    <form onSubmit={save} className="space-y-4">
-                        <div><Label className="text-xs font-medium text-gray-300">Nome do Combo</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required placeholder="Ex: Combo Café da Tarde" /></div>
-                        <div><Label className="text-xs font-medium text-gray-300">Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="Ex: 1 Salgado Assado + 1 Cappuccino Especial" /></div>
-                        <div><Label className="text-xs font-medium text-gray-300">Imagem do Combo</Label>
+                <DialogContent className="rounded-2xl max-w-md max-h-[90vh] overflow-y-auto bg-[#141414] text-white border border-[#F4B544]/30 shadow-2xl p-5">
+                    <DialogHeader className="pb-1 border-b border-white/10">
+                        <DialogTitle className="font-extrabold text-white text-base">{editing ? "Editar Combo" : "Novo Combo"}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={save} className="space-y-3 pt-1">
+                        <div><Label className="text-xs font-medium text-gray-300">Nome do Combo *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" required placeholder="Ex: Combo Café da Tarde" /></div>
+                        <div><Label className="text-xs font-medium text-gray-300">Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" placeholder="Ex: 1 Salgado Assado + 1 Cappuccino" /></div>
+                        <div>
+                            <Label className="text-xs font-medium text-gray-300">Imagem do Combo</Label>
                             <div className="mt-1 flex gap-2 items-center">
-                                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544] flex-1" />
-                                <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" className="rounded-xl border-white/10 bg-[#1E1E1E] text-white hover:bg-white/10" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
+                                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] flex-1 text-xs" />
+                                <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-xl border-white/10 bg-[#1A1A1A] text-white hover:bg-white/10" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
                             </div>
                             {form.image_url && <img src={getImageUrl(form.image_url)} alt="" className="mt-2 h-20 w-full object-cover rounded-lg border border-white/10" />}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div><Label className="text-xs font-medium text-gray-300">Preço Base (R$)</Label><Input type="number" step="0.01" value={form.base_price} onChange={e => setForm(f => ({ ...f, base_price: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required placeholder="0.00" /></div>
-                            <div><Label className="text-xs font-medium text-gray-300">Desconto (%)</Label><Input type="number" min="0" max="100" value={form.discount_percent} onChange={e => setForm(f => ({ ...f, discount_percent: parseInt(e.target.value) || 0 }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="0" /></div>
+                            <div><Label className="text-xs font-medium text-gray-300">Preço Base (R$) *</Label><Input type="number" step="0.01" value={form.base_price} onChange={e => setForm(f => ({ ...f, base_price: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" required placeholder="0.00" /></div>
+                            <div><Label className="text-xs font-medium text-gray-300">Desconto (%)</Label><Input type="number" min="0" max="100" value={form.discount_percent} onChange={e => setForm(f => ({ ...f, discount_percent: parseInt(e.target.value) || 0 }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" placeholder="0" /></div>
                         </div>
 
                         {/* Items do combo */}
                         <div>
-                            <Label className="text-xs font-medium text-gray-300">Itens do Combo (Categorias participantes)</Label>
-                            <div className="mt-2 space-y-2">
+                            <Label className="text-xs font-medium text-gray-300">Itens do Combo (Categorias)</Label>
+                            <div className="mt-1.5 space-y-1.5">
                                 {form.items.map((item, index) => (
-                                    <div key={index} className="flex items-center gap-2 p-2.5 bg-[#1E1E1E] rounded-xl border border-white/10">
-                                        <span className="flex-1 text-sm font-medium text-white">{item.quantity}x {getCategoryName(item.category_id)}</span>
-                                        <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg" onClick={() => removeItem(index)}><X className="h-4 w-4" /></Button>
+                                    <div key={index} className="flex items-center gap-2 p-2 bg-[#1A1A1A] rounded-xl border border-white/10">
+                                        <span className="flex-1 text-xs font-medium text-white">{item.quantity}x {getCategoryName(item.category_id)}</span>
+                                        <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg" onClick={() => removeItem(index)}><X className="h-3.5 w-3.5" /></Button>
                                     </div>
                                 ))}
                                 <div className="flex gap-2">
-                                    <select value={newItem.category_id} onChange={e => setNewItem(i => ({ ...i, category_id: e.target.value }))} className="flex-1 rounded-xl border border-white/10 bg-[#1E1E1E] text-white px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
+                                    <select value={newItem.category_id} onChange={e => setNewItem(i => ({ ...i, category_id: e.target.value }))} className="flex-1 h-9 rounded-xl border border-white/10 bg-[#1A1A1A] text-white px-2.5 text-xs focus:border-[#F4B544] focus:outline-none">
                                         <option value="" className="bg-[#10100F] text-white">Selecione uma categoria</option>
                                         {categories.map(c => <option key={c.id} value={c.id} className="bg-[#10100F] text-white">{c.name}</option>)}
                                     </select>
-                                    <Input type="number" min="1" value={newItem.quantity} onChange={e => setNewItem(i => ({ ...i, quantity: parseInt(e.target.value) || 1 }))} className="w-20 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" />
-                                    <Button type="button" onClick={addItem} className="rounded-xl border border-white/10 bg-[#1E1E1E] text-white hover:bg-white/10"><Plus className="h-4 w-4" /></Button>
+                                    <Input type="number" min="1" value={newItem.quantity} onChange={e => setNewItem(i => ({ ...i, quantity: parseInt(e.target.value) || 1 }))} className="w-16 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs text-center" />
+                                    <Button type="button" onClick={addItem} className="h-9 px-3 rounded-xl border border-white/10 bg-[#1A1A1A] text-[#F4B544] hover:bg-[#F4B544]/10"><Plus className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm font-semibold text-gray-300">Ativo</span></div>
-                        <Button type="submit" className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all">{editing ? "Atualizar" : "Criar"} Combo</Button>
+                        <div className="flex items-center justify-between p-2.5 bg-[#1A1A1A] rounded-xl border border-white/10">
+                            <span className="text-xs font-semibold text-gray-300">Combo Ativo no Cardápio</span>
+                            <Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} />
+                        </div>
+                        <div className="flex gap-2.5 pt-2 border-t border-white/10">
+                            <Button type="button" variant="ghost" onClick={() => setShowForm(false)} className="flex-1 h-10 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs font-bold">Cancelar</Button>
+                            <Button type="submit" className="flex-1 h-10 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-[1.01] transition-all text-xs">{editing ? "Atualizar" : "Criar Combo"}</Button>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>
