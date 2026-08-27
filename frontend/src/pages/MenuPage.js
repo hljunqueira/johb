@@ -7,7 +7,7 @@ import { useCustomer } from "@/context/CustomerContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -1438,10 +1438,15 @@ export default function MenuPage() {
             <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                 <SheetContent side="right" className="w-full sm:max-w-md bg-[#10100F] border-l border-[#F4B544]/20 p-0 text-[#FFFAF0] flex flex-col">
                     <SheetHeader className="p-4 sm:p-5 border-b border-[#F4B544]/15 bg-[#050505] flex flex-row items-center justify-between space-y-0">
-                        <SheetTitle className="font-serif text-xl sm:text-2xl font-bold text-[#FFFAF0] flex items-center gap-2">
-                            <ShoppingCart className="w-5 h-5 text-[#F4B544]" />
-                            <span>Seu Pedido</span>
-                        </SheetTitle>
+                        <div>
+                            <SheetTitle className="font-serif text-xl sm:text-2xl font-bold text-[#FFFAF0] flex items-center gap-2">
+                                <ShoppingCart className="w-5 h-5 text-[#F4B544]" />
+                                <span>Seu Pedido</span>
+                            </SheetTitle>
+                            <SheetDescription className="text-[11px] text-[#B8B1A3]">
+                                Salgados e produtos selecionados
+                            </SheetDescription>
+                        </div>
                         <button
                             type="button"
                             onClick={() => {

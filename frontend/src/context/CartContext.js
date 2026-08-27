@@ -27,6 +27,15 @@ export function CartProvider({ children }) {
         return sessionStorage.getItem("johb-scheduled-time") || "";
     });
 
+    const [scheduleMode, setScheduleMode] = useState(() => {
+        return sessionStorage.getItem("johb-schedule-mode") || "imediato";
+    });
+
+    useEffect(() => {
+        if (scheduleMode) sessionStorage.setItem("johb-schedule-mode", scheduleMode);
+        else sessionStorage.removeItem("johb-schedule-mode");
+    }, [scheduleMode]);
+
     useEffect(() => {
         if (scheduledDate) sessionStorage.setItem("johb-scheduled-date", scheduledDate);
         else sessionStorage.removeItem("johb-scheduled-date");
@@ -107,12 +116,28 @@ export function CartProvider({ children }) {
         setItems([]);
         setScheduledDate("");
         setScheduledTime("");
+        setScheduleMode("imediato");
     };
     const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
     const itemCount = items.reduce((s, i) => s + i.quantity, 0);
 
     return (
-        <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, updateObservation, clearCart, total, itemCount, getCartCount: () => itemCount, scheduledDate, scheduledTime, setScheduleInfo }}>
+        <CartContext.Provider value={{
+            items,
+            addItem,
+            removeItem,
+            updateQuantity,
+            updateObservation,
+            clearCart,
+            total,
+            itemCount,
+            getCartCount: () => itemCount,
+            scheduleMode,
+            setScheduleMode,
+            scheduledDate,
+            scheduledTime,
+            setScheduleInfo
+        }}>
             {children}
         </CartContext.Provider>
     );
