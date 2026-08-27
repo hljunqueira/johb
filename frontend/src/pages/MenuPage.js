@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Search, ShoppingCart, Plus, Minus, Clock, Heart, Layers, Grid3X3, ChevronRight, User, History, RotateCcw, X, Flame, Store, Trash2, Coffee, MapPin, PhoneCall, Truck, Sparkles, Check, Volume2, VolumeX } from "lucide-react";
@@ -392,7 +392,9 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         <DialogTitle className="font-serif text-2xl font-bold text-[#FFFAF0] mb-1">
                             {product.name}
                         </DialogTitle>
-                        <p className="text-xs text-[#B8B1A3] leading-relaxed">{product.description}</p>
+                        <DialogDescription className="text-xs text-[#B8B1A3] leading-relaxed">
+                            {product.description || "Ingredientes selecionados e preparo artesanal caprichado."}
+                        </DialogDescription>
                     </div>
 
                     {/* Complementos e Opcionais cadastrados no Produto pelo Admin */}
@@ -1204,6 +1206,8 @@ export default function MenuPage() {
                 <div className="mb-8">
                     <CategoryPills
                         categories={activeCategories}
+                        selectedCategory={selectedCategory}
+                        onSelectCategory={setSelectedCategory}
                         selected={selectedCategory}
                         onSelect={setSelectedCategory}
                     />
