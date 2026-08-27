@@ -1181,14 +1181,6 @@ export default function MenuPage() {
                     />
                 </div>
 
-                {/* Seção de Combos Promocionais & Sugestões */}
-                {!search && combos.length > 0 && (
-                    <ComboSuggestion 
-                        combos={combos} 
-                        onSelectCombo={handleSelectCombo} 
-                    />
-                )}
-
                 {/* Grid de Produtos */}
                 {isProductLoading ? (
                     <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -1227,6 +1219,16 @@ export default function MenuPage() {
                         )}
                     </div>
                 )}
+
+                {/* Seção de Combos Promocionais & Sugestões (Exibida após os produtos) */}
+                <div id="combos" className="mt-12">
+                    {!search && combos.length > 0 && (
+                        <ComboSuggestion 
+                            combos={combos} 
+                            onSelectCombo={handleSelectCombo} 
+                        />
+                    )}
+                </div>
             </section>
 
             {/* Seção de Depoimentos & Prova Social Reais */}
