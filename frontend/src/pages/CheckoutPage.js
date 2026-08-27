@@ -239,6 +239,18 @@ export default function CheckoutPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Validação de Loja Fechada
+        const isClosed = deliverySettings?.temporarily_closed || (deliverySettings?.allow_immediate_orders === false && deliverySettings?.allow_scheduled_orders === false);
+        if (isClosed) {
+            toast.error("A loja está temporariamente fechada para novos pedidos no momento.");
+            return;
+        }
+
+        if (deliverySettings?.allow_immediate_orders === false && (!isScheduled || !currentSelectedDate || !currentSelectedTime)) {
+            toast.error("Hoje é dia de produção na cozinha. Por favor, selecione data e horário para agendar seu pedido.");
+            return;
+        }
+
         if (isBelowMinOrder) {
             toast.error(`O valor mínimo para pedidos é de R$ ${minOrderValue.toFixed(2).replace(".", ",")}. Faltam R$ ${diffToMinOrder.toFixed(2).replace(".", ",")}.`);
             return;
@@ -381,6 +393,23 @@ export default function CheckoutPage() {
                         Quase Pronto para Saborear
                     </h1>
                 </div>
+
+                {/* Banner de Loja Fechada Temporariamente */}
+                {(deliverySettings?.temporarily_closed || (deliverySettings?.allow_immediate_orders === false && deliverySettings?.allow_scheduled_orders === false)) && (
+                    <div className="p-4 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-between gap-3 mb-8 shadow-lg shadow-red-500/5">
+                        <div className="flex items-center gap-2.5">
+                            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                            <span>🔴 A loja está fechada temporariamente para novos pedidos no momento.</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate("/")}
+                            className="px-4 py-2 rounded-xl bg-red-500/25 hover:bg-red-500/40 text-red-100 text-xs font-bold shrink-0 transition-colors cursor-pointer"
+                        >
+                            Voltar ao Cardápio
+                        </button>
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Coluna Principal: Formulário */}
@@ -883,32 +912,39 @@ export default function CheckoutPage() {
                             )}
 
                             {/* Botão de Finalização */}
-                            <button
-                                type="submit"
-                                disabled={loading || isBelowMinOrder || (isScheduled && (!currentSelectedDate || !currentSelectedTime))}
-                                className="w-full py-4 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin text-[#050505]" />
-                                        <span>Processando Pedido...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>
-                                            {isBelowMinOrder
-                                                ? `Mínimo: R$ ${minOrderValue.toFixed(2).replace(".", ",")} (Faltam R$ ${diffToMinOrder.toFixed(2).replace(".", ",")})`
-                                                : paymentMethod === "asaas"
-                                                    ? "Ir para Pagamento Online"
-                                                    : isScheduled
-                                                        ? (currentSelectedTime ? "Confirmar Pedido Agendado" : "Selecione um Horário Válido")
-                                                        : "Confirmar Pedido Agora"
-                                            }
-                                        </span>
-                                        <ArrowLeft className="w-4 h-4 rotate-180" />
-                                    </>
-                                )}
-                            </button>
+                            {(() => {
+                                const isClosed = deliverySettings?.temporarily_closed || (deliverySettings?.allow_immediate_orders === false && deliverySettings?.allow_scheduled_orders === false);
+                                return (
+                                    <button
+                                        type="submit"
+                                        disabled={loading || isClosed || isBelowMinOrder || (isScheduled && (!currentSelectedDate || !currentSelectedTime))}
+                                        className="w-full py-4 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-center gap-2 gold-glow disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin text-[#050505]" />
+                                                <span>Processando Pedido...</span>
+                                            </>
+                                        ) : isClosed ? (
+                                            <span>Loja Fechada Temporariamente</span>
+                                        ) : (
+                                            <>
+                                                <span>
+                                                    {isBelowMinOrder
+                                                        ? `Mínimo: R$ ${minOrderValue.toFixed(2).replace(".", ",")} (Faltam R$ ${diffToMinOrder.toFixed(2).replace(".", ",")})`
+                                                        : paymentMethod === "asaas"
+                                                            ? "Ir para Pagamento Online"
+                                                            : isScheduled
+                                                                ? (currentSelectedTime ? "Confirmar Pedido Agendado" : "Selecione um Horário Válido")
+                                                                : "Confirmar Pedido Agora"
+                                                    }
+                                                </span>
+                                                <ArrowLeft className="w-4 h-4 rotate-180" />
+                                            </>
+                                        )}
+                                    </button>
+                                );
+                            })()}
                         </div>
                     </div>
                 </form>

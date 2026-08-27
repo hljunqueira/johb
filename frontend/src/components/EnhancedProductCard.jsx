@@ -10,7 +10,7 @@ const getImageUrl = (url, backendUrl) => {
     return `${backendUrl || ''}${url}`;
 };
 
-export function EnhancedProductCard({ product, onClick, backendUrl }) {
+export function EnhancedProductCard({ product, onClick, backendUrl, canOrder = true }) {
     const { toggleFavorite, isFavorite } = useFavorites();
     const { addItem } = useCart();
     const favorited = isFavorite(product.id);
@@ -42,6 +42,10 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
     const handleQuickAdd = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (!canOrder) {
+            toast.error("A loja está fechada para novos pedidos no momento.");
+            return;
+        }
         if (hasAdditionals) {
             onClick(product);
         } else {
@@ -140,8 +144,13 @@ export function EnhancedProductCard({ product, onClick, backendUrl }) {
                     <button
                         type="button"
                         onClick={handleQuickAdd}
-                        className="w-10 h-10 rounded-full bg-[#F4B544] text-[#050505] hover:bg-[#FFC85C] font-bold transition-all transform active:scale-90 shadow-md flex items-center justify-center cursor-pointer"
-                        title={hasAdditionals ? "Personalizar item" : "Adicionar ao carrinho"}
+                        disabled={!canOrder}
+                        className={`w-10 h-10 rounded-full font-bold transition-all transform flex items-center justify-center ${
+                            canOrder
+                                ? "bg-[#F4B544] text-[#050505] hover:bg-[#FFC85C] active:scale-90 shadow-md cursor-pointer"
+                                : "bg-[#1A1A1A] text-gray-600 border border-white/10 cursor-not-allowed opacity-60"
+                        }`}
+                        title={!canOrder ? "Loja fechada no momento" : (hasAdditionals ? "Personalizar item" : "Adicionar ao carrinho")}
                         data-testid={`add-${product.id}`}
                     >
                         <Plus className="w-5 h-5 stroke-[2.5]" />

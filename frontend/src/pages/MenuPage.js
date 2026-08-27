@@ -250,19 +250,10 @@ function StoreStatusBanner({ status }) {
         );
     }
 
-    return (
-        <div className="py-3 px-5 text-center text-xs sm:text-sm font-bold tracking-wide rounded-2xl mb-8 transition-all bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-lg shadow-emerald-500/5">
-            <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5">
-                <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>
-                    🟢 Aberto Agora — {status?.message || "Aceitando Pedidos Online!"}
-                </span>
-            </div>
-        </div>
-    );
+    return null;
 }
 
-const ProductDetailModal = memo(function ProductDetailModal({ product, open, onClose, onAdd, storeOpen }) {
+const ProductDetailModal = memo(function ProductDetailModal({ product, open, onClose, onAdd, storeOpen, canOrder = true }) {
     const [quantity, setQuantity] = useState(1);
     const [selectedAdditionals, setSelectedAdditionals] = useState([]);
     const [observation, setObservation] = useState("");
@@ -330,6 +321,11 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
     };
 
     const validateAndAdd = () => {
+        if (!canOrder) {
+            toast.error("A loja está fechada para novos pedidos no momento.");
+            return;
+        }
+
         const errors = {};
         let isValid = true;
 
@@ -418,23 +414,40 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                                                 {selectedInCat}/{rule.max_select || 1}
                                             </span>
                                         </div>
-                                        <div className="space-y-1.5">
+
+                                        {catError && (
+                                            <p className="text-xs text-red-400 font-semibold">{catError}</p>
+                                        )}
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             {items.map(add => {
-                                                const isSelected = !!selectedAdditionals.find(a => a.name === add.name);
+                                                const isSelected = selectedAdditionals.some(a => a.name === add.name);
                                                 return (
                                                     <button
                                                         key={add.name}
                                                         type="button"
                                                         onClick={() => toggleAdditional(add, catKey, rule)}
-                                                        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${isSelected
-                                                                ? "border-[#F4B544] bg-[#171612] text-[#F4B544]"
-                                                                : "border-[#F4B544]/15 bg-[#050505] text-[#FFFAF0] hover:border-[#F4B544]/40"
-                                                            }`}
+                                                        className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                                                            isSelected
+                                                                ? "bg-[#F4B544]/15 border-[#F4B544] text-[#FFFAF0]"
+                                                                : "bg-[#050505] border-white/10 hover:border-[#F4B544]/40 text-[#B8B1A3]"
+                                                        }`}
                                                     >
-                                                        <span className="text-xs font-medium">{add.name}</span>
-                                                        <span className="text-xs font-bold text-[#F4B544]">
-                                                            {add.price > 0 ? `+ R$ ${add.price.toFixed(2)}` : "Grátis"}
-                                                        </span>
+                                                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                                            <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
+                                                                isSelected ? "bg-[#F4B544] border-[#F4B544] text-[#050505]" : "border-white/20"
+                                                            }`}>
+                                                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                                            </div>
+                                                            <span className="text-xs font-medium truncate">{add.name}</span>
+                                                        </div>
+                                                        {add.price > 0 ? (
+                                                            <span className="text-xs font-bold text-[#F4B544] shrink-0">
+                                                                + R$ {add.price.toFixed(2).replace(".", ",")}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#B8B1A3] shrink-0">Grátis</span>
+                                                        )}
                                                     </button>
                                                 );
                                             })}
@@ -468,9 +481,14 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
                         <button
                             type="button"
                             onClick={validateAndAdd}
-                            className="flex-1 py-3 px-6 rounded-full bg-[#F4B544] text-[#050505] font-bold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all flex items-center justify-between gold-glow cursor-pointer"
+                            disabled={!canOrder}
+                            className={`flex-1 py-3 px-6 rounded-full font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-between ${
+                                canOrder
+                                    ? "bg-[#F4B544] text-[#050505] hover:bg-[#FFC85C] gold-glow cursor-pointer"
+                                    : "bg-[#1A1A1A] text-gray-500 border border-white/10 cursor-not-allowed opacity-60"
+                            }`}
                         >
-                            <span>Adicionar ao Pedido</span>
+                            <span>{canOrder ? "Adicionar ao Pedido" : "Loja Fechada no Momento"}</span>
                             <span>R$ {totalPrice.toFixed(2).replace(".", ",")}</span>
                         </button>
                     </div>
@@ -480,7 +498,7 @@ const ProductDetailModal = memo(function ProductDetailModal({ product, open, onC
     );
 });
 
-function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout, deliverySettings }) {
+function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCheckout, deliverySettings, canOrder = true }) {
     const { scheduleMode, setScheduleMode, scheduledDate, scheduledTime, setScheduleInfo } = useCart();
     const [historyPhone, setHistoryPhone] = useState(() => localStorage.getItem("johb-phone") || "");
     const navigate = useNavigate();
@@ -540,6 +558,10 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
     }, [deliverySettings, selDate, selTime, scheduledDate, scheduledTime, setScheduleMode, setScheduleInfo]);
 
     const handleAdvance = () => {
+        if (!canOrder) {
+            toast.error("A loja está fechada para novos pedidos no momento.");
+            return;
+        }
         if (scheduleMode === "agendado" && selDate && selTime) {
             setScheduleInfo(selDate, selTime);
         } else {
@@ -768,13 +790,25 @@ function CartContent({ items, removeItem, updateQuantity, total, itemCount, onCh
                     <span className="text-[#FFFAF0]">Subtotal:</span>
                     <span className="text-[#F4B544] font-serif text-lg">R$ {total.toFixed(2)}</span>
                 </div>
+
+                {!canOrder && (
+                    <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold text-center leading-relaxed">
+                        🔴 Loja fechada para novos pedidos no momento. Pedidos online pausados.
+                    </div>
+                )}
+
                 <button
                     type="button"
                     onClick={handleAdvance}
-                    className="w-full py-3.5 rounded-full bg-[#F4B544] text-[#050505] font-extrabold text-xs uppercase tracking-widest hover:bg-[#FFC85C] transition-all gold-glow flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                    disabled={!canOrder}
+                    className={`w-full py-3.5 rounded-full font-extrabold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                        canOrder
+                            ? "bg-[#F4B544] text-[#050505] hover:bg-[#FFC85C] gold-glow cursor-pointer shadow-lg active:scale-95"
+                            : "bg-[#1A1A1A] text-gray-500 border border-white/10 cursor-not-allowed opacity-60"
+                    }`}
                 >
-                    <span>Avançar para Checkout</span>
-                    <ChevronRight className="w-4 h-4" />
+                    <span>{canOrder ? "Avançar para Checkout" : "Loja Fechada no Momento"}</span>
+                    {canOrder && <ChevronRight className="w-4 h-4" />}
                 </button>
 
                 <div className="text-center pt-1">
@@ -924,9 +958,14 @@ export default function MenuPage() {
     const { isOpen: storeOpen, ...storeStatus } = useStoreStatus();
     const navigate = useNavigate();
 
+    // Validação estrita de status da loja
+    const isCompletelyClosed = storeStatus.temporarilyClosed || (storeStatus.deliverySettings?.allow_immediate_orders === false && storeStatus.deliverySettings?.allow_scheduled_orders === false);
+    const allowScheduled = storeStatus.deliverySettings?.allow_scheduled_orders !== false;
+    const canOrder = !isCompletelyClosed && (storeOpen || storeStatus.isProductionDay || allowScheduled);
+
     const handleSelectCombo = (combo) => {
-        if (!storeOpen) {
-            toast.error("Loja fechada no momento");
+        if (!canOrder) {
+            toast.error("Loja fechada para novos pedidos no momento.");
             return;
         }
         const finalPrice = combo.final_price || Number(combo.base_price || 0);
@@ -1054,6 +1093,10 @@ export default function MenuPage() {
     }, [products, search, selectedCategory, activeCategories]);
 
     const handleAddItem = (product, quantity, additionals, observation) => {
+        if (!canOrder) {
+            toast.error("A loja está fechada para novos pedidos no momento.");
+            return;
+        }
         addItem(product, quantity, additionals, observation);
         toast.success("Item adicionado ao carrinho!");
     };
@@ -1092,92 +1135,77 @@ export default function MenuPage() {
                 <div className="flex items-center justify-between flex-wrap gap-4 p-4 rounded-2xl bg-[#10100F] border border-[#F4B544]/20 mb-8 shadow-lg">
                     {reviewsData.total_reviews > 0 ? (
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1 text-[#F4B544] font-extrabold text-sm sm:text-base">
-                                <span>⭐</span>
-                                <span>{reviewsData.avg_rating}</span>
-                                <span className="text-[#B8B1A3] font-normal text-xs">/ 5.0</span>
+                            <div className="flex items-center gap-1 bg-[#F4B544]/15 px-3 py-1.5 rounded-full border border-[#F4B544]/30">
+                                <Star className="h-4 w-4 fill-[#F4B544] text-[#F4B544]" />
+                                <span className="font-extrabold text-[#F4B544] text-sm">{reviewsData.avg_rating.toFixed(1)}</span>
                             </div>
-                            <span className="text-white/20">|</span>
-                            <span className="text-xs text-[#FFFAF0] font-medium">
-                                <strong>{reviewsData.total_reviews}</strong> {reviewsData.total_reviews === 1 ? "avaliação real de cliente" : "avaliações de clientes"} em Balneário Arroio do Silva
+                            <span className="text-xs sm:text-sm text-[#FFFAF0]/90 font-medium">
+                                Excelente! <strong>{reviewsData.total_reviews} clientes</strong> avaliaram com nota máxima
                             </span>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-3">
-                            <span className="text-[#F4B544] font-bold text-xs sm:text-sm">
-                                Salgados Frescos & Artesanais
-                            </span>
-                            <span className="text-white/20">|</span>
-                            <span className="text-xs text-[#FFFAF0] font-medium">
-                                Feitos sob encomenda com muito carinho em Balneário Arroio do Silva
-                            </span>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-[#FFFAF0]">
+                            <span className="font-semibold text-[#F4B544]">Salgados Frescos & Artesanais</span>
+                            <span className="text-[#B8B1A3]">| Feitos sob encomenda com muito carinho em Balneário Arroio do Silva</span>
                         </div>
                     )}
-                    <span className="text-[11px] font-bold text-[#F4B544] uppercase tracking-wider bg-[#F4B544]/10 px-3 py-1 rounded-full border border-[#F4B544]/30">
+                    <span className="text-xs uppercase font-bold tracking-widest text-[#F4B544] bg-[#F4B544]/10 px-3 py-1 rounded-full border border-[#F4B544]/20 hidden sm:inline-flex items-center gap-1">
                         🏆 Tradição & Qualidade Artesanal
                     </span>
                 </div>
 
-                {/* Barra de Pesquisa e Título da Seção */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#F4B544]/15 mb-6">
+                {/* Título da Seção e Barra de Busca */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 border-b border-[#F4B544]/15 pb-6">
                     <div>
-                        <div className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#F4B544] font-semibold mb-1">
+                        <span className="text-xs uppercase font-bold tracking-widest text-[#F4B544] block mb-1">
                             Nosso Cardápio
-                        </div>
-                        <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#FFFAF0]">
+                        </span>
+                        <h2 className="font-serif text-3xl sm:text-4xl font-extrabold text-[#FFFAF0] tracking-tight">
                             Sabores Feitos no Capricho
                         </h2>
                     </div>
 
-                    {/* Busca Estilizada */}
                     <div className="relative w-full md:w-80">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#F4B544]" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#B8B1A3]" />
                         <Input
                             placeholder="Buscar coxinha, assado, bolo..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-10 pr-10 rounded-full bg-[#10100F] border-[#F4B544]/30 text-[#FFFAF0] placeholder:text-[#B8B1A3]/60 focus-visible:ring-[#F4B544] h-11 text-sm"
+                            className="pl-10 h-11 bg-[#10100F] border-[#F4B544]/20 text-[#FFFAF0] placeholder:text-[#B8B1A3]/60 focus:border-[#F4B544] rounded-full text-xs shadow-inner"
                         />
-                        {search && (
-                            <button
-                                onClick={() => setSearch("")}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#B8B1A3] hover:text-[#FFFAF0]"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        )}
                     </div>
                 </div>
 
-                {/* Nível 1: Abas de Menus Principais */}
-                {menus.length > 0 && (
-                    <div className="flex items-center justify-start md:justify-center gap-3 overflow-x-auto pb-4 scrollbar-none mb-6">
-                        {menus.map(menu => {
-                            const isSelected = selectedMenu === menu.id;
-                            const cleanMenuName = (menu.name || "").replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[✨⭐🏆🔥🥐🍰🥤🍽️🍴🍕🌱🥧]/gu, "").trim();
-                            return (
+                {/* 1º Nível: Abas de Menus Principais */}
+                {menus.length > 1 && (
+                    <div className="flex justify-center mb-6">
+                        <div className="inline-flex p-1.5 rounded-full bg-[#10100F] border border-[#F4B544]/20 shadow-inner">
+                            {menus.map((menu) => (
                                 <button
                                     key={menu.id}
-                                    type="button"
-                                    onClick={() => handleSelectMenu(menu.id)}
-                                    className={`px-5 py-2.5 rounded-full text-xs uppercase tracking-widest font-extrabold transition-all cursor-pointer border ${isSelected
-                                            ? "bg-[#F4B544] text-[#050505] border-[#F4B544] shadow-lg shadow-[#F4B544]/20 scale-105"
-                                            : "bg-[#10100F] text-[#B8B1A3] border-white/10 hover:border-[#F4B544]/50 hover:text-[#FFFAF0]"
-                                        }`}
+                                    onClick={() => {
+                                        setSelectedMenu(menu.id);
+                                        setSelectedCategory("all");
+                                    }}
+                                    className={`px-5 py-2 rounded-full text-xs uppercase tracking-wider font-bold transition-all ${
+                                        selectedMenu === menu.id
+                                            ? "bg-[#F4B544] text-[#050505] shadow-md"
+                                            : "text-[#B8B1A3] hover:text-[#FFFAF0]"
+                                    }`}
                                 >
-                                    <span>{cleanMenuName}</span>
+                                    {menu.name}
                                 </button>
-                            );
-                        })}
+                            ))}
+                        </div>
                     </div>
                 )}
 
-                {/* Nível 2: Pílulas de Subcategorias do Menu Ativo */}
+                {/* 2º Nível: Pílulas de Categorias */}
                 <div className="mb-8">
                     <CategoryPills
                         categories={activeCategories}
-                        selectedCategory={selectedCategory}
-                        onSelectCategory={setSelectedCategory}
+                        selected={selectedCategory}
+                        onSelect={setSelectedCategory}
                     />
                 </div>
 
@@ -1196,6 +1224,7 @@ export default function MenuPage() {
                                 product={product}
                                 onClick={setSelectedProduct}
                                 backendUrl={BACKEND_URL}
+                                canOrder={canOrder}
                             />
                         ))}
                     </div>
@@ -1430,6 +1459,7 @@ export default function MenuPage() {
                             total={total}
                             itemCount={itemCount}
                             deliverySettings={storeStatus.deliverySettings}
+                            canOrder={canOrder}
                             onCheckout={() => {
                                 setCartOpen(false);
                                 navigate("/checkout");
@@ -1516,6 +1546,7 @@ export default function MenuPage() {
                 onClose={() => setSelectedProduct(null)}
                 onAdd={handleAddItem}
                 storeOpen={storeOpen}
+                canOrder={canOrder}
             />
 
             {/* Modal de Login */}
