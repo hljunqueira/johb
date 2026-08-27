@@ -43,8 +43,8 @@ async def main():
                     VALUES ($1, $2, $3, $4, TRUE)
                     ON CONFLICT (id) DO UPDATE 
                     SET name = EXCLUDED.name, description = EXCLUDED.description, "order" = EXCLUDED."order", active = TRUE
-                """, uuid.UUID(m["id"]), m["name"], m["description"], m["order"])
-                menu_ids[m["name"]] = m["id"]
+                """, uuid.UUID(str(m["id"])), str(m["name"]), str(m["description"]), int(str(m["order"])))
+                menu_ids[str(m["name"])] = str(m["id"])
                 logger.info(f"Menu '{m['name']}' sincronizado.")
 
             # 2. Definir Categorias por Menu
@@ -70,8 +70,8 @@ async def main():
                     VALUES ($1, $2, $3, $4, $5, TRUE)
                     ON CONFLICT (id) DO UPDATE 
                     SET name = EXCLUDED.name, description = EXCLUDED.description, menu_id = EXCLUDED.menu_id, "order" = EXCLUDED."order", active = TRUE
-                """, uuid.UUID(c["id"]), c["name"], c["description"], uuid.UUID(c["menu_id"]), c["order"])
-                cat_ids[c["name"]] = c["id"]
+                """, uuid.UUID(str(c["id"])), str(c["name"]), str(c["description"]), uuid.UUID(str(c["menu_id"])), int(str(c["order"])))
+                cat_ids[str(c["name"])] = str(c["id"])
                 logger.info(f"Categoria '{c['name']}' sincronizada.")
 
             # 3. Vincular produtos existentes às novas categorias

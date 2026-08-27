@@ -8,6 +8,7 @@ import json
 import uuid
 import math
 import httpx
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from decimal import Decimal
@@ -37,12 +38,26 @@ import asyncpg
 import jwt
 from passlib.context import CryptContext
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting up JOHB API")
+    logger.info(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
+    logger.info("Scheduling background database connection...")
+    asyncio.create_task(connect_db_background())
+    logger.info("Server ready to accept requests")
+    yield
+    global db_pool
+    if db_pool:
+        await db_pool.close()
+        logger.info("Database pool closed")
+
 # Password hashing
 app = FastAPI(
     title="JOHB API",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS - Origens permitidas
@@ -210,6 +225,8 @@ async def get_db_pool():
         try:
             logger.info("Connecting to database...")
             dsn = DATABASE_URL
+            if not dsn:
+                raise RuntimeError("DATABASE_URL não configurada no ambiente")
             ssl_mode = os.environ.get('DB_SSL', 'require')
             
             if 'sslmode' not in dsn:
@@ -287,27 +304,6 @@ def create_token(user_id: str, email: str, role: str = 'admin'):
 
 
 # ============================================
-# STARTUP/SHUTDOWN
-# ============================================
-
-@app.on_event("startup")
-async def startup():
-    logger.info("Starting up JOHB API")
-    logger.info(f"DATABASE_URL configured: {bool(DATABASE_URL)}")
-    logger.info("Scheduling background database connection...")
-    asyncio.create_task(connect_db_background())
-    logger.info("Server ready to accept requests")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    global db_pool
-    if db_pool:
-        await db_pool.close()
-        logger.info("Database pool closed")
-
-
-# ============================================
 # HEALTH CHECKS
 # ============================================
 
@@ -330,8 +326,50 @@ async def health_check_db():
 
 
 # ============================================
-# PUBLIC ENDPOINTS
+# PUBLIC ENDPOINTS & SERIALIZERS
 # ============================================
+
+def parse_jsonb_field(val, default):
+    if val is None:
+        return default
+    if isinstance(val, (dict, list)):
+        if isinstance(val, dict) and "0" in val and "1" in val:
+            try:
+                sorted_keys = sorted([int(k) for k in val.keys() if str(k).isdigit()])
+                reconstructed = "".join([val[str(k)] for k in sorted_keys])
+                parsed = json.loads(reconstructed)
+                if isinstance(parsed, str):
+                    parsed = json.loads(parsed)
+                return parsed
+            except Exception:
+                return default
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, str):
+                parsed = json.loads(parsed)
+            return parsed
+        except Exception:
+            return default
+    return default
+
+
+def sanitize_json_input(val, default):
+    if val is None:
+        return default
+    if isinstance(val, (dict, list)):
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, str):
+                parsed = json.loads(parsed)
+            return parsed
+        except Exception:
+            return default
+    return default
+
 
 def serialize_product(row) -> dict:
     """Serializa produto com conversão segura de Decimals, UUIDs e JSONBs"""
@@ -340,19 +378,46 @@ def serialize_product(row) -> dict:
     d = dict(row)
     if 'id' in d and isinstance(d['id'], uuid.UUID):
         d['id'] = str(d['id'])
+    if 'category_id' in d and isinstance(d['category_id'], uuid.UUID):
+        d['category_id'] = str(d['category_id'])
     if 'price' in d and isinstance(d['price'], Decimal):
         d['price'] = float(d['price'])
-    if 'complements' in d:
-        if isinstance(d['complements'], str):
-            try:
-                parsed = json.loads(d['complements'])
-                if isinstance(parsed, str):
-                    parsed = json.loads(parsed)
-                d['complements'] = parsed if isinstance(parsed, list) else []
-            except Exception:
-                d['complements'] = []
-        elif not isinstance(d['complements'], list):
-            d['complements'] = []
+    
+    # Parse seguro de additionals (opcionais configurados)
+    d['additionals'] = parse_jsonb_field(d.get('additionals'), [])
+    if not isinstance(d['additionals'], list):
+        d['additionals'] = []
+
+    # Parse seguro de complements
+    d['complements'] = parse_jsonb_field(d.get('complements'), [])
+    if not isinstance(d['complements'], list):
+        d['complements'] = []
+
+    # Converte complement_ids para strings se forem UUIDs
+    if 'complement_ids' in d and isinstance(d['complement_ids'], list):
+        d['complement_ids'] = [str(cid) if isinstance(cid, uuid.UUID) else str(cid) for cid in d['complement_ids']]
+    else:
+        d['complement_ids'] = []
+        
+    if 'created_at' in d and isinstance(d['created_at'], datetime):
+        d['created_at'] = d['created_at'].isoformat()
+    if 'updated_at' in d and isinstance(d['updated_at'], datetime):
+        d['updated_at'] = d['updated_at'].isoformat()
+    return d
+
+
+def serialize_combo(row) -> dict:
+    """Serializa combo com conversão segura de Decimals, UUIDs e JSONBs"""
+    if not row:
+        return {}
+    d = dict(row)
+    if 'id' in d and isinstance(d['id'], uuid.UUID):
+        d['id'] = str(d['id'])
+    if 'base_price' in d and isinstance(d['base_price'], Decimal):
+        d['base_price'] = float(d['base_price'])
+    d['items'] = parse_jsonb_field(d.get('items'), [])
+    if not isinstance(d['items'], list):
+        d['items'] = []
     if 'created_at' in d and isinstance(d['created_at'], datetime):
         d['created_at'] = d['created_at'].isoformat()
     if 'updated_at' in d and isinstance(d['updated_at'], datetime):
@@ -391,6 +456,7 @@ async def get_bootstrap():
     categories = await get_categories()
     products = await get_products()
     banners = await get_banners()
+    combos = await get_combos()
     delivery_settings = await get_delivery_settings()
     reviews_summary = await get_reviews_summary()
 
@@ -399,6 +465,7 @@ async def get_bootstrap():
         "categories": categories,
         "products": products,
         "banners": banners,
+        "combos": combos,
         "delivery_settings": delivery_settings,
         "reviews_summary": reviews_summary
     }
@@ -535,52 +602,19 @@ async def get_banners():
 @app.get("/api/combos")
 async def get_combos():
     """Lista combos ativos"""
+    cached = get_cached("combos", 60)
+    if cached is not None:
+        return cached
     pool = await get_db_pool()
     async with pool.acquire() as conn:
+        try:
+            await conn.execute("ALTER TABLE combos ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb")
+        except Exception:
+            pass
         rows = await conn.fetch('SELECT * FROM combos WHERE active = TRUE ORDER BY "order"')
-        return [dict(r) for r in rows]
-
-
-def parse_jsonb_field(val, default):
-    if val is None:
-        return default
-    if isinstance(val, (dict, list)):
-        if isinstance(val, dict) and "0" in val and "1" in val:
-            try:
-                sorted_keys = sorted([int(k) for k in val.keys() if str(k).isdigit()])
-                reconstructed = "".join([val[str(k)] for k in sorted_keys])
-                parsed = json.loads(reconstructed)
-                if isinstance(parsed, str):
-                    parsed = json.loads(parsed)
-                return parsed
-            except Exception:
-                return default
-        return val
-    if isinstance(val, str):
-        try:
-            parsed = json.loads(val)
-            if isinstance(parsed, str):
-                parsed = json.loads(parsed)
-            return parsed
-        except Exception:
-            return default
-    return default
-
-
-def sanitize_json_input(val, default):
-    if val is None:
-        return default
-    if isinstance(val, (dict, list)):
-        return val
-    if isinstance(val, str):
-        try:
-            parsed = json.loads(val)
-            if isinstance(parsed, str):
-                parsed = json.loads(parsed)
-            return parsed
-        except Exception:
-            return default
-    return default
+        data = [serialize_combo(r) for r in rows]
+        set_cached("combos", data, 60)
+        return data
 
 
 def format_delivery_settings_row(row):
@@ -949,9 +983,8 @@ async def calculate_delivery_fee(address: str):
             # Converter distance_rates de string JSON para lista se necessário
             if isinstance(distance_rates, str):
                 try:
-                    import json
                     distance_rates = json.loads(distance_rates)
-                except json.JSONDecodeError:
+                except Exception:
                     distance_rates = []
             
             if distance_rates and len(distance_rates) > 0:
@@ -1470,21 +1503,28 @@ async def rate_order(order_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Order not found")
 
     rating = None
-    comment = None
+    comment = ""
 
     content_type = request.headers.get("content-type", "")
-    if "application/json" in content_type:
+    if content_type.startswith("application/json"):
         try:
             body = await request.json()
-            rating = int(body.get("rating", 0))
-            comment = body.get("comment", "")
+            if isinstance(body, dict):
+                rating = int(body.get("rating", 0))
+                comment = str(body.get("comment", ""))
         except Exception:
             pass
     else:
         try:
             form = await request.form()
-            rating = int(form.get("rating", 0)) if form.get("rating") else None
-            comment = form.get("comment", "")
+            raw_rating = form.get("rating")
+            if isinstance(raw_rating, str) and raw_rating.strip().isdigit():
+                rating = int(raw_rating.strip())
+            elif isinstance(raw_rating, (int, float)):
+                rating = int(raw_rating)
+            raw_comment = form.get("comment")
+            if isinstance(raw_comment, str):
+                comment = raw_comment
         except Exception:
             pass
 
@@ -1493,7 +1533,7 @@ async def rate_order(order_id: str, request: Request):
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
-        clean_comment = comment.strip() if comment else None
+        clean_comment = comment.strip() if isinstance(comment, str) and comment.strip() else None
         await conn.execute(
             "UPDATE orders SET rating = $1, rating_comment = $2 WHERE id = $3",
             rating, clean_comment, order_uuid
@@ -1920,10 +1960,12 @@ async def admin_update_product(product_id: str, request: dict, user=Depends(get_
         ex_dict = dict(existing)
         name = request.get("name", ex_dict["name"])
         description = request.get("description", ex_dict.get("description"))
-        price = float(request.get("price", ex_dict["price"]))
+        price_val = request.get("price")
+        price = float(price_val) if price_val is not None else float(ex_dict.get("price", 0))
         category_id = request.get("category_id", ex_dict.get("category_id"))
         image_url = request.get("image_url", ex_dict.get("image_url"))
-        stock = int(request.get("stock", ex_dict.get("stock", -1)))
+        stock_val = request.get("stock")
+        stock = int(stock_val) if stock_val is not None else int(ex_dict.get("stock", -1))
         tags = request.get("tags", ex_dict.get("tags", []))
         
         adds = request.get("additionals")
@@ -1933,7 +1975,8 @@ async def admin_update_product(product_id: str, request: dict, user=Depends(get_
             additionals = json.dumps(adds) if isinstance(adds, (list, dict)) else str(adds)
             
         complement_ids = request.get("complement_ids", ex_dict.get("complement_ids", []))
-        order = int(request.get("order", ex_dict.get("order", 0)))
+        order_val = request.get("order")
+        order = int(order_val) if order_val is not None else int(ex_dict.get("order", 0))
         active = bool(request.get("active", ex_dict.get("active", True)))
 
         row = await conn.fetchrow(
@@ -2465,8 +2508,12 @@ async def admin_get_combos(user=Depends(get_current_user)):
     """Listar todos os combos (admin)"""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
+        try:
+            await conn.execute("ALTER TABLE combos ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb")
+        except Exception:
+            pass
         rows = await conn.fetch('SELECT * FROM combos ORDER BY "order"')
-        return [dict(r) for r in rows]
+        return [serialize_combo(r) for r in rows]
 
 
 @app.post("/api/admin/combos")
@@ -2477,14 +2524,21 @@ async def admin_create_combo(request: dict, user=Depends(get_current_user)):
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
+        try:
+            await conn.execute("ALTER TABLE combos ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb")
+        except Exception:
+            pass
+        items = request.get('items', [])
+        items_json = json.dumps(items) if isinstance(items, (list, dict)) else str(items)
         row = await conn.fetchrow(
-            """INSERT INTO combos (name, description, image_url, base_price, discount_percent, active, "order")
-               VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *""",
-            request.get('name'), request.get('description'), request.get('image_url'),
-            request.get('base_price'), request.get('discount_percent', 0),
-            request.get('active', True), request.get('order', 0)
+            """INSERT INTO combos (name, description, image_url, base_price, discount_percent, items, active, "order")
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *""",
+            request.get('name', ''), request.get('description', ''), request.get('image_url', ''),
+            float(request.get('base_price', 0.0)), int(request.get('discount_percent', 0)),
+            items_json, bool(request.get('active', True)), int(request.get('order', 0))
         )
-        return dict(row)
+        invalidate_cache()
+        return serialize_combo(row)
 
 
 @app.put("/api/admin/combos/{combo_id}")
@@ -2495,13 +2549,23 @@ async def admin_update_combo(combo_id: str, request: dict, user=Depends(get_curr
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
+        try:
+            await conn.execute("ALTER TABLE combos ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb")
+        except Exception:
+            pass
+        items = request.get('items', [])
+        items_json = json.dumps(items) if isinstance(items, (list, dict)) else str(items)
+        c_uuid = uuid.UUID(combo_id) if isinstance(combo_id, str) else combo_id
         row = await conn.fetchrow(
-            """UPDATE combos SET name = $1, description = $2, image_url = $3, base_price = $4, discount_percent = $5, active = $6, "order" = $7
-               WHERE id = $8 RETURNING *""",
-            request.get('name'), request.get('description'), request.get('image_url'),
-            request.get('base_price'), request.get('discount_percent'), request.get('active'), request.get('order'), combo_id
+            """UPDATE combos SET name = $1, description = $2, image_url = $3, base_price = $4, discount_percent = $5, items = $6, active = $7, "order" = $8
+               WHERE id = $9 RETURNING *""",
+            request.get('name', ''), request.get('description', ''), request.get('image_url', ''),
+            float(request.get('base_price', 0.0)), int(request.get('discount_percent', 0)),
+            items_json, bool(request.get('active', True)), int(request.get('order', 0)),
+            c_uuid
         )
-        return dict(row) if row else None
+        invalidate_cache()
+        return serialize_combo(row) if row else None
 
 
 @app.delete("/api/admin/combos/{combo_id}")
@@ -2512,7 +2576,9 @@ async def admin_delete_combo(combo_id: str, user=Depends(get_current_user)):
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
-        await conn.execute("DELETE FROM combos WHERE id = $1", combo_id)
+        c_uuid = uuid.UUID(combo_id) if isinstance(combo_id, str) else combo_id
+        await conn.execute("DELETE FROM combos WHERE id = $1", c_uuid)
+        invalidate_cache()
         return {"success": True}
 
 
@@ -3129,7 +3195,7 @@ async def admin_upload_file(file: UploadFile = File(...), user=Depends(get_curre
             raise HTTPException(status_code=500, detail=f"Erro no upload: {str(e)}")
 
     # Fallback: salva localmente (apenas para dev local)
-    import aiofiles
+    import aiofiles  # type: ignore
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
     file_path = os.path.join(upload_dir, file_name)

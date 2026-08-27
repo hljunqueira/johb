@@ -119,7 +119,7 @@ export function CustomerProvider({ children }) {
         setCustomer(null);
         setLastOrders([]);
         setReorderSuggestions([]);
-        localStorage.removeItem("salada-soul-customer");
+        localStorage.removeItem("johb-customer");
     }, []);
 
     // Verificar se está logado

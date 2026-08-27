@@ -16,6 +16,7 @@ import Header from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { CategoryPills } from "@/components/CategoryPills";
 import { EnhancedProductCard } from "@/components/EnhancedProductCard";
+import { ComboSuggestion } from "@/components/ComboSuggestion";
 import { getAvailableScheduleDates, getAvailableTimeSlots } from "@/lib/scheduleUtils";
 
 const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
@@ -894,6 +895,7 @@ export default function MenuPage() {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("all");
     const [products, setProducts] = useState([]);
+    const [combos, setCombos] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isProductLoading, setProductLoading] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -913,7 +915,28 @@ export default function MenuPage() {
     const { isOpen: storeOpen, ...storeStatus } = useStoreStatus();
     const navigate = useNavigate();
 
-    // Carregar Menus, Categorias, Produtos e Reviews no mount via /api/bootstrap unificado
+    const handleSelectCombo = (combo) => {
+        if (!storeOpen) {
+            toast.error("Loja fechada no momento");
+            return;
+        }
+        const finalPrice = combo.final_price || Number(combo.base_price || 0);
+        addItem({
+            id: `combo-${combo.id}`,
+            product_id: `combo-${combo.id}`,
+            name: `Combo: ${combo.name}`,
+            price: finalPrice,
+            image_url: combo.image_url,
+            quantity: 1,
+            is_combo: true,
+            combo_details: combo
+        });
+        setCartAnimating(true);
+        setTimeout(() => setCartAnimating(false), 600);
+        toast.success(`${combo.name} adicionado à sacola!`);
+    };
+
+    // Carregar Menus, Categorias, Produtos, Combos e Reviews no mount via /api/bootstrap unificado
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -921,6 +944,7 @@ export default function MenuPage() {
                 let fetchedMenus = [];
                 let fetchedCats = [];
                 let fetchedProds = [];
+                let fetchedCombos = [];
                 let fetchedReviews = null;
 
                 try {
@@ -929,25 +953,29 @@ export default function MenuPage() {
                         fetchedMenus = Array.isArray(bootRes.data.menus) ? bootRes.data.menus : [];
                         fetchedCats = Array.isArray(bootRes.data.categories) ? bootRes.data.categories : [];
                         fetchedProds = Array.isArray(bootRes.data.products) ? bootRes.data.products : [];
+                        fetchedCombos = Array.isArray(bootRes.data.combos) ? bootRes.data.combos : [];
                         fetchedReviews = bootRes.data.reviews_summary;
                     }
                 } catch {
                     // Fallback para requisições individuais diretas à API
-                    const [menuRes, catRes, prodRes, revRes] = await Promise.all([
+                    const [menuRes, catRes, prodRes, comboRes, revRes] = await Promise.all([
                         axios.get(`${API}/menus`).catch(() => ({ data: [] })),
                         axios.get(`${API}/categories`).catch(() => ({ data: [] })),
                         axios.get(`${API}/products`).catch(() => ({ data: [] })),
+                        axios.get(`${API}/combos`).catch(() => ({ data: [] })),
                         axios.get(`${API}/reviews/summary`).catch(() => ({ data: { avg_rating: 0, total_reviews: 0, testimonials: [] } }))
                     ]);
                     fetchedMenus = Array.isArray(menuRes.data) ? menuRes.data : [];
                     fetchedCats = Array.isArray(catRes.data) ? catRes.data : [];
                     fetchedProds = Array.isArray(prodRes.data) ? prodRes.data : [];
+                    fetchedCombos = Array.isArray(comboRes.data) ? comboRes.data : [];
                     fetchedReviews = revRes?.data;
                 }
 
                 setMenus(fetchedMenus);
                 setCategories(fetchedCats);
                 setProducts(fetchedProds);
+                setCombos(fetchedCombos);
                 if (fetchedReviews) setReviewsData(fetchedReviews);
 
                 if (fetchedMenus.length > 0) {
@@ -1137,6 +1165,14 @@ export default function MenuPage() {
                         onSelectCategory={setSelectedCategory}
                     />
                 </div>
+
+                {/* Seção de Combos Promocionais & Sugestões */}
+                {!search && combos.length > 0 && (
+                    <ComboSuggestion 
+                        combos={combos} 
+                        onSelectCombo={handleSelectCombo} 
+                    />
+                )}
 
                 {/* Grid de Produtos */}
                 {isProductLoading ? (

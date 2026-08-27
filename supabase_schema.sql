@@ -173,6 +173,7 @@ CREATE TABLE IF NOT EXISTS combos (
     image_url TEXT,
     base_price DECIMAL(10,2) NOT NULL,
     discount_percent INTEGER DEFAULT 0,
+    items JSONB DEFAULT '[]'::jsonb,
     active BOOLEAN DEFAULT TRUE,
     "order" INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),

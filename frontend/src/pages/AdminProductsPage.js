@@ -230,7 +230,7 @@ export default function AdminProductsPage() {
                                         value={form.name} 
                                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
                                         className="mt-1.5 rounded-lg" 
-                                        placeholder="Ex: Salada Caesar"
+                                        placeholder="Ex: Coxinha de Frango com Catupiry"
                                         required 
                                         data-testid="product-name" 
                                     />

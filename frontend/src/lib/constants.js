@@ -29,15 +29,14 @@ export const TAG_CONFIG = {
 
 export const getTagStyle = (tag) => TAG_CONFIG[tag] || { label: tag, color: "bg-gray-100 text-gray-700", icon: "🏷️" };
 
-// Complement categories for "Monte sua Salada"
+// Categorias padrão de complementos/opcionais do JOHB Café & Salgados
 export const COMPLEMENT_CATEGORIES = {
-    base_folhas: { label: "Base de Folhas", order: 0, icon: "🥬" },
-    proteina: { label: "Proteina", order: 1, icon: "🍗" },
-    legumes: { label: "Legumes & Verduras", order: 2, icon: "🥕" },
-    frutas: { label: "Frutas", order: 3, icon: "🍓" },
-    extras: { label: "Extras & Crocancia", order: 4, icon: "🥜" },
-    molhos: { label: "Molhos & Cremes", order: 5, icon: "🥣" },
-    temperos: { label: "Temperos", order: 6, icon: "🧂" }
+    sabor_salgado: { label: "Escolha o Salgado / Assado", order: 0, icon: "🥟" },
+    molhos: { label: "Molhos & Acompanhamentos", order: 1, icon: "🥫" },
+    adicionais: { label: "Adicionais & Recheios Extras", order: 2, icon: "🧀" },
+    bebida_combo: { label: "Escolha a Bebida", order: 3, icon: "🥤" },
+    doce_combo: { label: "Escolha o Doce / Cuca", order: 4, icon: "🍰" },
+    outros: { label: "Opcionais Especiais", order: 5, icon: "✨" }
 };
 
 // Order status configuration

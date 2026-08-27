@@ -3,6 +3,11 @@
 # IDE and editors
 .idea/
 .vscode/
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
 
 # Dependencies
 node_modules/

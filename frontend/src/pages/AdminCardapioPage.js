@@ -345,19 +345,20 @@ function CategoriesTab({ headers, setConfirmModal }) {
                 </div>
             )}
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="rounded-2xl"><DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Categoria" : "Nova Categoria"}</DialogTitle></DialogHeader>
+                <DialogContent className="rounded-2xl bg-[#141414] text-white border border-[#D4AF37]/30">
+                    <DialogHeader><DialogTitle className="font-extrabold text-white text-lg">{editing ? "Editar Categoria" : "Nova Categoria"}</DialogTitle></DialogHeader>
                     <form onSubmit={save} className="space-y-4">
-                        <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="cat-name" /></div>
-                        <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="cat-desc" /></div>
-                        <div><Label>Icone (slug)</Label><Input value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="salad, bowl, juice..." className="mt-1 rounded-lg" data-testid="cat-icon" /></div>
-                        <div><Label>Menu</Label>
-                            <select value={form.menu_id} onChange={e => setForm(f => ({ ...f, menu_id: e.target.value }))} className="w-full mt-1 rounded-xl border border-[#F4B544]/30 bg-[#0D0D0C] text-[#FFFAF0] px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
-                                <option value="" className="bg-[#10100F] text-[#FFFAF0]">Selecione um menu</option>
-                                {menus.map(m => <option key={m.id} value={m.id} className="bg-[#10100F] text-[#FFFAF0]">{m.name}</option>)}
+                        <div><Label className="text-gray-300 font-medium text-xs">Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required data-testid="cat-name" placeholder="Ex: Salgados Assados" /></div>
+                        <div><Label className="text-gray-300 font-medium text-xs">Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="cat-desc" placeholder="Ex: Salgados artesanais assados na hora" /></div>
+                        <div><Label className="text-gray-300 font-medium text-xs">Ícone / Tag</Label><Input value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="salgado, cafe, doce, bebida..." className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="cat-icon" /></div>
+                        <div><Label className="text-gray-300 font-medium text-xs">Menu Vinculado</Label>
+                            <select value={form.menu_id} onChange={e => setForm(f => ({ ...f, menu_id: e.target.value }))} className="w-full mt-1 rounded-xl border border-[#F4B544]/30 bg-[#1E1E1E] text-white px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
+                                <option value="" className="bg-[#10100F] text-white">Selecione um menu</option>
+                                {menus.map(m => <option key={m.id} value={m.id} className="bg-[#10100F] text-white">{m.name}</option>)}
                             </select>
                         </div>
-                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm">Ativo</span></div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full" data-testid="save-cat-btn">{editing ? "Atualizar" : "Criar"}</Button>
+                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm font-semibold text-gray-300">Ativo</span></div>
+                        <Button type="submit" className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all" data-testid="save-cat-btn">{editing ? "Atualizar" : "Criar"}</Button>
                     </form>
                 </DialogContent>
             </Dialog>
@@ -501,7 +502,20 @@ function ProductsTab({ headers, setConfirmModal }) {
     
     const edit = (p) => { 
         setEditing(p.id); 
-        const existingAdditionals = Array.isArray(p.additionals) ? p.additionals : [];
+        let existingAdditionals = [];
+        if (p.additionals) {
+            if (Array.isArray(p.additionals)) {
+                existingAdditionals = p.additionals;
+            } else if (typeof p.additionals === "string") {
+                try {
+                    const parsed = JSON.parse(p.additionals);
+                    existingAdditionals = Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    existingAdditionals = [];
+                }
+            }
+        }
+        
         const matchedIds = existingAdditionals
             .map(add => { const found = complements.find(c => c.name === add.name); return found?.id; })
             .filter(Boolean);
@@ -699,56 +713,56 @@ function ProductsTab({ headers, setConfirmModal }) {
 
 
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="max-w-2xl rounded-2xl max-h-[92vh] overflow-y-auto" data-testid="product-form">
+                <DialogContent className="max-w-2xl rounded-2xl max-h-[92vh] overflow-y-auto bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl" data-testid="product-form">
                     <DialogHeader>
-                        <DialogTitle className="font-heading text-lg">{editing ? "Editar Produto" : "Novo Produto"}</DialogTitle>
-                        <p className="text-xs text-muted-foreground">{editing ? "Atualize as informações do produto" : "Preencha os dados para criar um novo produto"}</p>
+                        <DialogTitle className="font-extrabold text-white text-lg">{editing ? "Editar Produto" : "Novo Produto"}</DialogTitle>
+                        <p className="text-xs text-gray-400">{editing ? "Atualize as informações do produto" : "Preencha os dados para criar um novo produto"}</p>
                     </DialogHeader>
                     <form onSubmit={save} className="space-y-5 pt-1">
 
                         {/* Linha 1: Nome + Status */}
                         <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
                             <div>
-                                <Label className="text-sm font-medium">Nome <span className="text-destructive">*</span></Label>
-                                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" placeholder="Ex: Salada Caesar" required data-testid="product-name" />
+                                <Label className="text-sm font-medium text-gray-300">Nome <span className="text-[#F4B544]">*</span></Label>
+                                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="Ex: Coxinha de Frango com Catupiry" required data-testid="product-name" />
                             </div>
                             <div className="flex flex-col items-center gap-1 pb-1">
-                                <span className="text-xs text-muted-foreground">Ativo</span>
+                                <span className="text-xs text-gray-400">Ativo</span>
                                 <Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} />
                             </div>
                         </div>
 
                         {/* Descrição */}
                         <div>
-                            <Label className="text-sm font-medium">Descrição</Label>
-                            <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg resize-none" rows={3} placeholder="Descreva os ingredientes, sabor, diferencial..." data-testid="product-desc" />
+                            <Label className="text-sm font-medium text-gray-300">Descrição</Label>
+                            <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544] resize-none" rows={3} placeholder="Descreva os ingredientes, sabor, diferencial..." data-testid="product-desc" />
                         </div>
 
                         {/* Preço + Estoque */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <Label className="text-sm font-medium">Preço (R$) <span className="text-destructive">*</span></Label>
+                                <Label className="text-sm font-medium text-gray-300">Preço (R$) <span className="text-[#F4B544]">*</span></Label>
                                 <div className="relative mt-1">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                                    <Input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="rounded-lg pl-9" placeholder="0.00" required data-testid="product-price" />
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
+                                    <Input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544] pl-9" placeholder="0.00" required data-testid="product-price" />
                                 </div>
                                 {(form.price === "0" || form.price === "0.00" || form.price === 0 || form.price === "") && (
-                                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1"><svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>Preço sob consulta — soma dos complementos</p>
+                                    <p className="text-xs text-amber-400 mt-1 flex items-center gap-1"><svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>Preço sob consulta — soma dos complementos</p>
                                 )}
                             </div>
                             <div>
-                                <Label className="text-sm font-medium">Estoque</Label>
-                                <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="mt-1 rounded-lg" data-testid="product-stock" />
-                                <p className="text-xs text-muted-foreground mt-1">Use -1 para ilimitado</p>
+                                <Label className="text-sm font-medium text-gray-300">Estoque</Label>
+                                <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="product-stock" />
+                                <p className="text-xs text-gray-500 mt-1">Use -1 para ilimitado</p>
                             </div>
                         </div>
 
                         {/* Categoria */}
                         <div>
-                            <Label className="text-sm font-medium">Categoria <span className="text-destructive">*</span></Label>
-                            <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} className="w-full mt-1 rounded-xl border border-[#F4B544]/30 bg-[#0D0D0C] text-[#FFFAF0] px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none" required>
-                                <option value="" className="bg-[#10100F] text-[#FFFAF0]">Selecione uma categoria</option>
-                                {categories.map(c => <option key={c.id} value={c.id} className="bg-[#10100F] text-[#FFFAF0]">{c.name}</option>)}
+                            <Label className="text-sm font-medium text-gray-300">Categoria <span className="text-[#F4B544]">*</span></Label>
+                            <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} className="w-full mt-1 rounded-xl border border-white/10 bg-[#1E1E1E] text-white px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none" required>
+                                <option value="" className="bg-[#10100F] text-white">Selecione uma categoria</option>
+                                {categories.map(c => <option key={c.id} value={c.id} className="bg-[#10100F] text-white">{c.name}</option>)}
                             </select>
                         </div>
 
@@ -990,9 +1004,9 @@ function ProductsTab({ headers, setConfirmModal }) {
                         </div>
 
                         {/* Ações */}
-                        <div className="flex gap-3 pt-2 border-t">
-                            <Button type="button" variant="outline" className="flex-1 rounded-full" onClick={() => setShowForm(false)}>Cancelar</Button>
-                            <Button type="submit" className="flex-1 bg-primary text-white rounded-full" data-testid="save-product-btn">{editing ? "Salvar alterações" : "Criar Produto"}</Button>
+                        <div className="flex gap-3 pt-4 border-t border-white/10">
+                            <Button type="button" variant="ghost" className="flex-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10" onClick={() => setShowForm(false)}>Cancelar</Button>
+                            <Button type="submit" className="flex-1 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all" data-testid="save-product-btn">{editing ? "Salvar alterações" : "Criar Produto"}</Button>
                         </div>
                     </form>
                 </DialogContent>
@@ -1000,13 +1014,13 @@ function ProductsTab({ headers, setConfirmModal }) {
             
             {/* Modal para vincular categorias */}
             <Dialog open={showLinkCategoriesModal} onOpenChange={setShowLinkCategoriesModal}>
-                <DialogContent className="rounded-2xl max-w-lg max-h-[80vh] overflow-hidden">
+                <DialogContent className="rounded-2xl max-w-lg max-h-[80vh] overflow-hidden bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl">
                     <DialogHeader>
-                        <DialogTitle className="font-heading">Vincular Categorias</DialogTitle>
+                        <DialogTitle className="font-extrabold text-white text-lg">Vincular Categorias</DialogTitle>
                     </DialogHeader>
                     <div className="py-4">
-                        <p className="text-sm text-muted-foreground mb-4">Selecione as categorias de complemento que este produto terá:</p>
-                        <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                        <p className="text-xs text-gray-400 mb-4">Selecione as categorias de complemento que este produto terá:</p>
+                        <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                             {compCategories
                                 .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
                                 .map(cat => {
@@ -1017,32 +1031,32 @@ function ProductsTab({ headers, setConfirmModal }) {
                                             key={cat.key}
                                             type="button"
                                             onClick={() => linkCategory(cat.key)}
-                                            className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all ${
+                                            className={`w-full flex items-center justify-between p-3.5 rounded-xl border-2 transition-all text-left ${
                                                 isLinked 
-                                                    ? "border-primary bg-primary/5" 
-                                                    : "border-border hover:border-primary/30 bg-white"
+                                                    ? "border-[#F4B544] bg-[#F4B544]/15 text-[#F4B544] shadow-md shadow-[#F4B544]/10" 
+                                                    : "border-white/10 hover:border-[#F4B544]/50 bg-[#1E1E1E] text-white"
                                             }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <span className="text-2xl">{cat.icon || "📦"}</span>
+                                                <span className="text-2xl">{cat.icon || "🥟"}</span>
                                                 <div className="text-left">
-                                                    <p className="font-medium text-sm">{cat.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</p>
+                                                    <p className="font-bold text-sm text-white">{cat.name}</p>
+                                                    <p className="text-xs text-gray-400">{count} opç{count !== 1 ? "ões" : "ão"} disponível{count !== 1 ? "is" : ""}</p>
                                                 </div>
                                             </div>
-                                            <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
-                                                isLinked ? "bg-primary border-primary" : "border-gray-300"
+                                            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                                                isLinked ? "bg-[#F4B544] border-[#F4B544]" : "border-white/20 bg-[#141414]"
                                             }`}>
-                                                {isLinked && <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                {isLinked && <svg className="h-3.5 w-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                                             </div>
                                         </button>
                                     );
                                 })}
                         </div>
                     </div>
-                    <div className="flex gap-3 pt-2 border-t">
-                        <Button type="button" variant="outline" className="flex-1 rounded-full" onClick={() => setShowLinkCategoriesModal(false)}>Cancelar</Button>
-                        <Button type="button" className="flex-1 bg-primary text-white rounded-full" onClick={() => setShowLinkCategoriesModal(false)}>
+                    <div className="flex gap-3 pt-3 border-t border-white/10">
+                        <Button type="button" variant="ghost" className="flex-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10" onClick={() => setShowLinkCategoriesModal(false)}>Cancelar</Button>
+                        <Button type="button" className="flex-1 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all" onClick={() => setShowLinkCategoriesModal(false)}>
                             Confirmar ({form.linked_categories.length} categoria{form.linked_categories.length !== 1 ? "s" : ""})
                         </Button>
                     </div>
@@ -1436,18 +1450,18 @@ function OptionalsTab({ headers, setConfirmModal }) {
 
             {/* Modal de Complemento */}
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="rounded-2xl max-w-3xl">
+                <DialogContent className="rounded-2xl max-w-3xl bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl">
                     <DialogHeader>
-                        <DialogTitle className="font-heading">{editing ? "Editar Complemento" : "Novo Complemento"}</DialogTitle>
+                        <DialogTitle className="font-extrabold text-white text-lg">{editing ? "Editar Complemento" : "Novo Complemento"}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={save} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
-                                <Label>Foto do Complemento</Label>
+                                <Label className="text-gray-300 font-medium text-xs">Foto do Complemento</Label>
                                 <div 
-                                    className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary/50 hover:bg-gray-50 transition-all cursor-pointer relative"
-                                    onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-primary", "bg-primary/5"); }}
-                                    onDragLeave={e => { e.currentTarget.classList.remove("border-primary", "bg-primary/5"); }}
+                                    className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-[#F4B544]/50 hover:bg-white/5 transition-all cursor-pointer relative bg-[#1E1E1E]"
+                                    onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-[#F4B544]", "bg-[#F4B544]/5"); }}
+                                    onDragLeave={e => { e.currentTarget.classList.remove("border-[#F4B544]", "bg-[#F4B544]/5"); }}
                                     onDrop={handleImageDrop}
                                     onClick={() => document.getElementById("comp-image-upload").click()}
                                 >
@@ -1460,56 +1474,56 @@ function OptionalsTab({ headers, setConfirmModal }) {
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
-                                            <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <div className="mx-auto w-16 h-16 rounded-full bg-[#141414] border border-white/10 flex items-center justify-center">
                                                 <Image className="h-8 w-8 text-gray-400" />
                                             </div>
-                                            <p className="text-sm text-gray-600">Arraste uma imagem aqui</p>
-                                            <p className="text-xs text-gray-400">ou clique para selecionar</p>
+                                            <p className="text-sm text-gray-300">Arraste uma imagem aqui</p>
+                                            <p className="text-xs text-gray-500">ou clique para selecionar</p>
                                         </div>
                                     )}
                                     <input id="comp-image-upload" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                                 </div>
-                                <div className="text-xs text-muted-foreground text-center">Formatos: JPG, PNG, WEBP (max 2MB)</div>
+                                <div className="text-xs text-gray-500 text-center">Formatos: JPG, PNG, WEBP (max 2MB)</div>
                             </div>
                             
                             <div className="space-y-4">
-                                <div><Label>Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required data-testid="comp-name" /></div>
-                                <div><Label>Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-lg" required data-testid="comp-price" /></div>
-                                <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" data-testid="comp-desc" /></div>
+                                <div><Label className="text-gray-300 font-medium text-xs">Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required data-testid="comp-name" placeholder="Ex: Catupiry Extra" /></div>
+                                <div><Label className="text-gray-300 font-medium text-xs">Preço (R$) *</Label><Input type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required data-testid="comp-price" /></div>
+                                <div><Label className="text-gray-300 font-medium text-xs">Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" data-testid="comp-desc" placeholder="Ex: Porção adicional de 50g" /></div>
                                 
-                                <div><Label>Categoria</Label>
-                                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full mt-1 rounded-xl border border-[#F4B544]/30 bg-[#0D0D0C] text-[#FFFAF0] px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
+                                <div><Label className="text-gray-300 font-medium text-xs">Categoria</Label>
+                                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full mt-1 rounded-xl border border-white/10 bg-[#1E1E1E] text-white px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
                                         {sortedCategories.map(cat => (
-                                            <option key={cat.key} value={cat.key} className="bg-[#10100F] text-[#FFFAF0]">{cat.icon} {cat.name}</option>
+                                            <option key={cat.key} value={cat.key} className="bg-[#10100F] text-white">{cat.icon} {cat.name}</option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                        <div className="flex items-center gap-3 p-4 bg-[#1E1E1E] rounded-xl border border-[#F4B544]/30">
                             <Switch checked={form.required} onCheckedChange={v => setForm(f => ({ ...f, required: v }))} />
                             <div className="flex flex-col">
-                                <span className="text-sm font-medium">Obrigatório no pedido</span>
-                                <span className="text-xs text-muted-foreground">Cliente deve selecionar pelo menos um item desta categoria</span>
+                                <span className="text-sm font-bold text-white">Obrigatório no pedido</span>
+                                <span className="text-xs text-gray-400">Cliente deve selecionar pelo menos um item desta categoria</span>
                             </div>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-sm">Mínimo para selecionar</Label>
-                                <Input type="number" min="0" value={form.min_select || 0} onChange={e => setForm(f => ({ ...f, min_select: parseInt(e.target.value) || 0 }))} className="mt-1 rounded-lg" />
+                                <Label className="text-xs font-medium text-gray-300">Mínimo para selecionar</Label>
+                                <Input type="number" min="0" value={form.min_select || 0} onChange={e => setForm(f => ({ ...f, min_select: parseInt(e.target.value) || 0 }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" />
                             </div>
                             <div>
-                                <Label className="text-sm">Máximo permitido</Label>
-                                <Input type="number" min="1" value={form.max_select || 1} onChange={e => setForm(f => ({ ...f, max_select: parseInt(e.target.value) || 1 }))} className="mt-1 rounded-lg" />
+                                <Label className="text-xs font-medium text-gray-300">Máximo permitido</Label>
+                                <Input type="number" min="1" value={form.max_select || 1} onChange={e => setForm(f => ({ ...f, max_select: parseInt(e.target.value) || 1 }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" />
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm">Ativo</span></div>
-                        <div className="flex gap-3 pt-2">
-                            <Button type="button" variant="outline" className="flex-1 rounded-full" onClick={() => setShowForm(false)}>Cancelar</Button>
-                            <Button type="submit" className="flex-1 bg-primary text-white rounded-full" data-testid="save-comp-btn">{editing ? "Atualizar" : "Criar"}</Button>
+                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm font-semibold text-gray-300">Ativo</span></div>
+                        <div className="flex gap-3 pt-3 border-t border-white/10">
+                            <Button type="button" variant="ghost" className="flex-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10" onClick={() => setShowForm(false)}>Cancelar</Button>
+                            <Button type="submit" className="flex-1 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all" data-testid="save-comp-btn">{editing ? "Atualizar" : "Criar"}</Button>
                         </div>
                     </form>
                 </DialogContent>
@@ -1517,53 +1531,53 @@ function OptionalsTab({ headers, setConfirmModal }) {
             
             {/* Modal de Gerenciamento de Categorias */}
             <Dialog open={showCategoryManager} onOpenChange={setShowCategoryManager}>
-                <DialogContent className="rounded-2xl max-w-2xl max-h-[80vh] overflow-hidden">
+                <DialogContent className="rounded-2xl max-w-2xl max-h-[80vh] overflow-hidden bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl">
                     <DialogHeader>
-                        <DialogTitle className="font-heading flex items-center gap-2">
-                            <Layers className="h-5 w-5" /> Gerenciar Categorias
+                        <DialogTitle className="font-extrabold text-white text-lg flex items-center gap-2">
+                            <Layers className="h-5 w-5 text-[#F4B544]" /> Gerenciar Categorias de Opcionais
                         </DialogTitle>
                     </DialogHeader>
                     
                     <div className="space-y-3 max-h-[50vh] overflow-auto pr-2">
                         {sortedCategories.length === 0 ? (
                             <div className="text-center py-8">
-                                <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                                <p className="text-muted-foreground">Nenhuma categoria cadastrada</p>
+                                <Layers className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+                                <p className="text-gray-400">Nenhuma categoria cadastrada</p>
                             </div>
                         ) : (
                             sortedCategories.map((cat, index) => {
                                 const count = complements.filter(c => c.category === cat.key).length;
                                 return (
-                                    <div key={cat.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-border">
+                                    <div key={cat.id} className="flex items-center justify-between p-4 bg-[#1E1E1E] rounded-xl border border-white/10">
                                         <div className="flex items-center gap-3">
                                             <div className="flex flex-col items-center gap-1">
-                                                <button onClick={() => { /* reorder up */ }} disabled={index === 0} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
+                                                <button onClick={() => { /* reorder up */ }} disabled={index === 0} className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-20">
                                                     ↑
                                                 </button>
-                                                <span className="text-xs font-medium text-muted-foreground">{cat.order_index}</span>
-                                                <button onClick={() => { /* reorder down */ }} disabled={index === sortedCategories.length - 1} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
+                                                <span className="text-xs font-bold text-[#F4B544]">{cat.order_index}</span>
+                                                <button onClick={() => { /* reorder down */ }} disabled={index === sortedCategories.length - 1} className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-20">
                                                     ↓
                                                 </button>
                                             </div>
-                                            <span className="text-2xl bg-white w-12 h-12 rounded-xl flex items-center justify-center border border-border">{cat.icon || "📦"}</span>
+                                            <span className="text-2xl bg-[#141414] w-12 h-12 rounded-xl flex items-center justify-center border border-white/10">{cat.icon || "🥟"}</span>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <p className="font-medium">{cat.name}</p>
+                                                    <p className="font-bold text-white text-sm">{cat.name}</p>
                                                     {cat.required && (
-                                                        <Badge variant="secondary" className="bg-amber-100 text-amber-700">Obrigatório</Badge>
+                                                        <Badge className="bg-[#F4B544]/20 text-[#F4B544] border border-[#F4B544]/30 text-[10px] font-bold">Obrigatório</Badge>
                                                     )}
                                                 </div>
-                                                <p className="text-xs text-muted-foreground">
+                                                <p className="text-xs text-gray-400">
                                                     ID: {cat.key} · {count} item{count !== 1 ? "s" : ""}
                                                     {cat.required && ` · min: ${cat.min_select} · max: ${cat.max_select}`}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1">
-                                            <Button size="icon" variant="ghost" onClick={() => { setShowCategoryManager(false); editCategory(cat); }} className="h-9 w-9">
+                                            <Button size="icon" variant="ghost" onClick={() => { setShowCategoryManager(false); editCategory(cat); }} className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => delCategory(cat.id, cat.name)}>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg" onClick={() => delCategory(cat.id, cat.name)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -1573,8 +1587,8 @@ function OptionalsTab({ headers, setConfirmModal }) {
                         )}
                     </div>
                     
-                    <div className="border-t pt-4 flex justify-end">
-                        <Button onClick={() => { setShowCategoryManager(false); openNewCategory(); }} className="bg-primary text-white rounded-full">
+                    <div className="border-t border-white/10 pt-4 flex justify-end">
+                        <Button onClick={() => { setShowCategoryManager(false); openNewCategory(); }} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all">
                             <Plus className="h-4 w-4 mr-1.5" />Nova Categoria
                         </Button>
                     </div>
@@ -1583,56 +1597,56 @@ function OptionalsTab({ headers, setConfirmModal }) {
             
             {/* Modal de Categoria (Nova/Editar) */}
             <Dialog open={showCategoryForm} onOpenChange={setShowCategoryForm}>
-                <DialogContent className="rounded-2xl max-w-lg">
+                <DialogContent className="rounded-2xl max-w-lg bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl">
                     <DialogHeader>
-                        <DialogTitle className="font-heading">{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
+                        <DialogTitle className="font-extrabold text-white text-lg">{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
                     </DialogHeader>
                     
                     <form onSubmit={saveCategory} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-xs">Código da categoria*</Label>
-                                <Input value={categoryForm.key} onChange={e => setCategoryForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} className="mt-1 rounded-lg" placeholder="ex: frutas_frescas" required disabled={!!editingCategory} />
-                                <p className="text-[10px] text-muted-foreground mt-1">Usado internamente, não pode ter espaços</p>
+                                <Label className="text-xs font-medium text-gray-300">Código da categoria*</Label>
+                                <Input value={categoryForm.key} onChange={e => setCategoryForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="ex: molhos_especiais" required disabled={!!editingCategory} />
+                                <p className="text-[10px] text-gray-500 mt-1">Usado internamente, não pode ter espaços</p>
                             </div>
                             <div>
-                                <Label className="text-xs">Nome da categoria*</Label>
-                                <Input value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" placeholder="ex: Frutas Frescas" required />
-                                <p className="text-[10px] text-muted-foreground mt-1">Nome exibido no cardápio</p>
+                                <Label className="text-xs font-medium text-gray-300">Nome da categoria*</Label>
+                                <Input value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="ex: Molhos & Acompanhamentos" required />
+                                <p className="text-[10px] text-gray-500 mt-1">Nome exibido no cardápio</p>
                             </div>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-xs">Ícone (emoji)</Label>
-                                <Input value={categoryForm.icon} onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value }))} className="mt-1 rounded-lg text-lg" placeholder="🍓" maxLength={2} />
-                                <p className="text-[10px] text-muted-foreground mt-1">Emoji que aparece antes do nome</p>
+                                <Label className="text-xs font-medium text-gray-300">Ícone (emoji)</Label>
+                                <Input value={categoryForm.icon} onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544] text-lg" placeholder="🥟" maxLength={2} />
+                                <p className="text-[10px] text-gray-500 mt-1">Emoji que aparece antes do nome</p>
                             </div>
                             <div>
-                                <Label className="text-xs">Posição na lista</Label>
+                                <Label className="text-xs font-medium text-gray-300">Posição na lista</Label>
                                 <Input 
                                     type="number"
                                     min="0"
                                     value={categoryForm.order_index} 
                                     onChange={e => setCategoryForm(f => ({ ...f, order_index: parseInt(e.target.value) || 0 }))} 
-                                    className="mt-1 rounded-lg" 
+                                    className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" 
                                     placeholder="0"
                                 />
-                                <p className="text-[10px] text-muted-foreground mt-1">0 = primeiro, 1 = segundo, etc.</p>
+                                <p className="text-[10px] text-gray-500 mt-1">0 = primeiro, 1 = segundo, etc.</p>
                             </div>
                         </div>
                         
                         {/* Obrigatoriedade */}
-                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 p-3.5 bg-[#1E1E1E] rounded-xl border border-white/10">
+                            <div className="flex items-center gap-3">
                                 <input 
                                     type="checkbox" 
                                     id="cat-required"
                                     checked={categoryForm.required}
                                     onChange={e => setCategoryForm(f => ({ ...f, required: e.target.checked }))}
-                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                    className="h-4 w-4 rounded border-white/20 bg-[#141414] text-[#F4B544] accent-[#F4B544] cursor-pointer"
                                 />
-                                <Label htmlFor="cat-required" className="text-sm font-medium cursor-pointer">Categoria obrigatória</Label>
+                                <Label htmlFor="cat-required" className="text-sm font-bold text-white cursor-pointer">Categoria obrigatória</Label>
                             </div>
                         </div>
                         
@@ -1640,39 +1654,39 @@ function OptionalsTab({ headers, setConfirmModal }) {
                         {categoryForm.required && (
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <Label className="text-xs">Mínimo de seleções*</Label>
+                                    <Label className="text-xs font-medium text-gray-300">Mínimo de seleções*</Label>
                                     <Input 
                                         type="number"
                                         min={1}
                                         value={categoryForm.min_select} 
                                         onChange={e => setCategoryForm(f => ({ ...f, min_select: parseInt(e.target.value) || 1 }))} 
-                                        className="mt-1 rounded-lg" 
+                                        className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" 
                                         placeholder="1"
                                         required={categoryForm.required}
                                     />
-                                    <p className="text-[10px] text-muted-foreground mt-1">Mínimo de itens que o cliente deve escolher</p>
+                                    <p className="text-[10px] text-gray-500 mt-1">Mínimo de itens que o cliente deve escolher</p>
                                 </div>
                                 <div>
-                                    <Label className="text-xs">Máximo de seleções*</Label>
+                                    <Label className="text-xs font-medium text-gray-300">Máximo de seleções*</Label>
                                     <Input 
                                         type="number"
                                         min={1}
                                         value={categoryForm.max_select} 
                                         onChange={e => setCategoryForm(f => ({ ...f, max_select: parseInt(e.target.value) || 1 }))} 
-                                        className="mt-1 rounded-lg" 
+                                        className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" 
                                         placeholder="1"
                                         required={categoryForm.required}
                                     />
-                                    <p className="text-[10px] text-muted-foreground mt-1">Máximo de itens que o cliente pode escolher</p>
+                                    <p className="text-[10px] text-gray-500 mt-1">Máximo de itens que o cliente pode escolher</p>
                                 </div>
                             </div>
                         )}
-                        <div className="flex gap-2">
-                            <Button type="submit" className="flex-1 bg-primary text-white rounded-full">
+                        <div className="flex gap-2 pt-2">
+                            <Button type="submit" className="flex-1 bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all">
                                 {editingCategory ? "Atualizar" : "Criar"} Categoria
                             </Button>
                             {editingCategory && (
-                                <Button type="button" variant="outline" onClick={() => { setEditingCategory(null); setCategoryForm({ key: "", name: "", icon: "", order_index: 0 }); }} className="rounded-full">
+                                <Button type="button" variant="ghost" onClick={() => { setEditingCategory(null); setCategoryForm({ key: "", name: "", icon: "", order_index: 0 }); }} className="rounded-xl text-gray-400 hover:text-white hover:bg-white/10">
                                     Cancelar
                                 </Button>
                             )}
@@ -1982,46 +1996,46 @@ function CombosTab({ headers }) {
             )}
 
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="rounded-2xl max-w-lg max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle className="font-heading">{editing ? "Editar Combo" : "Novo Combo"}</DialogTitle></DialogHeader>
+                <DialogContent className="rounded-2xl max-w-lg max-h-[90vh] overflow-y-auto bg-[#141414] text-white border border-[#D4AF37]/30 shadow-2xl">
+                    <DialogHeader><DialogTitle className="font-extrabold text-white text-lg">{editing ? "Editar Combo" : "Novo Combo"}</DialogTitle></DialogHeader>
                     <form onSubmit={save} className="space-y-4">
-                        <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-lg" required /></div>
-                        <div><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-lg" /></div>
-                        <div><Label>Imagem</Label>
+                        <div><Label className="text-xs font-medium text-gray-300">Nome do Combo</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required placeholder="Ex: Combo Café da Tarde" /></div>
+                        <div><Label className="text-xs font-medium text-gray-300">Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="Ex: 1 Salgado Assado + 1 Cappuccino Especial" /></div>
+                        <div><Label className="text-xs font-medium text-gray-300">Imagem do Combo</Label>
                             <div className="mt-1 flex gap-2 items-center">
-                                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="rounded-lg flex-1" />
-                                <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
+                                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544] flex-1" />
+                                <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" className="rounded-xl border-white/10 bg-[#1E1E1E] text-white hover:bg-white/10" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
                             </div>
-                            {form.image_url && <img src={getImageUrl(form.image_url)} alt="" className="mt-2 h-20 w-full object-cover rounded-lg" />}
+                            {form.image_url && <img src={getImageUrl(form.image_url)} alt="" className="mt-2 h-20 w-full object-cover rounded-lg border border-white/10" />}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div><Label>Preco Base (R$)</Label><Input type="number" step="0.01" value={form.base_price} onChange={e => setForm(f => ({ ...f, base_price: e.target.value }))} className="mt-1 rounded-lg" required /></div>
-                            <div><Label>Desconto (%)</Label><Input type="number" value={form.discount_percent} onChange={e => setForm(f => ({ ...f, discount_percent: parseInt(e.target.value) || 0 }))} className="mt-1 rounded-lg" /></div>
+                            <div><Label className="text-xs font-medium text-gray-300">Preço Base (R$)</Label><Input type="number" step="0.01" value={form.base_price} onChange={e => setForm(f => ({ ...f, base_price: e.target.value }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" required placeholder="0.00" /></div>
+                            <div><Label className="text-xs font-medium text-gray-300">Desconto (%)</Label><Input type="number" min="0" max="100" value={form.discount_percent} onChange={e => setForm(f => ({ ...f, discount_percent: parseInt(e.target.value) || 0 }))} className="mt-1 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" placeholder="0" /></div>
                         </div>
 
                         {/* Items do combo */}
                         <div>
-                            <Label>Itens do Combo</Label>
+                            <Label className="text-xs font-medium text-gray-300">Itens do Combo (Categorias participantes)</Label>
                             <div className="mt-2 space-y-2">
                                 {form.items.map((item, index) => (
-                                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                                        <span className="flex-1 text-sm">{item.quantity}x {getCategoryName(item.category_id)}</span>
-                                        <Button type="button" size="icon" variant="ghost" onClick={() => removeItem(index)}><X className="h-4 w-4" /></Button>
+                                    <div key={index} className="flex items-center gap-2 p-2.5 bg-[#1E1E1E] rounded-xl border border-white/10">
+                                        <span className="flex-1 text-sm font-medium text-white">{item.quantity}x {getCategoryName(item.category_id)}</span>
+                                        <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg" onClick={() => removeItem(index)}><X className="h-4 w-4" /></Button>
                                     </div>
                                 ))}
                                 <div className="flex gap-2">
-                                    <select value={newItem.category_id} onChange={e => setNewItem(i => ({ ...i, category_id: e.target.value }))} className="flex-1 rounded-lg border border-input bg-white px-3 py-2 text-sm">
-                                        <option value="">Selecione uma categoria</option>
-                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    <select value={newItem.category_id} onChange={e => setNewItem(i => ({ ...i, category_id: e.target.value }))} className="flex-1 rounded-xl border border-white/10 bg-[#1E1E1E] text-white px-3 py-2 text-sm focus:border-[#F4B544] focus:outline-none">
+                                        <option value="" className="bg-[#10100F] text-white">Selecione uma categoria</option>
+                                        {categories.map(c => <option key={c.id} value={c.id} className="bg-[#10100F] text-white">{c.name}</option>)}
                                     </select>
-                                    <Input type="number" min="1" value={newItem.quantity} onChange={e => setNewItem(i => ({ ...i, quantity: parseInt(e.target.value) || 1 }))} className="w-20 rounded-lg" />
-                                    <Button type="button" onClick={addItem} variant="outline"><Plus className="h-4 w-4" /></Button>
+                                    <Input type="number" min="1" value={newItem.quantity} onChange={e => setNewItem(i => ({ ...i, quantity: parseInt(e.target.value) || 1 }))} className="w-20 rounded-xl bg-[#1E1E1E] text-white border-white/10 focus:border-[#F4B544]" />
+                                    <Button type="button" onClick={addItem} className="rounded-xl border border-white/10 bg-[#1E1E1E] text-white hover:bg-white/10"><Plus className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm">Ativo</span></div>
-                        <Button type="submit" className="w-full bg-primary text-white rounded-full">{editing ? "Atualizar" : "Criar"}</Button>
+                        <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><span className="text-sm font-semibold text-gray-300">Ativo</span></div>
+                        <Button type="submit" className="w-full bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all">{editing ? "Atualizar" : "Criar"} Combo</Button>
                     </form>
                 </DialogContent>
             </Dialog>

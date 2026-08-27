@@ -82,7 +82,7 @@ export function FavoritesProvider({ children }) {
     useEffect(() => {
         const handleStorageChange = () => {
             try {
-                const saved = localStorage.getItem("salada-soul-customer");
+                const saved = localStorage.getItem("johb-customer");
                 const phone = saved ? JSON.parse(saved)?.phone : null;
                 if (phone !== customerPhone) {
                     setCustomerPhone(phone);

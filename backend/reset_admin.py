@@ -19,7 +19,7 @@ async def reset_admin_password():
             port=os.environ.get('DB_PORT', '5432'),
             user=os.environ.get('DB_USER', 'postgres'),
             password=os.environ.get('DB_PASSWORD', ''),
-            database=os.environ.get('DB_NAME', 'saladasoul')
+            database=os.environ.get('DB_NAME', 'johb')
         )
     
     # Gerar hash da nova senha
@@ -27,7 +27,7 @@ async def reset_admin_password():
     
     # Atualizar senha do admin
     await conn.execute(
-        "UPDATE admin_users SET password_hash = $1 WHERE email = 'admin@saladasoul.com'",
+        "UPDATE admin_users SET password_hash = $1 WHERE email = 'admin@johb.com.br' OR email = 'admin@saladasoul.com' OR role = 'admin'",
         new_hash
     )
     
