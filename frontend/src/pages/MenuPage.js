@@ -874,66 +874,6 @@ function LoginModal({ open, onClose, onLogin }) {
     );
 }
 
-function AboutVideoCard() {
-    const [muted, setMuted] = useState(true);
-    const videoRef = useRef(null);
-
-    const toggleSound = () => {
-        if (videoRef.current) {
-            videoRef.current.muted = !muted;
-            setMuted(!muted);
-            if (muted) {
-                toast.success("Áudio do vídeo ativado!", {
-                    style: { background: "#171612", color: "#FFFAF0", border: "1px solid rgba(244, 181, 68, 0.4)" }
-                });
-            }
-        }
-    };
-
-    return (
-        <div className="relative w-full max-w-sm sm:max-w-md mx-auto rounded-3xl overflow-hidden border border-[#F4B544]/35 bg-[#10100F] shadow-2xl gold-glow group">
-            <video
-                ref={videoRef}
-                src="/johbcafeesalgados.mp4"
-                autoPlay
-                loop
-                muted={muted}
-                playsInline
-                className="w-full h-full object-cover max-h-[500px] rounded-3xl"
-            />
-            {/* Overlay com gradiente suave */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/85 via-transparent to-transparent pointer-events-none rounded-3xl" />
-
-            {/* Botão de Controle de Som */}
-            <button
-                type="button"
-                onClick={toggleSound}
-                className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#050505]/85 hover:bg-[#171612] border border-[#F4B544]/40 hover:border-[#F4B544] text-[#FFFAF0] text-xs font-bold shadow-xl backdrop-blur-md transition-all active:scale-95 cursor-pointer"
-                aria-label={muted ? "Ativar som do vídeo" : "Desativar som do vídeo"}
-            >
-                {muted ? (
-                    <>
-                        <VolumeX className="w-4 h-4 text-[#F4B544]" />
-                        <span>Ativar Som</span>
-                    </>
-                ) : (
-                    <>
-                        <Volume2 className="w-4 h-4 text-[#F4B544] animate-pulse" />
-                        <span>Som Ligado</span>
-                    </>
-                )}
-            </button>
-
-            {/* Badge elegante no rodapé do vídeo */}
-            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none z-10">
-                <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#10100F]/90 border border-[#F4B544]/30 backdrop-blur-md text-xs font-bold text-[#F4B544] shadow-lg">
-                    <span>🎬 Produção Artesanal JOHB</span>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 export default function MenuPage() {
     const [menus, setMenus] = useState([]);
     const [selectedMenu, setSelectedMenu] = useState(null);
@@ -1398,20 +1338,30 @@ export default function MenuPage() {
                         <p className="text-[#B8B1A3] leading-relaxed font-light text-base sm:text-lg">
                             Do preparo à entrega, cada pedido JOHB é feito para chegar com muito sabor e bem quentinho até você. Nossos salgados e assados são preparados em pequenos lotes ao longo do dia com ingredientes nobres e massa super leve.
                         </p>
-                        <div className="pt-4 grid grid-cols-2 gap-6 border-t border-[#F4B544]/15">
+                        <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[#F4B544]/15">
                             <div>
                                 <span className="block font-serif text-xl font-bold text-[#F4B544]">Balneário Arroio do Silva</span>
                                 <span className="text-xs text-[#B8B1A3]">Delivery rápido e direto para sua casa.</span>
                             </div>
                             <div>
-                                <span className="block font-serif text-xl font-bold text-[#F4B544]">Atendimento</span>
-                                <span className="text-xs text-[#B8B1A3]">Somente pedidos agendados</span>
+                                <span className="block font-serif text-xl font-bold text-[#F4B544]">Qualidade & Tradição</span>
+                                <span className="text-xs text-[#B8B1A3]">Receitas de família com muito capricho.</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="relative flex justify-center items-center">
-                        <AboutVideoCard />
+                        <div className="relative w-full max-w-sm sm:max-w-md aspect-square rounded-3xl overflow-hidden border border-[#F4B544]/30 bg-[#10100F] shadow-2xl gold-glow flex flex-col items-center justify-center p-8 sm:p-12 text-center group">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-[#F4B544]/10 via-transparent to-transparent pointer-events-none" />
+                            <img
+                                src="/logo.png"
+                                alt="JOHB Café & Salgados"
+                                className="w-48 sm:w-56 h-auto object-contain filter drop-shadow-[0_10px_25px_rgba(244,181,68,0.25)] group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="mt-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#171612] border border-[#F4B544]/30 text-xs uppercase tracking-widest font-extrabold text-[#F4B544]">
+                                <span>☕ Café & Salgados Artesanais</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
