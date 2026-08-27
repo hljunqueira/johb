@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Utensils, Tag } from "lucide-react";
+import { Utensils, Tag } from "lucide-react";
 import { getImageUrl } from "@/lib/constants";
 
 export function ComboSuggestion({ combos = [], onSelectCombo }) {
@@ -9,8 +9,7 @@ export function ComboSuggestion({ combos = [], onSelectCombo }) {
 
     return (
         <div className="bg-[#141414] rounded-2xl border border-[#D4AF37]/30 p-5 md:p-7 mb-8 shadow-xl">
-            <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="h-5 w-5 text-[#F4B544]" />
+            <div className="mb-1">
                 <h2 className="text-xl md:text-2xl font-black font-heading text-white tracking-tight">
                     Combos Especiais & Ofertas
                 </h2>
