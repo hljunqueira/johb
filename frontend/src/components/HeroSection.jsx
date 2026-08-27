@@ -48,11 +48,11 @@ export function HeroSection({ onVerCardapio, deliverySettings, storeStatus }) {
         if (deliverySettings?.temporarily_closed || storeStatus?.temporarilyClosed) {
             return "Ver Cardápio (Pausado)";
         }
+        if (storeStatus?.isProductionDay || (deliverySettings?.allow_immediate_orders === false && deliverySettings?.allow_scheduled_orders !== false)) {
+            return "Ver Cardápio & Encomendar";
+        }
         if (deliverySettings?.allow_immediate_orders !== false && deliverySettings?.allow_scheduled_orders === false) {
             return "Ver Cardápio & Pedir Agora";
-        }
-        if (deliverySettings?.allow_immediate_orders === false && deliverySettings?.allow_scheduled_orders !== false) {
-            return "Ver Cardápio & Agendar";
         }
         return "Ver Cardápio & Fazer Pedido";
     };

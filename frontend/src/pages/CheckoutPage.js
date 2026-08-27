@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { 
-    ArrowLeft, Truck, Store, Check, Loader2, MapPin, 
+import {
+    ArrowLeft, Truck, Store, Check, Loader2, MapPin,
     CreditCard, QrCode, ShoppingBag, ShieldCheck, Sparkles,
     Clock, DollarSign, Banknote, AlertCircle, Tag, X
 } from "lucide-react";
@@ -26,7 +26,7 @@ const getImageUrl = (url) => {
 export default function CheckoutPage() {
     const { items, total, clearCart, scheduledDate, scheduledTime, setScheduleInfo } = useCart();
     const navigate = useNavigate();
-    
+
     // Dados do cliente salvos no navegador
     const customerData = (() => {
         try {
@@ -39,12 +39,12 @@ export default function CheckoutPage() {
 
     const [name, setName] = useState(customerData?.name || localStorage.getItem("johb-name") || "");
     const [phone, setPhone] = useState(customerData?.phone || localStorage.getItem("johb-phone") || "");
-    
+
     const [deliveryType, setDeliveryType] = useState("entrega"); // 'entrega' ou 'retirada'
     const [address, setAddress] = useState(() => localStorage.getItem("johb-address") || "");
     const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("johb-neighborhood") || "");
     const [observation, setObservation] = useState("");
-    
+
     // Formas de pagamento: 'asaas' (online), 'cartao_maquininha', 'dinheiro'
     const [paymentMethod, setPaymentMethod] = useState("asaas");
     const [needsChange, setNeedsChange] = useState(false);
@@ -115,6 +115,13 @@ export default function CheckoutPage() {
     // Controle se o pedido é agendado ou imediato
     const [isScheduled, setIsScheduled] = useState(() => Boolean(scheduledDate && scheduledTime));
 
+    // Se pedidos imediatos estiverem desativados, garante modo agendado ativo
+    useEffect(() => {
+        if (deliverySettings?.allow_immediate_orders === false) {
+            setIsScheduled(true);
+        }
+    }, [deliverySettings]);
+
     // Auto-reconhecimento de cliente por WhatsApp
     const handlePhoneBlur = async () => {
         const clean = phone.replace(/\D/g, "");
@@ -128,7 +135,7 @@ export default function CheckoutPage() {
                     }
                     toast.success(`Olá de volta, ${res.data.name}! Preenchemos seus dados habituais.`);
                 }
-            } catch {}
+            } catch { }
         }
     };
 
@@ -175,8 +182,8 @@ export default function CheckoutPage() {
     const minFree = Number(deliverySettings?.min_free_delivery ?? 0);
     const isFreeDeliveryEligible = minFree > 0 && total >= minFree;
 
-    const finalDeliveryFee = deliveryType === "entrega" 
-        ? (isFreeDeliveryEligible ? 0 : baseFee) 
+    const finalDeliveryFee = deliveryType === "entrega"
+        ? (isFreeDeliveryEligible ? 0 : baseFee)
         : 0;
 
     // Validação de Pedido Mínimo
@@ -391,11 +398,10 @@ export default function CheckoutPage() {
                                     type="button"
                                     onClick={() => setDeliveryType("entrega")}
                                     disabled={deliverySettings?.active === false}
-                                    className={`p-4 rounded-xl border text-center transition-all flex flex-col items-center gap-2 ${
-                                        deliveryType === "entrega"
+                                    className={`p-4 rounded-xl border text-center transition-all flex flex-col items-center gap-2 ${deliveryType === "entrega"
                                             ? "bg-[#171612] border-[#F4B544] text-[#F4B544] gold-glow-sm"
                                             : "bg-[#050505] border-[#F4B544]/15 text-[#B8B1A3] hover:border-[#F4B544]/30"
-                                    } ${deliverySettings?.active === false ? "opacity-40 cursor-not-allowed" : ""}`}
+                                        } ${deliverySettings?.active === false ? "opacity-40 cursor-not-allowed" : ""}`}
                                 >
                                     <Truck className="w-6 h-6" />
                                     <span className="font-bold text-xs uppercase tracking-wider">Entrega em Domicílio</span>
@@ -408,11 +414,10 @@ export default function CheckoutPage() {
                                     type="button"
                                     onClick={() => setDeliveryType("retirada")}
                                     disabled={deliverySettings?.allow_pickup === false}
-                                    className={`p-4 rounded-xl border text-center transition-all flex flex-col items-center gap-2 ${
-                                        deliveryType === "retirada"
+                                    className={`p-4 rounded-xl border text-center transition-all flex flex-col items-center gap-2 ${deliveryType === "retirada"
                                             ? "bg-[#171612] border-[#F4B544] text-[#F4B544] gold-glow-sm"
                                             : "bg-[#050505] border-[#F4B544]/15 text-[#B8B1A3] hover:border-[#F4B544]/30"
-                                    } ${deliverySettings?.allow_pickup === false ? "opacity-40 cursor-not-allowed" : ""}`}
+                                        } ${deliverySettings?.allow_pickup === false ? "opacity-40 cursor-not-allowed" : ""}`}
                                 >
                                     <Store className="w-6 h-6" />
                                     <span className="font-bold text-xs uppercase tracking-wider">Retirar no Balcão</span>
@@ -441,11 +446,10 @@ export default function CheckoutPage() {
                                             setIsScheduled(false);
                                             setScheduleInfo("", "");
                                         }}
-                                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                            !isScheduled
+                                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${!isScheduled
                                                 ? "bg-[#F4B544] text-black font-extrabold shadow-md"
                                                 : "text-[#B8B1A3] hover:text-[#FFFAF0]"
-                                        }`}
+                                            }`}
                                     >
                                         <span>⚡ O quanto antes</span>
                                     </button>
@@ -455,14 +459,20 @@ export default function CheckoutPage() {
                                             setIsScheduled(true);
                                             setScheduleInfo(currentSelectedDate, currentSelectedTime);
                                         }}
-                                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                            isScheduled
+                                        className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${isScheduled
                                                 ? "bg-[#F4B544] text-black font-extrabold shadow-md"
                                                 : "text-[#B8B1A3] hover:text-[#FFFAF0]"
-                                        }`}
+                                            }`}
                                     >
                                         <span>📅 Agendar Horário</span>
                                     </button>
+                                </div>
+                            )}
+
+                            {deliverySettings?.allow_immediate_orders === false && (
+                                <div className="p-3.5 rounded-xl bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-between text-xs text-[#F4B544]">
+                                    <span>🥖 <strong>Dia de Produção na Cozinha</strong> Pedidos exclusivamente por encomenda agendada.</span>
+                                    <span className="font-bold">📅 Encomenda</span>
                                 </div>
                             )}
 
@@ -614,11 +624,10 @@ export default function CheckoutPage() {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod("asaas")}
-                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
-                                            paymentMethod === "asaas"
+                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${paymentMethod === "asaas"
                                                 ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
                                                 : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
@@ -638,11 +647,10 @@ export default function CheckoutPage() {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod("cartao_maquininha")}
-                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
-                                            paymentMethod === "cartao_maquininha"
+                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${paymentMethod === "cartao_maquininha"
                                                 ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
                                                 : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
@@ -662,11 +670,10 @@ export default function CheckoutPage() {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod("dinheiro")}
-                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
-                                            paymentMethod === "dinheiro"
+                                        className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${paymentMethod === "dinheiro"
                                                 ? "bg-[#171612] border-[#F4B544] gold-glow-sm"
                                                 : "bg-[#050505] border-[#F4B544]/15 hover:border-[#F4B544]/30"
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg bg-[#F4B544]/10 border border-[#F4B544]/30 flex items-center justify-center text-[#F4B544]">
@@ -681,13 +688,13 @@ export default function CheckoutPage() {
                                     </button>
                                 )}
 
-                                {deliverySettings?.accept_online_payment === false && 
-                                 deliverySettings?.accept_card_machine === false && 
-                                 deliverySettings?.accept_cash === false && (
-                                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
-                                        Nenhuma forma de pagamento configurada. Por favor, entre em contato via WhatsApp.
-                                    </div>
-                                )}
+                                {deliverySettings?.accept_online_payment === false &&
+                                    deliverySettings?.accept_card_machine === false &&
+                                    deliverySettings?.accept_cash === false && (
+                                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                                            Nenhuma forma de pagamento configurada. Por favor, entre em contato via WhatsApp.
+                                        </div>
+                                    )}
 
                                 {paymentMethod === "dinheiro" && (
                                     <div className="p-4 rounded-xl bg-[#050505] border border-[#F4B544]/30 space-y-3 mt-2 animate-in fade-in">
@@ -697,18 +704,16 @@ export default function CheckoutPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => { setNeedsChange(false); setChangeForValue(""); }}
-                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
-                                                        !needsChange ? "bg-[#F4B544] text-black border-[#F4B544]" : "bg-[#10100F] text-[#B8B1A3] border-white/10"
-                                                    }`}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${!needsChange ? "bg-[#F4B544] text-black border-[#F4B544]" : "bg-[#10100F] text-[#B8B1A3] border-white/10"
+                                                        }`}
                                                 >
                                                     Não preciso
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => setNeedsChange(true)}
-                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
-                                                        needsChange ? "bg-[#F4B544] text-black border-[#F4B544]" : "bg-[#10100F] text-[#B8B1A3] border-white/10"
-                                                    }`}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold border ${needsChange ? "bg-[#F4B544] text-black border-[#F4B544]" : "bg-[#10100F] text-[#B8B1A3] border-white/10"
+                                                        }`}
                                                 >
                                                     Sim, preciso
                                                 </button>
@@ -891,11 +896,11 @@ export default function CheckoutPage() {
                                 ) : (
                                     <>
                                         <span>
-                                            {isBelowMinOrder 
+                                            {isBelowMinOrder
                                                 ? `Mínimo: R$ ${minOrderValue.toFixed(2).replace(".", ",")} (Faltam R$ ${diffToMinOrder.toFixed(2).replace(".", ",")})`
-                                                : paymentMethod === "asaas" 
-                                                    ? "Ir para Pagamento Online" 
-                                                    : isScheduled 
+                                                : paymentMethod === "asaas"
+                                                    ? "Ir para Pagamento Online"
+                                                    : isScheduled
                                                         ? (currentSelectedTime ? "Confirmar Pedido Agendado" : "Selecione um Horário Válido")
                                                         : "Confirmar Pedido Agora"
                                             }

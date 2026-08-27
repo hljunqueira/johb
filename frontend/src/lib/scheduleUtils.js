@@ -1,5 +1,7 @@
 /**
  * Utilitários para Agendamento Prévio de Pedidos - JOHB Café & Salgados
+ * Respeita estritamente o horário oficial de Brasília (America/Sao_Paulo)
+ * e as configurações de dias de funcionamento do banco de dados (sem fallbacks artificiais).
  */
 
 const DAY_KEYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
@@ -15,10 +17,12 @@ const DAY_LABELS = {
 
 export function parseBusinessHours(raw) {
     if (!raw) return {};
-    if (typeof raw === 'object') return raw;
+    if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
     if (typeof raw === 'string') {
         try {
-            return JSON.parse(raw);
+            let parsed = JSON.parse(raw);
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            return typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
         } catch {
             return {};
         }
@@ -27,26 +31,73 @@ export function parseBusinessHours(raw) {
 }
 
 /**
+ * Retorna os componentes da data e hora atual no fuso de Brasília
+ */
+export function getBrasiliaNow() {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Sao_Paulo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+    });
+    const parts = formatter.formatToParts(now);
+    const getVal = (type) => parts.find(p => p.type === type)?.value;
+
+    const year = parseInt(getVal("year"), 10);
+    const month = parseInt(getVal("month"), 10);
+    const day = parseInt(getVal("day"), 10);
+    const hour = parseInt(getVal("hour"), 10);
+    const minute = parseInt(getVal("minute"), 10);
+
+    // Cria objeto Date no fuso de Brasília
+    const brasiliaDate = new Date(year, month - 1, day, hour, minute);
+    return {
+        dateObj: brasiliaDate,
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        currentMinutes: hour * 60 + minute,
+        dateStr: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    };
+}
+
+/**
  * Retorna a lista de datas elegíveis para agendamento respeitando os dias em que o restaurante abre.
  */
 export function getAvailableScheduleDates(deliverySettings) {
+    if (!deliverySettings) return [];
+    if (deliverySettings.temporarily_closed) return [];
+
     const dates = [];
-    const maxDays = Number(deliverySettings?.max_schedule_days) || 7;
+    const maxDays = Math.min(30, Math.max(1, Number(deliverySettings?.max_schedule_days) || 7));
     const businessHours = parseBusinessHours(deliverySettings?.business_hours);
     const alwaysOpen = Boolean(deliverySettings?.always_open);
+    const allowImmediate = deliverySettings?.allow_immediate_orders !== false;
+    const allowScheduled = deliverySettings?.allow_scheduled_orders !== false;
 
-    const now = new Date();
+    if (!allowScheduled && !allowImmediate) {
+        return [];
+    }
+
+    const { dateObj: baseDate } = getBrasiliaNow();
 
     for (let i = 0; i < maxDays; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() + i);
+        const d = new Date(baseDate);
+        d.setDate(baseDate.getDate() + i);
 
         const dayKey = DAY_KEYS[d.getDay()];
         const dayConfig = businessHours[dayKey];
-        const isOpen = alwaysOpen || !dayConfig || dayConfig.open !== false;
 
-        // Se o restaurante estiver fechado neste dia da semana, pula
-        if (!isOpen) continue;
+        // Se não for always_open e o dia não estiver cadastrado como aberto, pula
+        const isOpenDay = alwaysOpen || (dayConfig && dayConfig.open === true);
+        if (!isOpenDay) continue;
 
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -61,9 +112,10 @@ export function getAvailableScheduleDates(deliverySettings) {
             prefix = w;
         }
 
-        const label = `${prefix} (${day}/${month})`;
         const slots = getAvailableTimeSlots(dateStr, deliverySettings);
         const hasSlots = slots.length > 0;
+
+        const label = `${prefix} (${day}/${month})`;
 
         dates.push({
             value: dateStr,
@@ -87,40 +139,48 @@ export function getAvailableScheduleDates(deliverySettings) {
  * Se for hoje, filtra respeitando a antecedência mínima (min_lead_hours).
  */
 export function getAvailableTimeSlots(selectedDateStr, deliverySettings) {
-    if (!selectedDateStr) return [];
+    if (!selectedDateStr || !deliverySettings) return [];
+    if (deliverySettings.temporarily_closed) return [];
 
     const businessHours = parseBusinessHours(deliverySettings?.business_hours);
     const alwaysOpen = Boolean(deliverySettings?.always_open);
     const minLeadHours = Number(deliverySettings?.min_lead_hours ?? 0.5);
 
     const [year, month, day] = selectedDateStr.split('-').map(Number);
+    if (!year || !month || !day) return [];
+
     const targetDate = new Date(year, month - 1, day);
     const dayKey = DAY_KEYS[targetDate.getDay()];
-    const dayConfig = businessHours[dayKey] || { open: true, start: "11:00", end: "22:00" };
+    const dayConfig = businessHours[dayKey];
 
-    if (!alwaysOpen && dayConfig.open === false) {
-        return [];
+    if (!alwaysOpen) {
+        if (!dayConfig || dayConfig.open !== true) {
+            return [];
+        }
     }
 
-    const startStr = dayConfig.start || "11:00";
-    const endStr = dayConfig.end || "22:00";
+    const startStr = (dayConfig?.start || (alwaysOpen ? "00:00" : "")).trim();
+    const endStr = (dayConfig?.end || (alwaysOpen ? "23:59" : "")).trim();
+
+    if (!startStr || !endStr) return [];
 
     const [startH, startM] = startStr.split(':').map(Number);
     const [endH, endM] = endStr.split(':').map(Number);
 
-    const startTotalMins = (isNaN(startH) ? 11 : startH) * 60 + (isNaN(startM) ? 0 : startM);
-    const endTotalMins = (isNaN(endH) ? 22 : endH) * 60 + (isNaN(endM) ? 0 : endM);
+    if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) {
+        return [];
+    }
 
-    const now = new Date();
-    const isToday = (
-        now.getFullYear() === year &&
-        now.getMonth() === (month - 1) &&
-        now.getDate() === day
-    );
+    const startTotalMins = startH * 60 + startM;
+    const endTotalMins = endH * 60 + endM;
 
-    // Se for hoje, calcula a restrição de horário mínimo
-    const currentMinsNow = now.getHours() * 60 + now.getMinutes();
-    const minEarliestMins = isToday ? (currentMinsNow + Math.round(minLeadHours * 60)) : 0;
+    if (startTotalMins >= endTotalMins) return [];
+
+    const { year: nowYear, month: nowMonth, day: nowDay, currentMinutes: nowMinutes } = getBrasiliaNow();
+    const isToday = (nowYear === year && nowMonth === month && nowDay === day);
+
+    // Se for hoje, calcula a restrição de horário mínimo de antecedência
+    const minEarliestMins = isToday ? (nowMinutes + Math.round(minLeadHours * 60)) : 0;
 
     const slots = [];
     for (let m = startTotalMins; m <= endTotalMins; m += 30) {

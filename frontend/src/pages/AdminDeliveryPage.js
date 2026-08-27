@@ -587,6 +587,15 @@ function HoursTab({ settings, setSettings, loading, saveDelivery, updateHour }) 
                     </div>
                 </div>
 
+                {settings.allow_immediate_orders === false && settings.allow_scheduled_orders !== false && (
+                    <div className="p-3.5 rounded-xl bg-[#F4B544]/10 border border-[#F4B544]/30 text-xs text-[#F4B544] flex items-center gap-2.5">
+                        <span className="text-base shrink-0">🥖</span>
+                        <span>
+                            <strong>Modo Dia de Produção Ativo:</strong> A loja não aceitará pedidos de pronta-entrega hoje, mas clientes poderão navegar e agendar encomendas para amanhã e dias futuros.
+                        </span>
+                    </div>
+                )}
+
                 {settings.allow_scheduled_orders !== false && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/10">
                         <div>

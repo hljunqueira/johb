@@ -1291,8 +1291,38 @@ async def create_order(request: CreateOrderRequest):
                 "line_total": item_line_total
             })
 
-        # 2. Validar Pedido Mínimo e Recalcular Taxa de Entrega no Backend
-        settings_row = await conn.fetchrow("SELECT delivery_fee, min_free_delivery, min_order_value, areas FROM delivery_settings WHERE id = 1")
+        # 2. Validar Regras de Negócio da Loja, Pedido Mínimo e Taxa de Entrega
+        settings_row = await conn.fetchrow("""
+            SELECT delivery_fee, min_free_delivery, min_order_value, areas,
+                   active, allow_pickup, allow_immediate_orders, allow_scheduled_orders, temporarily_closed
+            FROM delivery_settings WHERE id = 1
+        """)
+        
+        if settings_row:
+            if settings_row['temporarily_closed']:
+                raise HTTPException(status_code=400, detail="A loja está temporariamente fechada para novos pedidos no momento.")
+
+            allow_imm = settings_row['allow_immediate_orders'] if settings_row['allow_immediate_orders'] is not None else True
+            allow_sch = settings_row['allow_scheduled_orders'] if settings_row['allow_scheduled_orders'] is not None else True
+
+            if not allow_imm and not allow_sch:
+                raise HTTPException(status_code=400, detail="Os pedidos online estão desativados no momento.")
+
+            # Se pronta-entrega imediata estiver desativada (Dia de Produção), exige agendamento prévio
+            if not allow_imm and allow_sch:
+                if not request.scheduled_date or not request.scheduled_time:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Hoje é dia de produção na cozinha. Por favor, selecione uma data e horário de agendamento para sua encomenda."
+                    )
+
+            # Validar modalidade de recebimento
+            if request.delivery_type == "retirada" and settings_row['allow_pickup'] is False:
+                raise HTTPException(status_code=400, detail="A opção de retirada no balcão não está disponível no momento.")
+            
+            if request.delivery_type == "entrega" and settings_row['active'] is False:
+                raise HTTPException(status_code=400, detail="O serviço de tele-entrega em domicílio está pausado no momento.")
+
         min_order_val = float(settings_row['min_order_value']) if (settings_row and settings_row['min_order_value'] is not None) else 0.0
         
         if min_order_val > 0 and recalculated_subtotal < min_order_val:
