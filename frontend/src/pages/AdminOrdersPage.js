@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -112,16 +112,17 @@ const OrderCard = ({
                 <div
                     ref={provided.innerRef}
                     {...provided.draggableProps}
-                    className={`bg-[#181714] rounded-2xl border p-3.5 shadow-md transition-all flex flex-col gap-2.5 ${
+                    {...provided.dragHandleProps}
+                    className={`bg-[#181714] rounded-2xl border p-3.5 shadow-md transition-all flex flex-col gap-2.5 cursor-grab active:cursor-grabbing select-none ${
                         snapshot.isDragging 
-                            ? "shadow-2xl ring-2 ring-[#F4B544] border-[#F4B544] scale-105 rotate-1" 
-                            : "border-white/10 hover:border-[#F4B544]/40"
+                            ? "shadow-2xl ring-2 ring-[#F4B544] border-[#F4B544] scale-105 rotate-1 z-50 opacity-95 bg-[#201E19]" 
+                            : "border-white/10 hover:border-[#F4B544]/50 hover:bg-[#1C1A16]"
                     } ${delayed ? "border-red-500/50 bg-red-950/15" : ""}`}
                 >
                     {/* Header Compacto: Drag, #Pedido, Tempo & Ações */}
                     <div className="flex justify-between items-center gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
-                            <div {...provided.dragHandleProps} className="cursor-grab text-gray-500 hover:text-gray-300">
+                            <div className="text-[#F4B544]/70 group-hover:text-[#F4B544]">
                                 <GripVertical className="h-3.5 w-3.5" />
                             </div>
                             <span className="text-base font-black text-[#F4B544] leading-none tracking-tight">
@@ -339,6 +340,45 @@ export default function AdminOrdersPage() {
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, orderId: null });
     const { token } = useAuth();
     const headers = { Authorization: `Bearer ${token}` };
+
+    // Mouse drag horizontal scroll para o Kanban Board
+    const kanbanScrollRef = useRef(null);
+    const [isBoardDragging, setIsBoardDragging] = useState(false);
+    const [dragStartX, setDragStartX] = useState(0);
+    const [dragScrollLeft, setDragScrollLeft] = useState(0);
+
+    const handleBoardMouseDown = (e) => {
+        // Ignora drag do board se o clique foi em um card draggable, botão, input ou dropdown
+        if (
+            e.target.closest('[data-rfd-draggable-id]') ||
+            e.target.closest('button') ||
+            e.target.closest('input') ||
+            e.target.closest('select') ||
+            e.target.closest('a')
+        ) {
+            return;
+        }
+        if (!kanbanScrollRef.current) return;
+        setIsBoardDragging(true);
+        setDragStartX(e.pageX - kanbanScrollRef.current.offsetLeft);
+        setDragScrollLeft(kanbanScrollRef.current.scrollLeft);
+    };
+
+    const handleBoardMouseLeave = () => {
+        setIsBoardDragging(false);
+    };
+
+    const handleBoardMouseUp = () => {
+        setIsBoardDragging(false);
+    };
+
+    const handleBoardMouseMove = (e) => {
+        if (!isBoardDragging || !kanbanScrollRef.current) return;
+        e.preventDefault();
+        const x = e.pageX - kanbanScrollRef.current.offsetLeft;
+        const walk = (x - dragStartX) * 1.5;
+        kanbanScrollRef.current.scrollLeft = dragScrollLeft - walk;
+    };
 
     const fetchOrders = useCallback(async () => {
         if (!token) return;
@@ -714,8 +754,17 @@ export default function AdminOrdersPage() {
             <div className="flex-1 w-full overflow-hidden pt-4 flex flex-col">
                 <DragDropContext onDragEnd={onDragEnd}>
                     {activeTab === "all" ? (
-                        /* Kanban View Horizontal Scroll */
-                        <div className="flex-1 w-full overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
+                        /* Kanban View Horizontal Scroll com suporte a Mouse Drag */
+                        <div 
+                            ref={kanbanScrollRef}
+                            onMouseDown={handleBoardMouseDown}
+                            onMouseLeave={handleBoardMouseLeave}
+                            onMouseUp={handleBoardMouseUp}
+                            onMouseMove={handleBoardMouseMove}
+                            className={`flex-1 w-full overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar ${
+                                isBoardDragging ? "cursor-grabbing select-none" : "cursor-default"
+                            }`}
+                        >
                             <div className="flex gap-5 h-full min-w-max pr-6">
                                 {KANBAN_COLUMNS.map((colId) => {
                                     const config = statusConfig[colId] || { label: colId, icon: CircleEllipsis };
