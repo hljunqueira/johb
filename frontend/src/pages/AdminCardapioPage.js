@@ -1766,19 +1766,31 @@ function BannersTab({ headers }) {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
                 <div>
                     <h3 className="text-base font-bold text-white">Banners Promocionais</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">Banners em destaque no topo da página inicial do cardápio.</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Banners em destaque na página inicial, exibidos logo após as informações da loja.</p>
                 </div>
                 <Button onClick={() => { setEditing(null); setForm({ title: "", subtitle: "", image_url: "", cta_text: "Ver mais", cta_link: "#", active: true, order: 0 }); setShowForm(true); }} className="bg-gradient-to-r from-[#F4B544] to-[#C88A24] text-black font-extrabold rounded-xl shadow-lg shadow-[#F4B544]/20 hover:scale-105 transition-all text-xs h-9 px-4"><Plus className="h-4 w-4 mr-1.5" />Novo Banner</Button>
+            </div>
+
+            {/* Dica de Resolução Recomendada */}
+            <div className="mb-6 p-4 rounded-2xl bg-[#1A1A1A] border border-[#F4B544]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                    <span className="text-lg">📐</span>
+                    <div>
+                        <p className="text-white font-bold">Resolução Recomendada para Banners:</p>
+                        <p className="text-gray-400 text-[11px] mt-0.5">Use imagens horizontais em <strong className="text-[#F4B544]">1200 x 400 px</strong> (Proporção 3:1) ou <strong className="text-[#F4B544]">1080 x 360 px</strong> em formato JPG, PNG ou WEBP.</p>
+                    </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-lg bg-[#F4B544]/15 text-[#F4B544] font-bold text-[10px] uppercase tracking-wider shrink-0 border border-[#F4B544]/20">Proporção 3:1</span>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
                 {banners.map(b => (
                     <div key={b.id} className="bg-[#141414] rounded-2xl border border-white/10 overflow-hidden hover:border-[#F4B544]/30 transition-all shadow-xl">
                         {b.image_url && (
-                            <div className="h-36 bg-[#1A1A1A] relative">
+                            <div className="aspect-[3/1] bg-[#1A1A1A] relative overflow-hidden">
                                 <img src={getImageUrl(b.image_url)} alt={b.title} className="w-full h-full object-cover" />
                             </div>
                         )}
@@ -1820,12 +1832,19 @@ function BannersTab({ headers }) {
                         <div><Label className="text-xs font-medium text-gray-300">Título *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" required /></div>
                         <div><Label className="text-xs font-medium text-gray-300">Subtítulo</Label><Input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" /></div>
                         <div>
-                            <Label className="text-xs font-medium text-gray-300">Imagem do Banner</Label>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-medium text-gray-300">Imagem do Banner</Label>
+                                <span className="text-[10px] text-[#F4B544] font-semibold">📐 Ideal: 1200x400 px (3:1)</span>
+                            </div>
                             <div className="mt-1 flex gap-2 items-center">
                                 <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="URL da imagem" className="h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] flex-1 text-xs" />
                                 <label className="cursor-pointer"><input type="file" accept="image/*" className="hidden" onChange={handleUpload} /><Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-xl border-white/10 bg-[#1A1A1A] text-white hover:bg-white/10" asChild><span><Upload className="h-4 w-4" /></span></Button></label>
                             </div>
-                            {form.image_url && <img src={getImageUrl(form.image_url)} alt="" className="mt-2 h-24 w-full object-cover rounded-lg border border-white/10" />}
+                            {form.image_url && (
+                                <div className="mt-2 aspect-[3/1] w-full rounded-lg border border-white/10 overflow-hidden bg-[#1A1A1A]">
+                                    <img src={getImageUrl(form.image_url)} alt="" className="w-full h-full object-cover" />
+                                </div>
+                            )}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div><Label className="text-xs font-medium text-gray-300">Texto do Botão</Label><Input value={form.cta_text} onChange={e => setForm(f => ({ ...f, cta_text: e.target.value }))} className="mt-1 h-9 rounded-xl bg-[#1A1A1A] text-white border-white/10 focus:border-[#F4B544] text-xs" /></div>

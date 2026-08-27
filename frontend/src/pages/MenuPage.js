@@ -17,6 +17,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { CategoryPills } from "@/components/CategoryPills";
 import { EnhancedProductCard } from "@/components/EnhancedProductCard";
 import { ComboSuggestion } from "@/components/ComboSuggestion";
+import { PromotionalBanners } from "@/components/PromotionalBanners";
 import { getAvailableScheduleDates, getAvailableTimeSlots, getBrasiliaNow, parseBusinessHours } from "@/lib/scheduleUtils";
 
 const rawBackend = process.env.REACT_APP_BACKEND_URL || '';
@@ -1080,6 +1081,12 @@ export default function MenuPage() {
             <section id="cardapio" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 {/* Banner de Status da Loja / Agendamento */}
                 <StoreStatusBanner status={{ isOpen: storeOpen, ...storeStatus }} />
+
+                {/* Banners Promocionais Dinâmicos da Loja */}
+                <PromotionalBanners onAction={() => {
+                    const el = document.getElementById("cardapio");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                }} />
 
                 {/* Selo de Prova Social no Topo */}
                 <div className="flex items-center justify-between flex-wrap gap-4 p-4 rounded-2xl bg-[#10100F] border border-[#F4B544]/20 mb-8 shadow-lg">
